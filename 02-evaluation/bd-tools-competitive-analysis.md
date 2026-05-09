@@ -1,6 +1,8 @@
 # BD / sales intelligence tools — reference matrix
 
-**Purpose:** Quick comparison of common platforms when you are building a **personal, composable outbound stack** (this repo) instead of buying a single vertical SaaS product.
+**Purpose:** Quick comparison of common platforms when you are building a **personal, composable outbound stack** inside **Venture OS** (this repository).
+
+**Important:** This document is **vendor research**, not the definition of what we are building. Ground truth for the repo is [README](../README.md): a **solo operator’s Venture OS** (ideas + pipeline + SQLite), **not** a requirement to build a vertical SaaS or any specific third-party product.
 
 Horizontal tools excel at breadth, CRM integrations, and scale. A custom stack adds **your** signals, workflows, and guardrails in code—see [venture-implementation-notes.md](../04-coding/venture-implementation-notes.md).
 

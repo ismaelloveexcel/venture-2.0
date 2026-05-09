@@ -1,6 +1,6 @@
 # venture-mcp-server
 
-Shared Python modules for the Venture job queue, lifecycle replay, and MCP server.
+Shared Python modules for **Venture OS** (this repo): the SQLite **job queue**, **lifecycle replay**, reply-intent helpers, and the optional **MCP server** for the IDE. This is **library + local server code** for one workspace, not a separately shipped commercial backend.
 
 ## Modules
 

@@ -1,6 +1,8 @@
 # Venture Engine V1 Contracts
 
-This directory contains the implementation contracts for the revenue engine:
+JSON and SQL **contracts** for the **Venture OS** pipeline: your offer, scoring, vertical economics, compliance, and reply-intent model. These files configure **your** revenue engine — they are not a public multi-tenant product schema.
+
+This directory contains:
 
 - `config/offer.config.json`: locked offer definition
 - `config/scoring.config.json`: scoring weights and viability thresholds

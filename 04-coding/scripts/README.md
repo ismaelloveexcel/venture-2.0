@@ -1,6 +1,8 @@
 # Venture OS — automation scripts
 
-Python entrypoints for outreach generation, sending, trust/integrity gates, and weekly optimization.
+These are the **main runtime** for Venture OS: Python entrypoints for outreach generation, sending, trust/integrity gates, and weekly optimization. Everything here serves **one operator’s** workflow (SQLite state beside these files), not a multi-tenant product.
+
+**Framing:** See [repository README](../../README.md) (“What this is / is not”) and [venture-implementation-notes.md](../venture-implementation-notes.md).
 
 ## Primary commands
 

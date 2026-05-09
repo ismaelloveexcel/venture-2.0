@@ -9,6 +9,7 @@ You are performing a dual audit of the Venture OS toolchain and workflow:
 - Track B: Investor-grade due diligence audit
 
 Context:
+- **Venture OS** = this repo: personal workspace (ideas, evaluation, **outreach pipeline**, SQLite queue/lifecycle). **Not** by default a separate commercial “Venture OS” product or a fixed industry-vertical platform unless stated.
 - Goal: build a real venture that reaches at least $10,000/month revenue.
 - Operator: solo, non-technical founder.
 - Constraint: system must be reliable, low-maintenance, clear to operate, and resilient to user mistakes.

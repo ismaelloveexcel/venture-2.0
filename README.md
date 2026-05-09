@@ -1,5 +1,21 @@
 # Venture OS (VENTURE 2.0)
 
+## What this is
+
+**Venture OS** is one founder’s **personal operating workspace**: folders and scripts for moving from raw ideas to shipped experiments, outbound, and KPIs. The technical center of gravity is **`04-coding/scripts/`** — a Python pipeline that generates outreach, runs **guardrails** (qualification, quality, caps, integrity, optional reply-intent), sends via configured providers, and persists **replayable state** in SQLite (`venture_jobs.db`) with **block severity**, **funnel snapshots**, and **lifecycle events**.
+
+Supporting pieces: JSON **contracts** (`04-coding/venture-engine/config/`), a small **MCP server** (`venture-mcp-server/`) for IDE automation, and templates for ideas, evaluation, design QA, and sales copy elsewhere in the repo.
+
+## What this is not
+
+- **Not** a multi-tenant commercial product, **not** a “vertical BD SaaS,” and **not** tied to any external company brand you might see in old research files.
+- **Not** a replacement for your CRM or data vendors — it **composes** APIs (e.g. Hunter, OpenAI, Resend, Airtable/Notion) around **your** offer and rules.
+- The **thing you sell** (offer, niche, pricing) lives in config and `06-sales/`; **Venture OS** is the **system that runs** the venture, not the customer-facing product name unless you choose to use it that way.
+
+If anything in the repo conflicts with this page, **trust this README first**, then `04-coding/venture-implementation-notes.md`.
+
+---
+
 Structured workspace for idea → evaluation → build → design QA → sales → KPIs, with an automated **outreach pipeline** and **replayable lifecycle state**.
 
 ## Quick map

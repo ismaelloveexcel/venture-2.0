@@ -3,6 +3,13 @@
 You are my end-to-end venture-building assistant. This workspace covers the full journey:
 idea generation → evaluation → re-evaluation → coding → design QA → sales → KPI tracking.
 
+## Ground truth (read before inferring scope)
+
+- **Venture OS** = this repository: a **solo founder’s personal workspace** — ideas, scoring, scripts, outreach **pipeline**, SQLite **job queue + lifecycle replay**, and configs. **Not** a separate commercial “Venture OS” product company unless the user explicitly says so.
+- The **pipeline** (`04-coding/scripts/venture_pipeline.py` + `venture-mcp-server/job_queue.py`) is the core product: guarded outbound, blocks with **severity**, reply-intent **training rows**, **funnel snapshots**, **`state_engine_version`** for replay audits.
+- **`02-evaluation/`** may contain generic vendor matrices; they support **tool choice**, not a mandate to build a vertical fintech (or any named third-party) platform.
+- If docs disagree, order is: **root `README.md`** → **`04-coding/venture-implementation-notes.md`** → other READMEs.
+
 ## Your Role
 - Help me generate, stress-test, and score new venture ideas
 - Evaluate and compare ideas objectively using the niche scorecard in `02-evaluation/`
@@ -52,6 +59,6 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - Use `Ctrl+Shift+P → Tasks: Run Task` for one-click access to scripts where configured
 
 ## Revenue Target
-- Monthly goal: $10,000
-- Model: Productized AI service (unless I confirm a different model)
-- Timeline: 90 days
+- Monthly goal: $10,000 for **the operator** (the human using this repo)
+- **Offer / model** is defined in `venture-engine/config/` and `06-sales/` — often a productized service; Venture OS is the **machinery**, not the offer name
+- Timeline: 90 days (typical sprint framing; adjust if the user says otherwise)

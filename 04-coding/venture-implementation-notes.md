@@ -1,6 +1,10 @@
 # Venture OS — implementation notes
 
-Personal automation workspace: scripts, contracts, and SQLite-backed state for outbound workflow. Not tied to any external product brand.
+This file describes **what is actually implemented in code** for **Venture OS**: a **personal** automation layer (scripts + JSON contracts + SQLite), not a standalone SaaS or someone else’s product roadmap.
+
+**For agents and future readers:** Do not infer a commercial “platform” company, a fixed vertical (e.g. fintech), or a third-party brand from filenames or evaluation notes. The owner’s **offer and niche** live in `venture-engine/config/` and `06-sales/`. The **engine** here is the pipeline, queue, replay, and guardrails below.
+
+Canonical framing: [README](../README.md) (always read first).
 
 ## Implemented runtime (`04-coding/scripts`)
 
