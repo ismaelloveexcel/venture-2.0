@@ -48,7 +48,7 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - **After each run**: funnel snapshot row for dashboard-style review; successful/blocked sends write training rows (`pending` / `not_sent`); `replied` lifecycle events resolve `pending` → `replied`
 - **Weekly**: `python 04-coding/scripts/weekly_optimizer.py` — settles stale `pending` → `no_reply`, writes `reply_intent_retrain_hint.json`
 - **Audit replay**: `python 04-coding/scripts/replay_audit.py` — checks lifecycle replay and **engine version drift**
-- Reference: root `README.md`, `04-coding/scripts/README.md`, `venture-mcp-server/README.md`, `04-coding/venture-engine/README.md`
+- Reference: root `README.md`, `04-coding/venture-implementation-notes.md`, `04-coding/scripts/README.md`, `venture-mcp-server/README.md`, `04-coding/venture-engine/README.md`
 - Use `Ctrl+Shift+P → Tasks: Run Task` for one-click access to scripts where configured
 
 ## Revenue Target

@@ -1,4 +1,4 @@
-Platform,Scoring Model Depth,Contact Intel Coverage,Account Intel Breadth,Personalization Data,Outreach Features,Integration Completeness,Analytics Sophistication,Finance-Specific Score,Best Use Case,Price/Month,Overall Rating
+Platform,Scoring Model Depth,Contact Intel Coverage,Account Intel Breadth,Personalization Data,Outreach Features,Integration Completeness,Analytics Sophistication,Niche / custom fit (your stack),Best Use Case,Price/Month,Overall Rating
 Apollo.io,Good,Excellent,Good,Good,Excellent,Excellent,Good,Low,Unified SMB/Mid-market platform,"$49-120/user",8.5/10
 ZoomInfo,Excellent,Excellent,Excellent,Good,Good,Good,Excellent,Low,Enterprise ABM with AI,"$2K-10K (quoted)",9.0/10
 Seamless.ai,Excellent,Excellent,Excellent,Excellent,Excellent,Excellent,Good,Low,Growth-stage full-stack revenue,"$100-500/user",9.2/10
@@ -8,4 +8,4 @@ Hunter.io,Poor,Excellent,Poor,Poor,Good,Excellent,Limited,Poor,Lean outbound ema
 Clearbit,Fair,Good,Good,Fair,Poor,Excellent,Fair,Low,Marketing enrichment/form shortening,"$200-1K/month",6.8/10
 Databox,N/A,No,No,No,No,Good,Excellent,N/A,Analytics/BI platform (not lead intel),"$199-999/month",Not comparable
 LinkedIn Sales Navigator,Fair,Good,Fair,Fair,Fair,Limited,Fair,Poor,LinkedIn-native relationship intelligence,"$99-165/month",6.0/10
-Arie Finance (Proposed),Excellent,Excellent,Excellent,Excellent,Excellent,Excellent,Excellent,Excellent,Finance/payments vertical specialization,"$299-499/user",10.0/10 (target)
+Venture OS (this repo),Varies,Varies,Varies,Varies,Varies,Varies,Varies,N/A,Composable scripts + queue + lifecycle + your APIs,"Local / usage-based",N/A (not a vendor score)

@@ -38,4 +38,4 @@ Notable tables for operations:
 - **Reply-intent model**: `../venture-engine/config/reply_intent.model.json`
 - **Retrain hints** (weekly output): `../venture-engine/config/reply_intent_retrain_hint.json`, merged into `optimizer_output.json`
 
-See root **`README.md`** and **`../venture-engine/README.md`** for contract details and env vars (`REPLY_INTENT_*`, integrity thresholds, caps).
+See root **`README.md`**, **`../venture-implementation-notes.md`**, and **`../venture-engine/README.md`** for runtime summary, contracts, and env vars (`REPLY_INTENT_*`, integrity thresholds, caps).

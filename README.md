@@ -10,6 +10,7 @@ Structured workspace for idea → evaluation → build → design QA → sales �
 | Engine contracts (JSON) | `04-coding/venture-engine/` — see [venture-engine README](04-coding/venture-engine/README.md) |
 | Job queue, lifecycle, blocks | `venture-mcp-server/` — see [MCP server README](venture-mcp-server/README.md) |
 | Copilot / agent defaults | `.github/copilot-instructions.md`, `.github/agents/` |
+| Implementation notes (runtime) | `04-coding/venture-implementation-notes.md` |
 | Environment template | `.env.example` |
 
 ## Operational hardening (runtime)
