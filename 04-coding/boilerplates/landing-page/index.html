@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>[Your Offer Headline]</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-white font-sans">
+
+  <!-- HERO -->
+  <section class="min-h-screen flex flex-col items-center justify-center text-center px-6 py-20">
+    <p class="text-sm uppercase tracking-widest text-indigo-400 mb-4">For [Target Customer]</p>
+    <h1 class="text-5xl md:text-6xl font-bold leading-tight max-w-4xl mb-6">
+      [Big Outcome] Without [Big Pain]
+    </h1>
+    <p class="text-xl text-gray-400 max-w-2xl mb-10">
+      [One sentence: what you do, who it's for, and how fast they see results]
+    </p>
+    <a href="#contact"
+       class="bg-indigo-600 hover:bg-indigo-500 text-white text-lg font-semibold px-8 py-4 rounded-xl transition">
+      Book a Free Strategy Call →
+    </a>
+    <p class="text-sm text-gray-600 mt-4">No commitment. 20 minutes. Real insights.</p>
+  </section>
+
+  <!-- SOCIAL PROOF BAR -->
+  <section class="bg-gray-900 py-8 px-6 text-center">
+    <p class="text-gray-500 text-sm uppercase tracking-widest mb-4">Trusted by professionals in</p>
+    <div class="flex flex-wrap justify-center gap-8 text-gray-400 font-semibold text-lg">
+      <span>[Industry 1]</span>
+      <span>[Industry 2]</span>
+      <span>[Industry 3]</span>
+    </div>
+  </section>
+
+  <!-- PROBLEM / SOLUTION -->
+  <section class="max-w-4xl mx-auto px-6 py-20">
+    <h2 class="text-3xl font-bold mb-6">Sound familiar?</h2>
+    <ul class="space-y-4 text-gray-400 text-lg mb-12">
+      <li>❌ [Pain point 1 — make it specific and emotional]</li>
+      <li>❌ [Pain point 2]</li>
+      <li>❌ [Pain point 3 — the one they're embarrassed about]</li>
+    </ul>
+    <h2 class="text-3xl font-bold mb-6">Here's what changes:</h2>
+    <ul class="space-y-4 text-gray-400 text-lg">
+      <li>✅ [Outcome 1 — specific result, ideally with a number]</li>
+      <li>✅ [Outcome 2]</li>
+      <li>✅ [Outcome 3 — the transformation they actually want]</li>
+    </ul>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="bg-gray-900 px-6 py-20">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-3xl font-bold text-center mb-12">How It Works</h2>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-gray-800 rounded-2xl p-6">
+          <div class="text-indigo-400 text-4xl font-bold mb-3">01</div>
+          <h3 class="text-xl font-semibold mb-2">[Step 1 Name]</h3>
+          <p class="text-gray-400">[2-sentence description of what happens in step 1]</p>
+        </div>
+        <div class="bg-gray-800 rounded-2xl p-6">
+          <div class="text-indigo-400 text-4xl font-bold mb-3">02</div>
+          <h3 class="text-xl font-semibold mb-2">[Step 2 Name]</h3>
+          <p class="text-gray-400">[2-sentence description of what happens in step 2]</p>
+        </div>
+        <div class="bg-gray-800 rounded-2xl p-6">
+          <div class="text-indigo-400 text-4xl font-bold mb-3">03</div>
+          <h3 class="text-xl font-semibold mb-2">[Step 3 Name]</h3>
+          <p class="text-gray-400">[2-sentence description — what does the client experience?]</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="max-w-3xl mx-auto px-6 py-20 text-center">
+    <h2 class="text-3xl font-bold mb-4">Simple, Transparent Pricing</h2>
+    <p class="text-gray-400 mb-10">[One sentence positioning your price as an investment, not a cost]</p>
+    <div class="bg-gray-900 border border-indigo-500 rounded-2xl p-10">
+      <p class="text-indigo-400 uppercase tracking-widest text-sm mb-2">Most Popular</p>
+      <h3 class="text-4xl font-bold mb-2">[Your Service Name]</h3>
+      <p class="text-5xl font-extrabold my-6">$[X]<span class="text-2xl text-gray-400">/month</span></p>
+      <ul class="text-gray-400 text-left space-y-3 mb-8 max-w-sm mx-auto">
+        <li>✓ [Deliverable 1]</li>
+        <li>✓ [Deliverable 2]</li>
+        <li>✓ [Deliverable 3]</li>
+        <li>✓ [Deliverable 4]</li>
+        <li>✓ [Guarantee — e.g. "Results in 30 days or your money back"]</li>
+      </ul>
+      <a href="#contact"
+         class="block bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-8 py-4 rounded-xl transition">
+        Get Started →
+      </a>
+    </div>
+  </section>
+
+  <!-- CONTACT / CTA -->
+  <section id="contact" class="bg-gray-900 px-6 py-20 text-center">
+    <h2 class="text-3xl font-bold mb-4">Ready to get started?</h2>
+    <p class="text-gray-400 mb-8">Book a free 20-minute strategy call. No pitch — just value.</p>
+    <form class="max-w-md mx-auto space-y-4" onsubmit="handleSubmit(event)">
+      <input type="text" placeholder="Your Name"
+             class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white" required />
+      <input type="email" placeholder="Your Email"
+             class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white" required />
+      <input type="text" placeholder="Your Company / Role"
+             class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white" />
+      <button type="submit"
+              class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-8 py-4 rounded-xl transition">
+        Book My Free Call →
+      </button>
+    </form>
+    <p id="form-success" class="hidden text-green-400 mt-4 font-semibold">
+      Thanks! We'll be in touch within 24 hours.
+    </p>
+  </section>
+
+  <footer class="text-center py-8 text-gray-600 text-sm">
+    © 2026 [Your Company Name] · <a href="mailto:you@example.com" class="hover:text-gray-400">you@example.com</a>
+  </footer>
+
+  <script>
+    function handleSubmit(e) {
+      e.preventDefault();
+      // Replace this with your actual form handler (e.g. Netlify Forms, Formspree, or your API)
+      document.getElementById('form-success').classList.remove('hidden');
+      e.target.reset();
+    }
+  </script>
+</body>
+</html>

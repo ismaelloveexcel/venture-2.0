@@ -1,0 +1,16 @@
+{
+  "name": "AI Lead Recovery System",
+  "setup_price": 2000,
+  "monthly_price": 500,
+  "delivery_days": 14,
+  "scope": [
+    "instant lead response",
+    "sms follow-up",
+    "booking automation"
+  ],
+  "guarantee": "first measurable result in 14 days",
+  "exclusions": [
+    "custom CRM rebuilds",
+    "complex integrations"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "generated_at": "2026-05-09T15:05:00.964000",
+  "period_days": 7,
+  "since": "2026-05-02T15:05:00.939169",
+  "inputs": {
+    "trust_by_type": {},
+    "block_reasons": {},
+    "lifecycle": {
+      "event_counts": {
+        "message_drafted": 2,
+        "prospect_loaded": 2
+      },
+      "cta_selected": {},
+      "positive_signal_rows": 0
+    }
+  },
+  "outputs": {
+    "weight_nudges": {
+      "pain": 0.0,
+      "budget": 0.0,
+      "urgency": 0.0,
+      "ai_fit": 0.0,
+      "time_to_value": 0.0,
+      "reachability": 0.0,
+      "repeatability": 0.0
+    },
+    "suggested_weights": {
+      "pain": 0.25,
+      "budget": 0.2,
+      "urgency": 0.15,
+      "ai_fit": 0.15,
+      "time_to_value": 0.1,
+      "reachability": 0.1,
+      "repeatability": 0.05
+    },
+    "cta_policy": {
+      "notes": [],
+      "bias": {}
+    },
+    "discovery_targeting": {
+      "notes": []
+    },
+    "notes": []
+  },
+  "reply_intent": {
+    "stale_pending_settled_to_no_reply": 0,
+    "retrain_hint": {
+      "n_replied": 0,
+      "n_no_reply": 0,
+      "n_not_sent": 0,
+      "mean_predicted_replied": null,
+      "mean_predicted_no_reply": null,
+      "mean_predicted_not_sent": null,
+      "hint": "",
+      "suggested_intercept_nudge": 0.0,
+      "manual_step": "Merge suggested_intercept_nudge into reply_intent.model.json intercept after review"
+    }
+  }
+}

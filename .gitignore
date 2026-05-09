@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+# SQLite (local job queue, integration-test DBs); schema lives in venture-engine/db/*.sql
+*.db

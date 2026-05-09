@@ -1,0 +1,27 @@
+{
+  "editor.formatOnSave": true,
+  "editor.wordWrap": "on",
+  "editor.fontSize": 14,
+  "editor.tabSize": 2,
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  "markdown.preview.breaks": true,
+  "python.defaultInterpreterPath": "c:/Users/isuda/AppData/Roaming/uv/python/CPYTHON-3.14.4-WINDOWS-X86_64-NONE/python.exe",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "workbench.colorTheme": "Dark Modern",
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "*.md": "${capture}.csv, ${capture}-log.*",
+    "package.json": "package-lock.json, node_modules"
+  },
+  "github.copilot.chat.welcomeMessage": "always",
+  "DockerRun.DisableDockerrc": true
+}

@@ -1,0 +1,14 @@
+{
+  "home_services": {
+    "avg_ticket": 150,
+    "min_viable_deal": 1000
+  },
+  "clinics": {
+    "avg_ticket": 300,
+    "min_viable_deal": 1500
+  },
+  "real_estate": {
+    "avg_ticket": 250,
+    "min_viable_deal": 1200
+  }
+}

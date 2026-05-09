@@ -1,0 +1,128 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Install MCP Server Dependencies",
+      "type": "shell",
+      "command": ".venv/Scripts/python.exe -m pip install -r venture-mcp-server/requirements.txt",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "📊 Log Weekly KPIs",
+      "type": "shell",
+      "command": ".venv/Scripts/python.exe 04-coding/scripts/kpi_tracker.py",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "✉️  Generate Outreach Messages",
+      "type": "shell",
+      "command": ".venv/Scripts/python.exe 04-coding/scripts/outreach_automator.py",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "⚡ Run Full Venture Pipeline",
+      "type": "shell",
+      "command": ".venv/Scripts/python.exe 04-coding/scripts/venture_pipeline.py",
+      "group": "none",
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Dry Run Pipeline (no emails/syncs)",
+      "type": "shell",
+      "command": ".venv/Scripts/python.exe 04-coding/scripts/venture_pipeline.py --dry-run",
+      "group": "none",
+      "presentation": { "reveal": "always", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "🌐 Open Landing Page (Live Server)",
+      "type": "shell",
+      "command": "start 04-coding/boilerplates/landing-page/index.html",
+      "windows": {
+        "command": "start 04-coding/boilerplates/landing-page/index.html"
+      },
+      "group": "none",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🖥️  Start API Server",
+      "type": "shell",
+      "command": "cd 04-coding/boilerplates/api-server && npm install && npm run dev",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "🔑 Setup: Copy .env.example → .env",
+      "type": "shell",
+      "command": "if not exist .env copy .env.example .env && echo .env created — fill in your API keys",
+      "windows": {
+        "command": "if not exist .env (copy .env.example .env && echo .env created — fill in your API keys) else (echo .env already exists)"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "📋 Sync All to Notion",
+      "type": "shell",
+      "command": ".venv/Scripts/python.exe 04-coding/scripts/venture_pipeline.py",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "⏰ Schedule Weekly Pipeline (run once as Admin)",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File 04-coding/scripts/schedule_pipeline.ps1",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🖥️  Open Dashboard (non-technical UI)",
+      "type": "shell",
+      "command": ".venv/Scripts/python.exe 04-coding/scripts/dashboard.py",
+      "group": "none",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

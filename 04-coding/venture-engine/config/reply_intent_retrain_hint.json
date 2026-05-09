@@ -1,0 +1,11 @@
+{
+  "n_replied": 0,
+  "n_no_reply": 0,
+  "n_not_sent": 0,
+  "mean_predicted_replied": null,
+  "mean_predicted_no_reply": null,
+  "mean_predicted_not_sent": null,
+  "hint": "",
+  "suggested_intercept_nudge": 0.0,
+  "manual_step": "Merge suggested_intercept_nudge into reply_intent.model.json intercept after review"
+}

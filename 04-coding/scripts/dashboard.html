@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Venture OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0d0d14; color: #e2e8f0; font-family: system-ui, sans-serif; }
+    .card { background: #15151f; border: 1px solid #22223a; border-radius: 14px; }
+    .input-field {
+      display: block; width: 100%; margin-top: 6px; padding: 9px 12px;
+      background: #0d0d14; border: 1px solid #2a2a42; border-radius: 8px;
+      color: #e2e8f0; font-size: 14px; outline: none; transition: border-color .15s;
+    }
+    .input-field:focus { border-color: #6366f1; }
+    .input-field::placeholder { color: #4b5563; }
+    .btn-primary { background: #4f46e5; color: #fff; font-weight: 500; padding: 10px 22px;
+      border-radius: 8px; border: none; cursor: pointer; transition: background .15s; font-size: 14px; }
+    .btn-primary:hover:not(:disabled) { background: #4338ca; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-ghost { background: #1e1e2e; color: #9ca3af; font-weight: 500; padding: 10px 20px;
+      border-radius: 8px; border: 1px solid #2a2a42; cursor: pointer; transition: all .15s; font-size: 14px; }
+    .btn-ghost:hover { background: #252535; color: #e2e8f0; }
+    .tab-btn { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      border: none; cursor: pointer; transition: all .15s; }
+    .tab-btn.active { background: #4f46e5; color: #fff; }
+    .tab-btn:not(.active) { background: #1e1e2e; color: #6b7280; }
+    .tab-btn:not(.active):hover { background: #252535; color: #9ca3af; }
+    .terminal { background: #080810; border: 1px solid #1e1e2e; border-radius: 10px;
+      padding: 16px; color: #4ade80; font-family: 'Courier New', monospace; font-size: 12.5px;
+      line-height: 1.6; min-height: 80px; max-height: 340px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-word; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 500; }
+    .badge-pending { background: #451a03; color: #fb923c; }
+    .badge-sent    { background: #052e16; color: #4ade80; }
+    .badge-other   { background: #1e1e2e; color: #6b7280; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot-on  { background: #4ade80; }
+    .dot-off { background: #374151; }
+    .progress-bar-track { background: #1e1e2e; border-radius: 99px; height: 6px; overflow: hidden; }
+    .progress-bar-fill  { background: linear-gradient(90deg, #4f46e5, #7c3aed); height: 100%;
+      border-radius: 99px; transition: width .5s ease; }
+    .spinner { width: 16px; height: 16px; border: 2px solid #4f46e5;
+      border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0d0d14; }
+    ::-webkit-scrollbar-thumb { background: #2a2a42; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- ── Header ── -->
+  <div style="background:#10101a;border-bottom:1px solid #1e1e2e" class="sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div style="background:#4f46e5;width:32px;height:32px;border-radius:8px" class="flex items-center justify-center text-white font-bold text-sm">V</div>
+        <div>
+          <span class="text-white font-semibold">Venture OS</span>
+          <span class="text-gray-500 text-sm ml-2">local dashboard</span>
+        </div>
+      </div>
+      <div id="api-status" class="flex items-center gap-4 text-xs"></div>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-6 py-8">
+
+    <!-- ── KPI Cards ── -->
+    <div class="grid grid-cols-2 gap-4 mb-6 sm:grid-cols-4">
+      <div class="card p-5">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Monthly Revenue</p>
+        <p class="text-2xl font-bold text-white" id="kpi-mrr">—</p>
+        <div class="progress-bar-track mt-3"><div class="progress-bar-fill" id="kpi-bar" style="width:0%"></div></div>
+        <p class="text-gray-600 text-xs mt-1.5" id="kpi-pct">loading…</p>
+      </div>
+      <div class="card p-5">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Gap to $10k</p>
+        <p class="text-2xl font-bold text-amber-400" id="kpi-gap">—</p>
+        <p class="text-gray-600 text-xs mt-3">target: $10,000/mo</p>
+      </div>
+      <div class="card p-5">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Reply Rate</p>
+        <p class="text-2xl font-bold" id="kpi-reply">—</p>
+        <p class="text-gray-600 text-xs mt-3">4-week avg · target ≥5%</p>
+      </div>
+      <div class="card p-5">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Pending Prospects</p>
+        <p class="text-2xl font-bold text-white" id="kpi-pending">—</p>
+        <p class="text-gray-600 text-xs mt-3">ready to process</p>
+      </div>
+    </div>
+
+    <!-- ── Job Queue Status ── -->
+    <div class="grid grid-cols-2 gap-4 mb-8 sm:grid-cols-5">
+      <div class="card p-4">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Pending</p>
+        <p class="text-2xl font-bold text-amber-400" id="jq-pending">—</p>
+        <p class="text-gray-600 text-xs mt-2">jobs queued</p>
+      </div>
+      <div class="card p-4">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Completed</p>
+        <p class="text-2xl font-bold text-emerald-400" id="jq-completed">—</p>
+        <p class="text-gray-600 text-xs mt-2">this session</p>
+      </div>
+      <div class="card p-4">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Failed</p>
+        <p class="text-2xl font-bold text-red-400" id="jq-failed">—</p>
+        <p class="text-gray-600 text-xs mt-2">retry eligible</p>
+      </div>
+      <div class="card p-4">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">In Progress</p>
+        <p class="text-2xl font-bold text-blue-400" id="jq-inprogress">—</p>
+        <p class="text-gray-600 text-xs mt-2">running now</p>
+      </div>
+      <div class="card p-4">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Total Jobs</p>
+        <p class="text-2xl font-bold text-gray-400" id="jq-total">—</p>
+        <p class="text-gray-600 text-xs mt-2">all time</p>
+      </div>
+    </div>
+
+    <!-- ── Tabs ── -->
+    <div class="flex gap-2 mb-6 flex-wrap">
+      <button class="tab-btn active" id="tab-pipeline" onclick="showTab('pipeline')">▶ Run Pipeline</button>
+      <button class="tab-btn" id="tab-prospects" onclick="showTab('prospects')">Prospects</button>
+      <button class="tab-btn" id="tab-score" onclick="showTab('score')">Score an Idea</button>
+      <button class="tab-btn" id="tab-add" onclick="showTab('add')">+ Add Prospect</button>
+    </div>
+
+    <!-- ── Pipeline Panel ── -->
+    <div id="panel-pipeline" class="card p-6">
+      <div class="flex items-start justify-between mb-5">
+        <div>
+          <h2 class="text-white font-semibold text-base">Run the Full Pipeline</h2>
+          <p class="text-gray-500 text-sm mt-1">
+            Email lookup → outreach generation → Notion sync → follow-up check → KPI digest
+          </p>
+        </div>
+        <button class="btn-primary flex items-center gap-2" id="run-btn" onclick="runPipeline()">
+          ▶ Run Now
+        </button>
+      </div>
+      <div id="run-status" class="hidden items-center gap-2 mb-3 text-sm text-indigo-300">
+        <span class="spinner"></span> Pipeline running — this takes 20–60 seconds…
+      </div>
+      <div class="terminal" id="pipeline-output">Click "Run Now" to execute the pipeline.</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+        <div class="card p-4">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">7-Day Funnel</p>
+          <div id="funnel-summary" class="text-sm text-gray-300">Loading funnel…</div>
+        </div>
+        <div class="card p-4">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">Blocked Prospects</p>
+          <div id="blocked-summary" class="text-sm text-gray-300">Loading blocked items…</div>
+        </div>
+      </div>
+      <div class="card p-4 mt-4">
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">Daily Operator Checklist</p>
+        <ul class="text-sm text-gray-300 space-y-1">
+          <li>1) Preflight passes with no [fail] items.</li>
+          <li>2) Blocked prospects reviewed and resolved.</li>
+          <li>3) Funnel bottleneck identified before sending.</li>
+          <li>4) Run in dry-run first, then live mode.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── Prospects Panel ── -->
+    <div id="panel-prospects" class="card p-6 hidden">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-white font-semibold text-base">All Prospects</h2>
+        <button class="btn-ghost text-xs py-1.5 px-3" onclick="loadProspects()">↻ Refresh</button>
+      </div>
+      <div id="prospects-content">
+        <p class="text-gray-500 text-sm">Loading…</p>
+      </div>
+    </div>
+
+    <!-- ── Score Idea Panel ── -->
+    <div id="panel-score" class="card p-6 hidden">
+      <h2 class="text-white font-semibold text-base mb-1">Score a Venture Idea</h2>
+      <p class="text-gray-500 text-sm mb-4">AI scores your idea against 8 business criteria and gives a GO / RESEARCH / SKIP verdict.</p>
+      <textarea id="idea-input"
+        class="input-field resize-none"
+        rows="4"
+        placeholder="Describe your idea… e.g. An AI chatbot that handles appointment rebooking for dental clinics, reducing no-shows by 40%"></textarea>
+      <div class="flex items-center gap-3 mt-3">
+        <button class="btn-primary flex items-center gap-2" id="score-btn" onclick="scoreIdea()">
+          Score It
+        </button>
+        <span id="score-status" class="hidden items-center gap-2 text-sm text-indigo-300">
+          <span class="spinner"></span> Asking AI…
+        </span>
+      </div>
+      <div id="score-result" class="terminal mt-4 hidden"></div>
+    </div>
+
+    <!-- ── Add Prospect Panel ── -->
+    <div id="panel-add" class="card p-6 hidden">
+      <h2 class="text-white font-semibold text-base mb-1">Add a New Prospect</h2>
+      <p class="text-gray-500 text-sm mb-5">Fill in what you know — the pipeline will find missing emails and write their outreach message automatically.</p>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label class="text-gray-400 text-xs uppercase tracking-widest">Full Name <span class="text-red-400">*</span></label>
+          <input id="p-name" class="input-field" placeholder="Jane Smith">
+        </div>
+        <div>
+          <label class="text-gray-400 text-xs uppercase tracking-widest">Company <span class="text-red-400">*</span></label>
+          <input id="p-company" class="input-field" placeholder="Bright Smiles Dental">
+        </div>
+        <div>
+          <label class="text-gray-400 text-xs uppercase tracking-widest">Their Role</label>
+          <input id="p-role" class="input-field" placeholder="Owner / CEO / Marketing Manager">
+        </div>
+        <div>
+          <label class="text-gray-400 text-xs uppercase tracking-widest">Industry</label>
+          <input id="p-industry" class="input-field" placeholder="Dental / Legal / E-commerce…">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="text-gray-400 text-xs uppercase tracking-widest">Their Main Pain Point <span class="text-red-400">*</span></label>
+          <input id="p-pain" class="input-field" placeholder="Patients not rebooking after appointments">
+        </div>
+        <div>
+          <label class="text-gray-400 text-xs uppercase tracking-widest">Email (optional — Hunter will find it)</label>
+          <input id="p-email" class="input-field" type="email" placeholder="jane@brightsmiles.com">
+        </div>
+        <div>
+          <label class="text-gray-400 text-xs uppercase tracking-widest">LinkedIn URL (optional)</label>
+          <input id="p-linkedin" class="input-field" placeholder="https://linkedin.com/in/…">
+        </div>
+      </div>
+      <div class="flex items-center gap-4 mt-5">
+        <button class="btn-primary" onclick="addProspect()" style="background:#059669">
+          ＋ Add Prospect
+        </button>
+        <p id="add-msg" class="text-sm hidden"></p>
+      </div>
+    </div>
+
+  </div><!-- /max-w -->
+
+  <script>
+    // ── Tab management ─────────────────────────────────────────────────────
+    const TABS = ['pipeline','prospects','score','add'];
+    function showTab(name) {
+      TABS.forEach(t => {
+        document.getElementById('panel-' + t).classList.add('hidden');
+        const btn = document.getElementById('tab-' + t);
+        btn.classList.remove('active');
+      });
+      document.getElementById('panel-' + name).classList.remove('hidden');
+      document.getElementById('tab-' + name).classList.add('active');
+      if (name === 'prospects') loadProspects();
+    }
+
+    // ── KPI cards ─────────────────────────────────────────────────────────
+    async function loadKPIs() {
+      try {
+        const d = await fetch('/api/kpis').then(r => r.json());
+        document.getElementById('kpi-mrr').textContent     = '$' + d.revenue.toLocaleString('en-US', {maximumFractionDigits:0});
+        document.getElementById('kpi-gap').textContent     = '$' + d.gap.toLocaleString('en-US', {maximumFractionDigits:0});
+        document.getElementById('kpi-pending').textContent = d.pending_prospects;
+        const rr = d.reply_rate;
+        const rrEl = document.getElementById('kpi-reply');
+        rrEl.textContent = rr.toFixed(1) + '%';
+        rrEl.className   = 'text-2xl font-bold ' + (rr >= 5 ? 'text-emerald-400' : rr > 0 ? 'text-amber-400' : 'text-gray-500');
+        document.getElementById('kpi-pct').textContent  = d.pct.toFixed(0) + '% of $10k target';
+        document.getElementById('kpi-bar').style.width  = Math.min(d.pct, 100) + '%';
+        if (d.revenue >= d.target) document.getElementById('kpi-mrr').classList.add('text-emerald-400');
+      } catch(e) { console.warn('KPI load failed', e); }
+    }
+
+    // ── API status dots ────────────────────────────────────────────────────
+    async function loadEnvStatus() {
+      try {
+        const d = await fetch('/api/env-status').then(r => r.json());
+        document.getElementById('api-status').innerHTML = Object.entries(d).map(([k,v]) =>
+          `<span class="flex items-center gap-1.5">
+            <span class="dot ${v ? 'dot-on' : 'dot-off'}"></span>
+            <span style="color:${v ? '#9ca3af' : '#374151'}">${k}</span>
+          </span>`
+        ).join('');
+      } catch(e) {}
+    }
+
+    // ── Run pipeline ───────────────────────────────────────────────────────
+    async function runPipeline() {
+      const btn     = document.getElementById('run-btn');
+      const out     = document.getElementById('pipeline-output');
+      const status  = document.getElementById('run-status');
+      btn.disabled  = true;
+      btn.textContent = 'Running…';
+      out.textContent = '';
+      status.classList.remove('hidden');
+      status.style.display = 'flex';
+      try {
+        const r = await fetch('/run-pipeline', { method: 'POST' });
+        const d = await r.json();
+        out.textContent = d.output || 'No output.';
+        out.scrollTop   = out.scrollHeight;
+        loadKPIs();
+        loadFunnel();
+        loadBlocked();
+      } catch(e) {
+        out.textContent = 'Network error: ' + e.message;
+      }
+      status.style.display = 'none';
+      btn.innerHTML   = '▶ Run Now';
+      btn.disabled    = false;
+    }
+
+    async function loadFunnel() {
+      const el = document.getElementById('funnel-summary');
+      try {
+        const d = await fetch('/api/funnel').then(r => r.json());
+        const stages = ['prospect_loaded','email_found','message_generated','email_sent','delivered','replied','followup_sent'];
+        const parts = stages.map(s => `${s.replaceAll('_',' ')}: ${d[s] || 0}`);
+        el.textContent = parts.join(' | ');
+      } catch (e) {
+        el.textContent = 'Failed to load funnel data.';
+      }
+    }
+
+    async function loadBlocked() {
+      const el = document.getElementById('blocked-summary');
+      try {
+        const rows = await fetch('/api/blocked').then(r => r.json());
+        if (!rows.length) {
+          el.textContent = 'No blocked prospects.';
+          return;
+        }
+        el.innerHTML = rows.slice(0, 5).map(r =>
+          `<div class="mb-1">${r.name || r.prospect_id} — ${r.stage} (${r.status_reason || 'n/a'})</div>`
+        ).join('');
+      } catch (e) {
+        el.textContent = 'Failed to load blocked prospects.';
+      }
+    }
+
+    // ── Prospects table ────────────────────────────────────────────────────
+    async function loadProspects() {
+      const el = document.getElementById('prospects-content');
+      el.innerHTML = '<p class="text-gray-500 text-sm">Loading…</p>';
+      try {
+        const rows = await fetch('/api/prospects').then(r => r.json());
+        if (!rows.length) {
+          el.innerHTML = '<p class="text-gray-500 text-sm">No prospects yet. Use the "Add Prospect" tab to add your first one.</p>';
+          return;
+        }
+        const cols = ['name','company','role','industry','pain_point','email','status'];
+        el.innerHTML = `
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" style="border-collapse:separate;border-spacing:0">
+              <thead>
+                <tr>${cols.map(c => `<th class="text-left text-gray-500 text-xs uppercase tracking-widest pb-3 pr-5">${c.replace('_',' ')}</th>`).join('')}</tr>
+              </thead>
+              <tbody>
+                ${rows.map(row => `
+                  <tr style="border-top:1px solid #1e1e2e">
+                    ${cols.map(c => {
+                      if (c === 'status') return `<td class="py-3 pr-5"><span class="badge ${badgeClass(row[c])}">${row[c]||'—'}</span></td>`;
+                      if (c === 'pain_point') return `<td class="py-3 pr-5 text-gray-400 max-w-xs truncate" title="${row[c]||''}">${row[c]||'—'}</td>`;
+                      return `<td class="py-3 pr-5 text-gray-300">${row[c]||'—'}</td>`;
+                    }).join('')}
+                  </tr>`
+                ).join('')}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-gray-600 text-xs mt-3">${rows.length} total prospect${rows.length !== 1 ? 's' : ''}</p>`;
+      } catch(e) {
+        el.innerHTML = '<p class="text-red-400 text-sm">Failed to load: ' + e.message + '</p>';
+      }
+    }
+
+    function badgeClass(s) {
+      if (!s || s === 'pending') return 'badge-pending';
+      if (s === 'sent') return 'badge-sent';
+      return 'badge-other';
+    }
+
+    // ── Score idea ─────────────────────────────────────────────────────────
+    async function scoreIdea() {
+      const idea = document.getElementById('idea-input').value.trim();
+      if (!idea) { document.getElementById('idea-input').focus(); return; }
+      const btn    = document.getElementById('score-btn');
+      const status = document.getElementById('score-status');
+      const res    = document.getElementById('score-result');
+      btn.disabled = true;
+      btn.textContent = 'Scoring…';
+      status.style.display = 'flex';
+      res.classList.remove('hidden');
+      res.textContent = '';
+      try {
+        const r = await fetch('/score-idea', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ idea })
+        });
+        const d = await r.json();
+        res.textContent = d.result;
+      } catch(e) {
+        res.textContent = 'Error: ' + e.message;
+      }
+      status.style.display = 'none';
+      btn.textContent = 'Score It';
+      btn.disabled = false;
+    }
+
+    // ── Add prospect ───────────────────────────────────────────────────────
+    async function addProspect() {
+      const get = id => document.getElementById(id).value.trim();
+      const data = {
+        name:         get('p-name'),
+        company:      get('p-company'),
+        role:         get('p-role'),
+        industry:     get('p-industry'),
+        pain_point:   get('p-pain'),
+        email:        get('p-email'),
+        linkedin_url: get('p-linkedin'),
+      };
+      if (!data.name || !data.company || !data.pain_point) {
+        showMsg('add-msg', '⚠  Name, Company and Pain Point are required.', 'text-amber-400');
+        return;
+      }
+      try {
+        const r = await fetch('/add-prospect', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        const d = await r.json();
+        if (d.success) {
+          showMsg('add-msg', '✓ Prospect added! Go to "Run Pipeline" to generate their outreach.', 'text-emerald-400');
+          ['p-name','p-company','p-role','p-industry','p-pain','p-email','p-linkedin']
+            .forEach(id => document.getElementById(id).value = '');
+          loadKPIs();
+        } else {
+          showMsg('add-msg', 'Error: ' + d.error, 'text-red-400');
+        }
+      } catch(e) {
+        showMsg('add-msg', 'Network error: ' + e.message, 'text-red-400');
+      }
+    }
+
+    function showMsg(id, text, cls) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className   = 'text-sm ' + cls;
+      el.classList.remove('hidden');
+    }
+
+    // ── Keyboard shortcuts ─────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const active = document.querySelector('.tab-btn.active').id.replace('tab-','');
+        if (active === 'pipeline') runPipeline();
+        if (active === 'score')    scoreIdea();
+        if (active === 'add')      addProspect();
+      }
+    });
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    loadKPIs();
+    loadEnvStatus();
+    loadFunnel();
+    loadBlocked();
+      loadJobQueue();
+      // Refresh job queue every 5 seconds
+      setInterval(loadJobQueue, 5000);
+
+      // ── Job Queue ─────────────────────────────────────────────────────────
+      async function loadJobQueue() {
+        try {
+          const d = await fetch('/api/job-queue').then(r => r.json());
+          document.getElementById('jq-pending').textContent     = d.pending;
+          document.getElementById('jq-completed').textContent   = d.completed;
+          document.getElementById('jq-failed').textContent      = d.failed;
+          document.getElementById('jq-inprogress').textContent  = d.in_progress;
+          document.getElementById('jq-total').textContent       = d.total;
+        } catch(e) { console.warn('Job queue load failed', e); }
+      }
+  </script>
+</body>
+</html>

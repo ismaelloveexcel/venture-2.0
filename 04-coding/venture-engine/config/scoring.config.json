@@ -1,0 +1,16 @@
+{
+  "threshold": 7.0,
+  "weights": {
+    "pain": 0.25,
+    "budget": 0.2,
+    "urgency": 0.15,
+    "ai_fit": 0.15,
+    "time_to_value": 0.1,
+    "reachability": 0.1,
+    "repeatability": 0.05
+  },
+  "viability": {
+    "min_evidence_confidence": 0.7,
+    "max_delivery_days": 14
+  }
+}

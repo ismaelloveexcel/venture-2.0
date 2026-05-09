@@ -1,0 +1,41 @@
+{
+  "servers": {
+    "notion": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@notionhq/notion-mcp-server"
+      ],
+      "env": {
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}",
+        "NOTION_API_KEY": "${env:NOTION_API_KEY}"
+      }
+    },
+    "venture-os": {
+      "type": "stdio",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "${workspaceFolder}/venture-mcp-server/server.py"
+      ],
+      "env": {
+        "OPENAI_API_KEY": "${env:OPENAI_API_KEY}",
+        "BRAVE_SEARCH_API_KEY": "${env:BRAVE_SEARCH_API_KEY}",
+        "HUNTER_API_KEY": "${env:HUNTER_API_KEY}",
+        "RESEND_API_KEY": "${env:RESEND_API_KEY}",
+        "AIRTABLE_API_KEY": "${env:AIRTABLE_API_KEY}",
+        "AIRTABLE_BASE_ID": "${env:AIRTABLE_BASE_ID}",
+        "NOTION_API_KEY": "${env:NOTION_API_KEY}",
+        "NOTION_IDEAS_DB": "${env:NOTION_IDEAS_DB}",
+        "NOTION_PROSPECTS_DB": "${env:NOTION_PROSPECTS_DB}",
+        "NOTION_KPIS_DB": "${env:NOTION_KPIS_DB}",
+        "NOTION_DECISIONS_DB": "${env:NOTION_DECISIONS_DB}",
+        "YOUR_NAME": "${env:YOUR_NAME}",
+        "YOUR_SERVICE": "${env:YOUR_SERVICE}",
+        "YOUR_UNIQUE_VALUE": "${env:YOUR_UNIQUE_VALUE}",
+        "YOUR_SOCIAL_PROOF": "${env:YOUR_SOCIAL_PROOF}",
+        "REVENUE_TARGET": "${env:REVENUE_TARGET}"
+      }
+    }
+  }
+}

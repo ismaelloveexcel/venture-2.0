@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "intercept": -0.35,
+  "min_prob_send_default": 0.12,
+  "weights": {
+    "log_word_count": 0.12,
+    "has_evidence_marker": 0.22,
+    "cta_strength": 0.18,
+    "trust": 0.15,
+    "evidence_confidence": 0.28,
+    "state_warm": 0.08,
+    "state_engaged": 0.12,
+    "state_qualified": 0.15,
+    "vertical_known": 0.05
+  }
+}

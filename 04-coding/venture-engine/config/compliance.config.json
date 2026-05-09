@@ -1,0 +1,14 @@
+{
+  "channels": {
+    "email": {
+      "require_unsubscribe": true
+    },
+    "sms": {
+      "opt_out_text": "Reply STOP to opt out"
+    },
+    "whatsapp": {
+      "opt_out_text": "Reply STOP to opt out"
+    }
+  },
+  "cooldown_days_after_no_reply": 21
+}
