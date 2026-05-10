@@ -14,7 +14,7 @@ Do not optimize for perfect precision yet. For the first 50-100 evaluated leads,
 Pipeline order:
 
 ```text
-motion signal detection -> revenue model classification -> distribution gap scoring -> urgency proxy scoring -> binary LinkedIn check
+spend trigger filter -> motion signal detection -> revenue model classification -> distribution gap scoring -> urgency proxy scoring -> binary LinkedIn check
 ```
 
 Do not use LinkedIn as a discovery source. Use LinkedIn only as the final binary verification gate.
@@ -23,11 +23,37 @@ Do not use LinkedIn as a discovery source. Use LinkedIn only as the final binary
 
 Operational routing uses motion class, not fit score:
 
-- `HOT` -> send candidate lane (subject to LinkedIn weak/missing + safety gate)
-- `POSSIBLE` -> test lane
-- `NO` -> discard/log only
+- `SPEND_ELIGIBLE + HOT` -> send candidate lane (subject to LinkedIn weak/missing + safety gate)
+- `SPEND_ELIGIBLE + POSSIBLE` -> test lane
+- all others -> discard/log only
 
 `fit_score` remains in schema as a diagnostic field for backward compatibility and analytics.
+
+Spend eligibility is a hard gate that must pass before HOT can route to send.
+
+## Spend Trigger Layer (Hard Signals)
+
+At least one hard spend trigger must be observed:
+
+- tool transition
+- failed internal build
+- budget release
+- execution bottleneck
+- partner/agency switching
+
+These are detection signals, not schema fields. They are written into `notes` and shadow logs.
+
+## Message Angle Mapping
+
+Message angle should be selected by spend trigger type:
+
+| Spend Trigger | Message Angle |
+|---|---|
+| tool transition | replacement positioning |
+| failed internal build | execution relief |
+| budget release | scaling acceleration |
+| execution bottleneck | operational unblock |
+| partner switch | efficiency / cost reduction |
 
 ## Buying Intensity Score (0-11)
 

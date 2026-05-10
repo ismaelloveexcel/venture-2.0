@@ -81,6 +81,8 @@ class RuntimeConfig:
     motion_hot_cap: int
     motion_possible_sample_size: int
     motion_shadow_mode: bool
+    spend_filter_required: bool
+    spend_min_trigger_count: int
 
     @classmethod
     def from_env(cls) -> "RuntimeConfig":
@@ -116,6 +118,8 @@ class RuntimeConfig:
             motion_hot_cap=_env_int("MOTION_HOT_CAP", 25),
             motion_possible_sample_size=_env_int("MOTION_POSSIBLE_SAMPLE_SIZE", 10),
             motion_shadow_mode=_env_bool("MOTION_SHADOW_MODE", True),
+            spend_filter_required=_env_bool("SPEND_FILTER_REQUIRED", True),
+            spend_min_trigger_count=_env_int("SPEND_MIN_TRIGGER_COUNT", 1),
         )
 
 

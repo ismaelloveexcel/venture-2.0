@@ -45,7 +45,7 @@ No custom tiers during validation.
 Use a pressure-first filter before any LinkedIn review:
 
 ```text
-motion signal detection -> revenue model classification -> distribution gap scoring -> urgency proxy scoring -> binary LinkedIn check
+spend trigger filter -> motion signal detection -> revenue model classification -> distribution gap scoring -> urgency proxy scoring -> binary LinkedIn check
 ```
 
 LinkedIn is a verification tool, not a discovery tool. Inspect only the top-ranked motion candidates, usually the top 20% of a batch.
@@ -83,10 +83,17 @@ Decision semantics are now motion-class based.
 
 Implementation rules:
 
+- Spend trigger eligibility is evaluated before motion routing.
 - Motion class is derived by `credibility_candidate_generator.py` and stored in `notes` only.
 - Existing schema remains unchanged.
 - `fit_score` is diagnostic only; it is not the routing authority.
 - LinkedIn remains a binary fit gate before send (`weak` or `missing`).
+
+Send routing contract:
+
+- Send only when `spend_eligible=true` and `motion_class=HOT` and LinkedIn is `weak` or `missing`.
+- Route `spend_eligible=true` and `motion_class=POSSIBLE` to test lane sampling.
+- Ignore/log all non-spend or `NO` rows.
 
 Decision authority hierarchy:
 

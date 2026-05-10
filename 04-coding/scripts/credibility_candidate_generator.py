@@ -98,6 +98,60 @@ VISIBILITY_WEAK_TERMS = ("no content", "inactive", "underbuilt", "no outbound", 
 
 ALLOWED_LINKEDIN_QUALITY = {"unknown", "strong", "weak", "missing"}
 
+SPEND_TRIGGER_TOOLING_TRANSITION_TERMS = (
+    "alternative to",
+    "replacing",
+    "migrating from",
+    "moving off",
+    "manual process",
+    "spreadsheet",
+    "legacy stack",
+)
+SPEND_TRIGGER_FAILED_BUILD_TERMS = (
+    "urgent hiring",
+    "still hiring",
+    "repeat hiring",
+    "contract-to-hire",
+    "outsourcing",
+    "outsource",
+    "fractional",
+)
+SPEND_TRIGGER_BUDGET_RELEASE_TERMS = (
+    "funding",
+    "raised",
+    "seed",
+    "series a",
+    "new team",
+    "new department",
+    "expanding to",
+    "new market",
+)
+SPEND_TRIGGER_EXECUTION_BOTTLENECK_TERMS = (
+    "overloaded",
+    "bottleneck",
+    "inefficiency",
+    "behind on",
+    "cannot keep up",
+    "operational drag",
+    "slow execution",
+)
+SPEND_TRIGGER_PARTNER_SWITCH_TERMS = (
+    "switching agency",
+    "changing agency",
+    "rethinking strategy",
+    "rethinking stack",
+    "looking for partner",
+    "replace partner",
+)
+
+SPEND_ANGLE_BY_TRIGGER = {
+    "tool_transition": "replacement_positioning",
+    "failed_internal_build": "execution_relief",
+    "budget_release": "scaling_acceleration",
+    "execution_bottleneck": "operational_unblock",
+    "partner_switch": "efficiency_cost_reduction",
+}
+
 
 @dataclass(frozen=True)
 class MotionSettings:
@@ -106,6 +160,8 @@ class MotionSettings:
     hot_cap: int
     possible_sample_size: int
     shadow_mode: bool
+    spend_filter_required: bool
+    spend_min_trigger_count: int
     random_seed: int
 
 
@@ -135,6 +191,8 @@ def _load_motion_settings() -> MotionSettings:
         hot_cap=max(1, cfg.motion_hot_cap),
         possible_sample_size=max(0, cfg.motion_possible_sample_size),
         shadow_mode=cfg.motion_shadow_mode,
+        spend_filter_required=cfg.spend_filter_required,
+        spend_min_trigger_count=max(1, cfg.spend_min_trigger_count),
         random_seed=42,
     )
 
@@ -356,6 +414,35 @@ class ScoredCandidate:
     row: dict[str, str]
     motion_class: str
     score: CandidateScore
+    spend_eligible: bool
+    spend_triggers: tuple[str, ...]
+    message_angle: str
+
+
+def _spend_triggers(row: dict[str, str]) -> tuple[str, ...]:
+    source_text = " ".join(
+        [
+            _get(row, "trigger"),
+            _get(row, "source"),
+            _get(row, "news", "funding_news"),
+            _get(row, "jobs", "job_titles", "job_postings"),
+            _get(row, "description"),
+            _get(row, "distribution_notes"),
+            _get(row, "visibility_signal"),
+        ]
+    )
+    triggers: list[str] = []
+    if _contains_any(source_text, SPEND_TRIGGER_TOOLING_TRANSITION_TERMS):
+        triggers.append("tool_transition")
+    if _contains_any(source_text, SPEND_TRIGGER_FAILED_BUILD_TERMS):
+        triggers.append("failed_internal_build")
+    if _contains_any(source_text, SPEND_TRIGGER_BUDGET_RELEASE_TERMS):
+        triggers.append("budget_release")
+    if _contains_any(source_text, SPEND_TRIGGER_EXECUTION_BOTTLENECK_TERMS):
+        triggers.append("execution_bottleneck")
+    if _contains_any(source_text, SPEND_TRIGGER_PARTNER_SWITCH_TERMS):
+        triggers.append("partner_switch")
+    return tuple(dict.fromkeys(triggers))
 
 
 def _normalized_linkedin_quality(row: dict[str, str]) -> str:
@@ -368,6 +455,9 @@ def _normalized_linkedin_quality(row: dict[str, str]) -> str:
 def build_candidate_row(row: dict[str, str], schema_fields: list[str], settings: MotionSettings) -> ScoredCandidate:
     score = score_candidate(row)
     motion_class = _motion_class(score.motion_score, settings)
+    spend_triggers = _spend_triggers(row)
+    spend_eligible = (len(spend_triggers) >= settings.spend_min_trigger_count) if settings.spend_filter_required else True
+    message_angle = SPEND_ANGLE_BY_TRIGGER.get(spend_triggers[0], "general_pressure") if spend_triggers else "general_pressure"
     company = _get(row, "company", "company_name", "name")
     first_name = _get(row, "first_name", "founder_first_name")
     role = _get(row, "role", "title", "founder_role")
@@ -384,6 +474,10 @@ def build_candidate_row(row: dict[str, str], schema_fields: list[str], settings:
     notes = "; ".join(
         [
             "candidate_pool=true",
+            f"spend_eligible={'true' if spend_eligible else 'false'}",
+            f"spend_trigger_count={len(spend_triggers)}",
+            f"spend_triggers={'+'.join(spend_triggers) if spend_triggers else 'none'}",
+            f"message_angle={message_angle}",
             f"motion_class={motion_class}",
             f"motion_score={score.motion_score}",
             f"buying_intensity_score={score.buying_intensity}",
@@ -417,6 +511,9 @@ def build_candidate_row(row: dict[str, str], schema_fields: list[str], settings:
         row={field: output.get(field, "") for field in schema_fields},
         motion_class=motion_class,
         score=score,
+        spend_eligible=spend_eligible,
+        spend_triggers=spend_triggers,
+        message_angle=message_angle,
     )
 
 
@@ -504,6 +601,8 @@ def main() -> int:
             hot_cap=settings.hot_cap,
             possible_sample_size=settings.possible_sample_size,
             shadow_mode=settings.shadow_mode,
+            spend_filter_required=settings.spend_filter_required,
+            spend_min_trigger_count=settings.spend_min_trigger_count,
             random_seed=settings.random_seed,
         )
     if args.possible_threshold is not None:
@@ -513,6 +612,8 @@ def main() -> int:
             hot_cap=settings.hot_cap,
             possible_sample_size=settings.possible_sample_size,
             shadow_mode=settings.shadow_mode,
+            spend_filter_required=settings.spend_filter_required,
+            spend_min_trigger_count=settings.spend_min_trigger_count,
             random_seed=settings.random_seed,
         )
     if args.hot_cap is not None:
@@ -522,6 +623,8 @@ def main() -> int:
             hot_cap=max(1, args.hot_cap),
             possible_sample_size=settings.possible_sample_size,
             shadow_mode=settings.shadow_mode,
+            spend_filter_required=settings.spend_filter_required,
+            spend_min_trigger_count=settings.spend_min_trigger_count,
             random_seed=settings.random_seed,
         )
     if args.possible_sample_size is not None:
@@ -531,6 +634,8 @@ def main() -> int:
             hot_cap=settings.hot_cap,
             possible_sample_size=max(0, args.possible_sample_size),
             shadow_mode=settings.shadow_mode,
+            spend_filter_required=settings.spend_filter_required,
+            spend_min_trigger_count=settings.spend_min_trigger_count,
             random_seed=settings.random_seed,
         )
     settings = MotionSettings(
@@ -539,6 +644,8 @@ def main() -> int:
         hot_cap=settings.hot_cap,
         possible_sample_size=settings.possible_sample_size,
         shadow_mode=(True if args.shadow_mode else False if args.live_route else settings.shadow_mode),
+        spend_filter_required=settings.spend_filter_required,
+        spend_min_trigger_count=settings.spend_min_trigger_count,
         random_seed=args.seed,
     )
 
@@ -547,9 +654,12 @@ def main() -> int:
     candidates = [build_candidate_row(row, fields, settings) for row in source_rows[: args.limit]]
     candidates = [candidate for candidate in candidates if candidate.score.buying_intensity >= args.min_buying_intensity]
 
-    hot_candidates = [candidate for candidate in candidates if candidate.motion_class == "HOT"]
-    possible_candidates = [candidate for candidate in candidates if candidate.motion_class == "POSSIBLE"]
-    no_candidates = [candidate for candidate in candidates if candidate.motion_class == "NO"]
+    spend_eligible_candidates = [candidate for candidate in candidates if candidate.spend_eligible]
+    no_spend_candidates = [candidate for candidate in candidates if not candidate.spend_eligible]
+
+    hot_candidates = [candidate for candidate in spend_eligible_candidates if candidate.motion_class == "HOT"]
+    possible_candidates = [candidate for candidate in spend_eligible_candidates if candidate.motion_class == "POSSIBLE"]
+    no_candidates = [candidate for candidate in spend_eligible_candidates if candidate.motion_class == "NO"]
 
     hot_candidates.sort(key=lambda candidate: candidate.score.motion_score, reverse=True)
     hot_candidates = hot_candidates[: settings.hot_cap]
@@ -585,6 +695,8 @@ def main() -> int:
     shadow_records: list[dict] = []
     for candidate in candidates:
         effective_route = candidate.motion_class
+        if not candidate.spend_eligible:
+            effective_route = "NO_SPEND"
         if candidate.motion_class == "HOT" and _lower(candidate.row.get("linkedin_quality")) not in {"weak", "missing"}:
             effective_route = "POSSIBLE_LINKEDIN_UNVERIFIED"
         if candidate.motion_class == "HOT" and settings.shadow_mode:
@@ -597,6 +709,9 @@ def main() -> int:
             "motion_score": candidate.score.motion_score,
             "buying_intensity_score": candidate.score.buying_intensity,
             "trigger": candidate.score.trigger,
+            "spend_eligible": candidate.spend_eligible,
+            "spend_triggers": list(candidate.spend_triggers),
+            "message_angle": candidate.message_angle,
             "linkedin_quality": candidate.row.get("linkedin_quality", ""),
             "effective_route": effective_route,
             "reasons": list(candidate.score.reasons),
@@ -615,9 +730,28 @@ def main() -> int:
             "motion_score": candidate.score.motion_score,
             "buying_intensity_score": candidate.score.buying_intensity,
             "trigger": candidate.score.trigger,
+            "spend_eligible": candidate.spend_eligible,
+            "spend_triggers": list(candidate.spend_triggers),
+            "message_angle": candidate.message_angle,
             "reasons": list(candidate.score.reasons),
         }
         for candidate in no_candidates
+    ] + [
+        {
+            "timestamp": now,
+            "company": candidate.row.get("company", ""),
+            "website": candidate.row.get("website", ""),
+            "motion_class": candidate.motion_class,
+            "motion_score": candidate.score.motion_score,
+            "buying_intensity_score": candidate.score.buying_intensity,
+            "trigger": candidate.score.trigger,
+            "spend_eligible": False,
+            "spend_triggers": list(candidate.spend_triggers),
+            "message_angle": candidate.message_angle,
+            "reasons": list(candidate.score.reasons),
+            "discard_reason": "no_spend_trigger",
+        }
+        for candidate in no_spend_candidates
     ]
     _append_jsonl(args.discard_log, discard_records, replace=args.replace)
 
@@ -626,10 +760,12 @@ def main() -> int:
         {
             "source_rows": len(source_rows),
             "evaluated_rows": len(candidates),
+            "spend_eligible": len(spend_eligible_candidates),
+            "no_spend": len(no_spend_candidates),
             "hot_total": len(hot_candidates),
             "hot_routed": hot_written,
             "possible_sampled": len(sampled_possible),
-            "discarded": len(no_candidates),
+            "discarded": len(no_candidates) + len(no_spend_candidates),
             "shadow_mode": settings.shadow_mode,
             "possible_output": str(args.output),
             "hot_output": str(args.hot_output),
