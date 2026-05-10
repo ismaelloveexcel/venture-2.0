@@ -12,6 +12,33 @@ from typing import Dict, List, Tuple
 _PLACEHOLDER_HINTS = ("...", "your", "example", "secret_")
 
 
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name, "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "y", "on"}
+
+
 def _is_effective_secret(value: str) -> bool:
     v = (value or "").strip()
     if not v:
@@ -49,6 +76,11 @@ class RuntimeConfig:
     reply_intent_enabled: bool
     reply_intent_min_prob: float
     reply_intent_volume_threshold: int
+    motion_hot_threshold: int
+    motion_possible_threshold: int
+    motion_hot_cap: int
+    motion_possible_sample_size: int
+    motion_shadow_mode: bool
 
     @classmethod
     def from_env(cls) -> "RuntimeConfig":
@@ -73,18 +105,17 @@ class RuntimeConfig:
                 "RESEND_FROM_NAME", "Ismael Sudally"
             ).strip(),
             digest_to_email=os.environ.get("DIGEST_TO_EMAIL", "").strip(),
-            auto_send_emails=os.environ.get("AUTO_SEND_EMAILS", "false").lower()
-            == "true",
-            followup_days=int(os.environ.get("FOLLOWUP_DAYS", "4")),
-            revenue_target=int(os.environ.get("REVENUE_TARGET", "10000")),
-            reply_intent_enabled=os.environ.get("REPLY_INTENT_ENABLED", "false").lower()
-            == "true",
-            reply_intent_min_prob=float(
-                os.environ.get("REPLY_INTENT_MIN_PROB", "0.12")
-            ),
-            reply_intent_volume_threshold=int(
-                os.environ.get("REPLY_INTENT_VOLUME_THRESHOLD", "12")
-            ),
+            auto_send_emails=_env_bool("AUTO_SEND_EMAILS", False),
+            followup_days=_env_int("FOLLOWUP_DAYS", 4),
+            revenue_target=_env_int("REVENUE_TARGET", 10000),
+            reply_intent_enabled=_env_bool("REPLY_INTENT_ENABLED", False),
+            reply_intent_min_prob=_env_float("REPLY_INTENT_MIN_PROB", 0.12),
+            reply_intent_volume_threshold=_env_int("REPLY_INTENT_VOLUME_THRESHOLD", 12),
+            motion_hot_threshold=_env_int("MOTION_HOT_THRESHOLD", 7),
+            motion_possible_threshold=_env_int("MOTION_POSSIBLE_THRESHOLD", 5),
+            motion_hot_cap=_env_int("MOTION_HOT_CAP", 25),
+            motion_possible_sample_size=_env_int("MOTION_POSSIBLE_SAMPLE_SIZE", 10),
+            motion_shadow_mode=_env_bool("MOTION_SHADOW_MODE", True),
         )
 
 

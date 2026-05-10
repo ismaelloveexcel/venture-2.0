@@ -73,6 +73,34 @@ Primary pressure types:
 
 Avoid idea-stage companies with no team, no traction, or no visible growth pressure.
 
+## Decision System v1 (Shadow Mode)
+
+Decision semantics are now motion-class based.
+
+- `MOTION_CLASS=HOT`: strong commercial motion signal
+- `MOTION_CLASS=POSSIBLE`: uncertain but testable motion signal
+- `MOTION_CLASS=NO`: low/no motion signal
+
+Implementation rules:
+
+- Motion class is derived by `credibility_candidate_generator.py` and stored in `notes` only.
+- Existing schema remains unchanged.
+- `fit_score` is diagnostic only; it is not the routing authority.
+- LinkedIn remains a binary fit gate before send (`weak` or `missing`).
+
+Decision authority hierarchy:
+
+1. Generator produces motion metadata and lane candidates.
+2. Pre-send gate remains the only execution authority for outbound sends.
+3. Runtime config controls thresholds and caps.
+4. Notes store explainability (`motion_class`, `motion_score`, motion reasons, urgency proxy).
+
+Shadow mode behavior:
+
+- HOT decisions are logged to shadow output but not routed to send execution.
+- POSSIBLE decisions are sampled into the test lane.
+- NO decisions are logged for false-negative analysis.
+
 ## Pre-Send Decision Table
 
 Use [credibility-launch-leads.csv](credibility-launch-leads.csv) as the only review table.

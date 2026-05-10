@@ -19,6 +19,16 @@ motion signal detection -> revenue model classification -> distribution gap scor
 
 Do not use LinkedIn as a discovery source. Use LinkedIn only as the final binary verification gate.
 
+## Decision Semantics v1
+
+Operational routing uses motion class, not fit score:
+
+- `HOT` -> send candidate lane (subject to LinkedIn weak/missing + safety gate)
+- `POSSIBLE` -> test lane
+- `NO` -> discard/log only
+
+`fit_score` remains in schema as a diagnostic field for backward compatibility and analytics.
+
 ## Buying Intensity Score (0-11)
 
 Compute internally before LinkedIn verification:
@@ -39,6 +49,14 @@ Map to handling:
 | 5-6 | Signal Lab |
 | 7-9 | Send Pool candidate |
 | 10-11 | Priority send candidate |
+
+Convert to an integer motion score for routing:
+
+$$
+motion\_score \in [0,10]
+$$
+
+The generator derives `motion_class` from configured thresholds and stores both in `notes`.
 
 ## Send-Ready Rule
 
