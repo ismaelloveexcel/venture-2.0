@@ -16,6 +16,7 @@ class QualificationResult:
 
 def evaluate_qualification(
     evidence_confidence: float,
+    min_evidence_confidence: float,
     has_direct_contact: bool,
     estimated_value: float,
     min_viable_deal: float,
@@ -25,14 +26,20 @@ def evaluate_qualification(
     capacity_available: bool,
 ) -> QualificationResult:
     reasons: List[str] = []
-    if evidence_confidence < 0.7:
-        reasons.append(f"evidence_confidence_below_threshold:{evidence_confidence:.2f}")
+    if evidence_confidence < min_evidence_confidence:
+        reasons.append(
+            f"evidence_confidence_below_threshold:{evidence_confidence:.2f}<{min_evidence_confidence:.2f}"
+        )
     if not has_direct_contact:
         reasons.append("missing_direct_contact")
     if estimated_value < min_viable_deal:
-        reasons.append(f"estimated_value_below_min:{estimated_value:.2f}<{min_viable_deal:.2f}")
+        reasons.append(
+            f"estimated_value_below_min:{estimated_value:.2f}<{min_viable_deal:.2f}"
+        )
     if implementation_days > max_delivery_days:
-        reasons.append(f"implementation_too_slow:{implementation_days}>{max_delivery_days}")
+        reasons.append(
+            f"implementation_too_slow:{implementation_days}>{max_delivery_days}"
+        )
     if has_compliance_risk:
         reasons.append("compliance_risk_detected")
     if not capacity_available:

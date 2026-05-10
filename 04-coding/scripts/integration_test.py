@@ -3,14 +3,31 @@
 Comprehensive Integration Test — Verify all three resilience modules work correctly
 """
 import sys
+import os
+import json
 import pathlib
 import sqlite3
+import shutil
+import tempfile
+from datetime import datetime, timedelta
 
+_SCRIPTS = pathlib.Path(__file__).parent
+sys.path.insert(0, str(_SCRIPTS))
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "venture-mcp-server"))
 
 from resilience import RateLimiter, with_retry
 from job_queue import get_queue, JobAction, JobStatus
-from lifecycle_engine import LifecycleEventType, replay_outreach_state, replay_outreach_state_from_rows
+from lifecycle_engine import (
+    LifecycleEventType,
+    LifecycleSnapshot,
+    replay_outreach_state,
+    replay_outreach_state_from_rows,
+)
+from compliance_policy import (
+    reset_compliance_cooldown_policy_for_run,
+    evaluate_compliance_cooldown_for_run,
+    get_compliance_cooldown_days_for_send,
+)
 from lifecycle_validation import LifecycleEventValidationError
 from logging_config import setup_logging
 import time
@@ -210,8 +227,178 @@ else:
     logger.error(f"  [FAIL] Snapshot mismatch full={full_s} snap_replay={snap_s}")
     failed_assertions += 1
 
-# Test 6: Logging
-logger.info("\n[TEST 6] Logging to File")
+# Test 5b: Outbound behavioral gate + follow-up eligibility (SQLite)
+logger.info("\n[TEST 5b] Outbound gate + follow-up SQL")
+pid = "gate_test_prospect"
+ck = "outreach_initial"
+old_ts = (datetime.now() - timedelta(days=30)).isoformat()
+with sqlite3.connect(str(test_db)) as _c:
+    _c.execute(
+        """INSERT OR IGNORE INTO outbound_events
+        (prospect_id, campaign_key, recipient_email, message_hash, status, provider_id, created_at, send_type)
+        VALUES (?, ?, ?, ?, 'sent', '', ?, 'initial')""",
+        [pid, ck, "gate@test.co", "h1", old_ts],
+    )
+    _c.commit()
+ok1, _ = queue.gate_outbound_send(pid, ck, "gate@test.co", send_type="initial", cooldown_days=0)
+if not ok1:
+    logger.info("  [PASS] Duplicate initial send blocked")
+else:
+    logger.error("  [FAIL] Expected duplicate initial blocked")
+    failed_assertions += 1
+ok_follow, _ = queue.gate_outbound_send(pid, ck, "gate@test.co", send_type="followup", cooldown_days=0)
+if ok_follow:
+    logger.info("  [PASS] Follow-up send_type allowed when initial exists")
+else:
+    logger.error(f"  [FAIL] Follow-up should be allowed: {ok_follow!r}")
+    failed_assertions += 1
+eligible = queue.list_followup_eligible_rows(7)
+if any(r.get("prospect_id") == pid for r in eligible):
+    logger.info("  [PASS] list_followup_eligible_rows includes stale initial with no reply")
+else:
+    logger.error("  [FAIL] Expected prospect in follow-up eligible list")
+    failed_assertions += 1
+
+# Test 5c: Live compliance cooldown fail-closed (malformed config file)
+logger.info("\n[TEST 5c] Compliance policy fail-closed (live)")
+_tmpd = tempfile.mkdtemp()
+try:
+    bad_cfg = pathlib.Path(_tmpd) / "compliance.json"
+    bad_cfg.write_text("{not-json", encoding="utf-8")
+    reset_compliance_cooldown_policy_for_run()
+    evaluate_compliance_cooldown_for_run(dry_run=False, config_path=bad_cfg)
+    _d, _br = get_compliance_cooldown_days_for_send(dry_run=False)
+    if _br and "compliance_policy_block" in _br:
+        logger.info("  [PASS] Malformed compliance config blocks live policy")
+    else:
+        logger.error(f"  [FAIL] Expected policy block, got days={_d} reason={_br!r}")
+        failed_assertions += 1
+finally:
+    shutil.rmtree(_tmpd, ignore_errors=True)
+
+# Test 5d: Send gate policy_block_reason (defense in depth)
+logger.info("\n[TEST 5d] gate_outbound_send policy_block_reason")
+_can, _msg = queue.gate_outbound_send(
+    "p", "c", "e@example.com",
+    send_type="initial",
+    cooldown_days=0,
+    policy_block_reason="compliance_policy_block:unittest",
+)
+if (not _can) and "compliance_policy_block" in _msg:
+    logger.info("  [PASS] policy_block_reason short-circuits gate")
+else:
+    logger.error(f"  [FAIL] Expected gate block, got can_send={_can} msg={_msg!r}")
+    failed_assertions += 1
+
+# Test 5e: Stale snapshot engine version ignored (replay == full)
+logger.info("\n[TEST 5e] Snapshot engine version mismatch ignored")
+_ev_rows = [(1, "replied", "{}")]
+_full, _ = replay_outreach_state_from_rows(_ev_rows, None)
+_stale_snap = LifecycleSnapshot(0, "COLD", 0, 0.1, "0.0.0-stale-engine")
+_tail, _ = replay_outreach_state_from_rows(_ev_rows, _stale_snap)
+if _full == _tail:
+    logger.info("  [PASS] Stale snapshot version falls back to full replay")
+else:
+    logger.error(f"  [FAIL] Stale snapshot replay mismatch full={_full!r} tail={_tail!r}")
+    failed_assertions += 1
+
+# Test 6: Policy gatekeeper + cooldown multiplier (VENTURE_POLICY_JSON; no Resend)
+logger.info("\n[TEST 6] Policy gatekeeper + apply_policy_cooldown_multiplier")
+_tmp_policy_dir = tempfile.mkdtemp()
+_tmp_policy = pathlib.Path(_tmp_policy_dir) / "policy.json"
+_prev_policy_env = os.environ.get("VENTURE_POLICY_JSON")
+try:
+    _tmp_policy.write_text(
+        json.dumps(
+            {
+                "mode": "SAFE_MODE",
+                "send_velocity": "paused",
+                "followup_depth": 0,
+                "cooldown_multiplier": 2.0,
+                "reason": "integration_test",
+                "decided_at": "",
+                "replay_enabled": False,
+                "manual_reset_required": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    os.environ["VENTURE_POLICY_JSON"] = str(_tmp_policy)
+    import venture_pipeline as vp_test
+
+    # Gatekeeper runs before Resend credential check — no HTTP when policy blocks.
+    blocked = vp_test.send_email(
+        "nobody@example.com",
+        "Test",
+        "Subject",
+        "<p>body</p>",
+        prospect_id="int_policy_gate",
+    )
+    if blocked is False:
+        logger.info("  [PASS] send_email returns False under SAFE_MODE (no Resend HTTP)")
+    else:
+        logger.error("  [FAIL] Expected send_email False when policy blocks")
+        failed_assertions += 1
+
+    ok_gk, reason_gk = vp_test.check_policy_gatekeeper()
+    if (not ok_gk) and "SAFE_MODE" in reason_gk:
+        logger.info("  [PASS] check_policy_gatekeeper blocks in SAFE_MODE")
+    else:
+        logger.error(f"  [FAIL] Expected SAFE_MODE block, got ok={ok_gk} reason={reason_gk!r}")
+        failed_assertions += 1
+
+    _tmp_policy.write_text(
+        json.dumps(
+            {
+                "mode": "NORMAL",
+                "send_velocity": "normal",
+                "followup_depth": 2,
+                "cooldown_multiplier": 2.0,
+                "reason": "integration_test",
+                "decided_at": "",
+                "replay_enabled": True,
+                "manual_reset_required": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    m_cd = vp_test.apply_policy_cooldown_multiplier(10, send_type="initial")
+    if m_cd == 20:
+        logger.info("  [PASS] cooldown_multiplier 2.0: 10 days becomes 20")
+    else:
+        logger.error(f"  [FAIL] Expected 20 cooldown days, got {m_cd}")
+        failed_assertions += 1
+
+    _tmp_policy.write_text(
+        json.dumps(
+            {
+                "mode": "NORMAL",
+                "send_velocity": "slow",
+                "followup_depth": 2,
+                "cooldown_multiplier": 2.0,
+                "reason": "integration_test",
+                "decided_at": "",
+                "replay_enabled": True,
+                "manual_reset_required": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    m_slow = vp_test.apply_policy_cooldown_multiplier(10, send_type="initial")
+    if m_slow == 25:
+        logger.info("  [PASS] send_velocity slow stacks on multiplier (10 * 2 * 1.25 = 25)")
+    else:
+        logger.error(f"  [FAIL] Expected 25 cooldown days for slow+2x, got {m_slow}")
+        failed_assertions += 1
+finally:
+    if _prev_policy_env is not None:
+        os.environ["VENTURE_POLICY_JSON"] = _prev_policy_env
+    else:
+        os.environ.pop("VENTURE_POLICY_JSON", None)
+    shutil.rmtree(_tmp_policy_dir, ignore_errors=True)
+
+# Test 7: Logging
+logger.info("\n[TEST 7] Logging to File")
 logger.debug("This is a DEBUG message")
 logger.info("This is an INFO message")
 logger.warning("This is a WARNING message")

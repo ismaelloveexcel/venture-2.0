@@ -47,6 +47,7 @@ class LifecycleSnapshot:
     outreach_state: str
     opened_count: int
     evidence_score: float
+    state_engine_version: str = STATE_ENGINE_VERSION
 
 
 def _parse_payload(raw: str) -> Dict[str, Any]:
@@ -109,6 +110,13 @@ def replay_outreach_state(events: List[Tuple[str, str]]) -> str:
     return state
 
 
+def _snapshot_usable(snapshot: Optional[LifecycleSnapshot]) -> bool:
+    if snapshot is None:
+        return False
+    ver = getattr(snapshot, "state_engine_version", None) or STATE_ENGINE_VERSION
+    return ver == STATE_ENGINE_VERSION
+
+
 def replay_outreach_state_from_rows(
     rows: List[Tuple[int, str, str]],
     snapshot: Optional[LifecycleSnapshot] = None,
@@ -117,7 +125,7 @@ def replay_outreach_state_from_rows(
     rows: (id, event_type, payload_json) ascending id.
     When snapshot is set, starts from snapshot fields and only applies tail rows.
     """
-    if not snapshot:
+    if not _snapshot_usable(snapshot):
         tail = [(t, p) for _, t, p in rows]
         return replay_outreach_state_fold(tail)
     tail = [(t, p) for eid, t, p in rows if eid > snapshot.after_event_id]
@@ -146,6 +154,8 @@ def extract_evidence_score_from_rows(
     rows: List[Tuple[int, str, str]],
     snapshot: Optional[LifecycleSnapshot] = None,
 ) -> float:
+    if not _snapshot_usable(snapshot):
+        snapshot = None
     last = snapshot.evidence_score if snapshot else 0.0
     cutoff = snapshot.after_event_id if snapshot else 0
     for eid, event_type, payload_raw in rows:

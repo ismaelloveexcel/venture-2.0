@@ -1,2 +1,6 @@
-name,company,role,industry,pain_point,linkedin_url,email,domain,status
-Jane Smith,Bright Smiles Dental,Owner,Dental,Losing patients who don't rebook,https://linkedin.com/in/janesmith,,brightsmilesdental.com,pending
+company_name,domain,name,email,role,industry,pain_signal,readiness_status,validation_reason
+Digital Growth Agency,digitalgrowth.io,Sarah Chen,sarah@digitalgrowth.io,Founder,agency,hiring_for_sales,READY,complete_profile
+RevOps Coaching,revenueops.coach,Mike Torres,mike@revenueops.coach,Head of Growth,coaching,scaling_outbound,READY,complete_profile
+SaaS Analytics Pro,saasanalytics.com,James Liu,,CEO,saas,low_reply_rate,REVIEW,missing_email_strong_domain
+Marketing Forge,marketing-forge.com,Lisa Wong,lisa@marketing-forge.com,Director of Sales,agency,leads_declining,READY,complete_profile
+Sales Acceleration Corp,salesacc.io,David Park,david@salesacc.io,CEO,consulting,competitor_pressure,READY,complete_profile

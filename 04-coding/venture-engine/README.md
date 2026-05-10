@@ -23,7 +23,7 @@ These contracts are intended to be enforced by runtime services, not treated as 
 
 ## Runtime data (SQLite, not in this folder)
 
-The live pipeline persists operational metrics in **`04-coding/scripts/venture_jobs.db`** (gitignored). Relevant artifacts:
+The live pipeline persists operational metrics in **`venture_jobs.db` at the repository root** (gitignored). Relevant artifacts:
 
 | Artifact | Table / column | Notes |
 |----------|----------------|--------|

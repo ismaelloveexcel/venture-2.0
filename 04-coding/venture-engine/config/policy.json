@@ -1,0 +1,10 @@
+{
+  "decided_at": "2026-05-10T05:16:17.359843+00:00Z",
+  "mode": "CONSERVATIVE",
+  "reason": "CAUTION: dlq=0, failure_rate=0.0%, reply_rate=0.0%",
+  "followup_depth": 1,
+  "cooldown_multiplier": 1.2,
+  "send_velocity": "normal",
+  "replay_enabled": true,
+  "manual_reset_required": false
+}

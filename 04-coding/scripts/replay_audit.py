@@ -10,6 +10,7 @@ import json
 import pathlib
 import sqlite3
 import sys
+from typing import Any, Dict, List
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent.parent / "venture-mcp-server"))
 

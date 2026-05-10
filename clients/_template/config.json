@@ -1,0 +1,21 @@
+{
+  "client_name": "Template Client",
+  "offer": "Core System",
+  "status": "draft",
+  "icp": {
+    "vertical": "B2B services",
+    "employee_range": "2-30",
+    "average_deal_size_min_usd": 2000,
+    "geographies": ["UK", "US", "Canada", "Australia"]
+  },
+  "commercials": {
+    "setup_fee_usd": 5500,
+    "monthly_retainer_usd": 1350,
+    "minimum_months": 3
+  },
+  "support": {
+    "included_days": 90,
+    "request_cap": 6,
+    "scope": "Bug fixes only; new campaigns, integrations, and strategy changes are paid."
+  }
+}

@@ -1,0 +1,6 @@
+company_name,domain,name,email,role,industry,pain_signal,linkedin_url,readiness_status,reason
+Northstar Digital,northstardigital.example,Amelia Grant,amelia@northstardigital.example,Founder,Marketing Agency,referral_dependency,https://linkedin.com/in/demo-amelia,READY,clear_b2b_service_fit
+BrightOps Studio,brightops.example,Daniel Reed,daniel@brightops.example,Managing Director,Web Design Agency,inconsistent_pipeline,https://linkedin.com/in/demo-daniel,READY,clear_b2b_service_fit
+ScaleWorks MSP,scaleworks.example,Priya Shah,priya@scaleworks.example,Owner,Managed IT Services,referral_dependency,https://linkedin.com/in/demo-priya,READY,clear_b2b_service_fit
+TalentBridge Search,talentbridge.example,Marcus Hill,marcus@talentbridge.example,Director,Recruitment Agency,client_acquisition,https://linkedin.com/in/demo-marcus,READY,clear_b2b_service_fit
+Conversion Foundry,conversionfoundry.example,Sophie Lane,sophie@conversionfoundry.example,Head of Growth,Performance Agency,low_reply_rate,https://linkedin.com/in/demo-sophie,READY,clear_b2b_service_fit

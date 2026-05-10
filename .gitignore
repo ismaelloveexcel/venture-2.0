@@ -9,3 +9,9 @@ Thumbs.db
 *.log
 # SQLite (local job queue, integration-test DBs); schema lives in venture-engine/db/*.sql
 *.db
+
+# Runtime state and generated operational artifacts
+execution_state.json
+logs/*.json
+04-coding/venture-engine/config/system_state.json
+06-sales/archive/generated-outreach-killed-*.csv

@@ -8,6 +8,7 @@ Tracks all operations (email lookups, Notion syncs, etc.) with:
 - Resume interrupted pipelines without data loss
 """
 
+import contextlib
 import sqlite3
 import json
 import logging
@@ -118,9 +119,39 @@ class JobQueue:
         self.db_path = Path(db_path)
         self._init_db()
     
+    @staticmethod
+    def _configure_connection(conn: sqlite3.Connection) -> None:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+
+    def _connect(self) -> sqlite3.Connection:
+        """Open SQLite with WAL, NORMAL sync, and busy_timeout on every connection."""
+        conn = sqlite3.connect(self.db_path)
+        self._configure_connection(conn)
+        return conn
+
+    @contextlib.contextmanager
+    def transaction(self):
+        """
+        One configured connection with BEGIN IMMEDIATE, commit on success, rollback on error.
+        Use for atomic multi-statement updates (lifecycle + projections). Do not call
+        sqlite3.connect(self.db_path) directly for transactional work.
+        """
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
     def _init_db(self) -> None:
         """Create tables if they don't exist."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS jobs (
                     id TEXT PRIMARY KEY,
@@ -159,10 +190,6 @@ class JobQueue:
                 )
             """)
             conn.execute("""
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_outbound_dedupe
-                ON outbound_events(prospect_id, campaign_key, message_hash)
-            """)
-            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_outbound_email
                 ON outbound_events(recipient_email, created_at)
             """)
@@ -186,6 +213,10 @@ class JobQueue:
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_funnel_stage_time
                 ON funnel_events(stage, created_at)
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_funnel_prospect_stage_time
+                ON funnel_events(prospect_id, stage, created_at)
             """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS prospect_state (
@@ -298,6 +329,7 @@ class JobQueue:
                     outreach_state TEXT NOT NULL,
                     opened_count INTEGER NOT NULL DEFAULT 0,
                     evidence_score REAL NOT NULL DEFAULT 0.0,
+                    state_engine_version TEXT NOT NULL DEFAULT '1.0.0',
                     updated_at TEXT NOT NULL
                 )
             """)
@@ -331,11 +363,28 @@ class JobQueue:
                     payload_json TEXT NOT NULL DEFAULT '{}'
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS webhook_dlq (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source TEXT NOT NULL DEFAULT 'resend',
+                    payload TEXT NOT NULL DEFAULT '',
+                    error TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL
+                )
+            """)
             self._ensure_column(conn, "prospect_state", "trust_score", "REAL NOT NULL DEFAULT 0.0")
             self._ensure_column(conn, "prospect_state", "outreach_state", "TEXT NOT NULL DEFAULT 'COLD'")
             self._ensure_column(conn, "block_logs", "block_type", "TEXT NOT NULL DEFAULT 'GENERAL_BLOCK'")
             self._ensure_column(conn, "block_logs", "severity", "TEXT NOT NULL DEFAULT 'SOFT'")
             self._ensure_column(conn, "opportunities", "state_engine_version", "TEXT NOT NULL DEFAULT '1.0.0'")
+            self._ensure_column(
+                conn, "lifecycle_snapshots", "state_engine_version", "TEXT NOT NULL DEFAULT '1.0.0'"
+            )
+            self._migrate_outbound_behavior_constraint(conn)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_outbound_initial_sent_time
+                ON outbound_events(send_type, status, created_at)
+            """)
             conn.commit()
 
     @staticmethod
@@ -349,6 +398,75 @@ class JobQueue:
             return
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
+    def _migrate_outbound_behavior_constraint(self, conn: sqlite3.Connection) -> None:
+        """
+        One logical send per (prospect_id, campaign_key, send_type).
+        Replaces message_hash-based dedupe for behavioral idempotency.
+        """
+        self._ensure_column(conn, "outbound_events", "send_type", "TEXT NOT NULL DEFAULT 'initial'")
+        conn.execute("DROP INDEX IF EXISTS idx_outbound_dedupe")
+        conn.execute("""
+            DELETE FROM outbound_events WHERE id NOT IN (
+                SELECT MIN(id) FROM outbound_events GROUP BY prospect_id, campaign_key, send_type
+            )
+        """)
+        conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_outbound_behavior
+            ON outbound_events(prospect_id, campaign_key, send_type)
+        """)
+
+    def record_webhook_dlq(self, source: str, payload: str, error: str) -> None:
+        ts = datetime.now().isoformat()
+        with self._connect() as conn:
+            conn.execute("""
+                INSERT INTO webhook_dlq (source, payload, error, created_at)
+                VALUES (?, ?, ?, ?)
+            """, [source, payload, error, ts])
+            conn.commit()
+
+    def count_webhook_dlq(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute("SELECT COUNT(*) FROM webhook_dlq").fetchone()
+        return int(row[0] if row else 0)
+
+    def list_webhook_dlq(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        ids: Optional[List[int]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Oldest-first for fair replay. When ids is set, limit/offset are ignored."""
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            if ids:
+                qs = ",".join("?" * len(ids))
+                rows = conn.execute(
+                    f"""SELECT id, source, payload, error, created_at FROM webhook_dlq
+                        WHERE id IN ({qs}) ORDER BY id ASC""",
+                    [int(i) for i in ids],
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """SELECT id, source, payload, error, created_at FROM webhook_dlq
+                       ORDER BY id ASC LIMIT ? OFFSET ?""",
+                    [max(1, int(limit)), max(0, int(offset))],
+                ).fetchall()
+        return [dict(r) for r in rows]
+
+    def delete_webhook_dlq(self, dlq_id: int) -> bool:
+        """Remove one DLQ row after successful replay."""
+        with self._connect() as conn:
+            cur = conn.execute("DELETE FROM webhook_dlq WHERE id = ?", [int(dlq_id)])
+            conn.commit()
+            return cur.rowcount > 0
+
+    def last_outbound_sent_at(self) -> Optional[str]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT MAX(created_at) FROM outbound_events WHERE status = 'sent'"
+            ).fetchone()
+        return str(row[0]) if row and row[0] else None
+
     @staticmethod
     def opportunity_id_for(business_id: str) -> str:
         return f"opp:{(business_id or '').strip()}"
@@ -358,7 +476,7 @@ class JobQueue:
         em = (email or "").strip()
         if not em:
             return ""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             row = conn.execute("""
                 SELECT prospect_id FROM prospect_state
                 WHERE lower(email) = lower(?)
@@ -378,16 +496,21 @@ class JobQueue:
 
     def _get_lifecycle_snapshot(self, conn: sqlite3.Connection, opp_id: str) -> Optional[LifecycleSnapshot]:
         row = conn.execute("""
-            SELECT after_event_id, outreach_state, opened_count, evidence_score
+            SELECT after_event_id, outreach_state, opened_count, evidence_score,
+                   COALESCE(state_engine_version, '1.0.0')
             FROM lifecycle_snapshots WHERE opportunity_id = ?
         """, [opp_id]).fetchone()
         if not row:
+            return None
+        ver = str(row[4])
+        if ver != STATE_ENGINE_VERSION:
             return None
         return LifecycleSnapshot(
             after_event_id=int(row[0]),
             outreach_state=str(row[1]),
             opened_count=int(row[2]),
             evidence_score=float(row[3]),
+            state_engine_version=ver,
         )
 
     def _save_lifecycle_snapshot(
@@ -402,15 +525,39 @@ class JobQueue:
         ts = datetime.now().isoformat()
         conn.execute("""
             INSERT INTO lifecycle_snapshots (
-                opportunity_id, after_event_id, outreach_state, opened_count, evidence_score, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                opportunity_id, after_event_id, outreach_state, opened_count, evidence_score,
+                state_engine_version, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(opportunity_id) DO UPDATE SET
                 after_event_id = excluded.after_event_id,
                 outreach_state = excluded.outreach_state,
                 opened_count = excluded.opened_count,
                 evidence_score = excluded.evidence_score,
+                state_engine_version = excluded.state_engine_version,
                 updated_at = excluded.updated_at
-        """, [opp_id, after_event_id, outreach_state, opened_count, evidence_score, ts])
+        """, [opp_id, after_event_id, outreach_state, opened_count, evidence_score, STATE_ENGINE_VERSION, ts])
+
+    def get_trust_score_in_conn(self, conn: sqlite3.Connection, business_id: str, half_life_days: float = 21.0) -> float:
+        bid = (business_id or "").strip()
+        if not bid:
+            return 0.0
+        rows = conn.execute(
+            "SELECT trust_delta, created_at FROM trust_events WHERE business_id = ?",
+            [bid],
+        ).fetchall()
+        if not rows:
+            return 0.0
+        now = datetime.now()
+        score = 0.0
+        for trust_delta, created_at in rows:
+            try:
+                event_time = datetime.fromisoformat(created_at)
+            except Exception:
+                event_time = now
+            age_days = max((now - event_time).total_seconds() / 86400.0, 0.0)
+            decay = math.exp(-math.log(2) * age_days / max(half_life_days, 0.1))
+            score += float(trust_delta) * decay
+        return score
 
     def record_lifecycle_event(
         self,
@@ -457,7 +604,18 @@ class JobQueue:
         }
 
         prev_stage, prev_name, prev_company, prev_email, prev_reason = ("", "", "", "", "")
-        with sqlite3.connect(self.db_path) as conn:
+        outreach_state = "COLD"
+        opened_count = 0
+        evidence_score = 0.0
+        block_hint = ""
+        trust_cached = 0.0
+        eff_name = ""
+        eff_company = ""
+        eff_email = ""
+        eff_stage = ""
+        eff_reason = ""
+
+        with self.transaction() as conn:
             prev_row = conn.execute("""
                 SELECT pipeline_stage, name, company, email, status_reason
                 FROM opportunities WHERE business_id = ?
@@ -513,16 +671,13 @@ class JobQueue:
                     evidence_score,
                 )
 
-            conn.commit()
+            trust_cached = self.get_trust_score_in_conn(conn, bid)
+            eff_name = name or prev_name
+            eff_company = company or prev_company
+            eff_email = email or prev_email
+            eff_stage = pipeline_stage or prev_stage
+            eff_reason = status_reason or block_hint or prev_reason
 
-        trust_cached = self.get_trust_score(bid)
-        eff_name = name or prev_name
-        eff_company = company or prev_company
-        eff_email = email or prev_email
-        eff_stage = pipeline_stage or prev_stage
-        eff_reason = status_reason or block_hint or prev_reason
-
-        with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
                 INSERT INTO opportunities (
                     id, business_id, outreach_state, evidence_score, pipeline_stage,
@@ -554,24 +709,52 @@ class JobQueue:
                 STATE_ENGINE_VERSION,
                 now,
             ])
-            conn.commit()
 
-        self.upsert_prospect_state(
-            prospect_id=bid,
-            stage=eff_stage or "lifecycle",
-            name=eff_name,
-            company=eff_company,
-            email=eff_email,
-            status_reason=eff_reason,
-            trust_score=trust_cached,
-            outreach_state=outreach_state,
-        )
+            conn.execute("""
+                INSERT INTO prospect_state (prospect_id, name, company, email, stage, status_reason, trust_score, outreach_state, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(prospect_id) DO UPDATE SET
+                    name = excluded.name,
+                    company = excluded.company,
+                    email = excluded.email,
+                    stage = excluded.stage,
+                    status_reason = excluded.status_reason,
+                    trust_score = excluded.trust_score,
+                    outreach_state = excluded.outreach_state,
+                    updated_at = excluded.updated_at
+            """, [
+                bid,
+                eff_name,
+                eff_company,
+                eff_email,
+                eff_stage or "lifecycle",
+                eff_reason,
+                trust_cached,
+                outreach_state,
+                now,
+            ])
 
-        if sync_funnel and event_type in funnel_map:
-            self.record_funnel_event(bid, funnel_map[event_type], {"source": source, **norm})
+            if sync_funnel and event_type in funnel_map:
+                conn.execute("""
+                    INSERT INTO funnel_events (prospect_id, stage, metadata, created_at)
+                    VALUES (?, ?, ?, ?)
+                """, [
+                    bid,
+                    funnel_map[event_type],
+                    json.dumps({"source": source, **norm}),
+                    now,
+                ])
 
-        if event_type == LifecycleEventType.REPLIED:
-            self.resolve_reply_intent_on_replied(bid)
+            if event_type == LifecycleEventType.REPLIED:
+                conn.execute("""
+                    UPDATE reply_intent_training_data
+                    SET actual_outcome = 'replied', resolved_at = ?
+                    WHERE id = (
+                        SELECT id FROM reply_intent_training_data
+                        WHERE business_id = ? AND actual_outcome = 'pending'
+                        ORDER BY id DESC LIMIT 1
+                    )
+                """, [now, bid])
 
         return {
             "opportunity_id": opp_id,
@@ -585,7 +768,7 @@ class JobQueue:
 
     def get_lifecycle_events(self, business_id: str, limit: int = 500) -> List[Dict[str, Any]]:
         opp_id = self.opportunity_id_for(business_id)
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("""
                 SELECT id, event_type, payload, source, created_at
@@ -609,7 +792,7 @@ class JobQueue:
         bid = (business_id or "").strip()
         if not bid:
             return None
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute("""
                 SELECT * FROM opportunities WHERE business_id = ?
@@ -642,14 +825,14 @@ class JobQueue:
         if not bid:
             return {}
         opp_id = self.opportunity_id_for(bid)
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             rows = self._fetch_lifecycle_rows(conn, opp_id)
             snap = self._get_lifecycle_snapshot(conn, opp_id)
         outreach_state, _ = replay_outreach_state_from_rows(rows, snap)
         evidence_score = extract_evidence_score_from_rows(rows, snap)
         trust_cached = self.get_trust_score(bid)
         now = datetime.now().isoformat()
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             row = conn.execute(
                 "SELECT name, company, email, status_reason, pipeline_stage FROM opportunities WHERE business_id = ?",
                 [bid],
@@ -692,7 +875,7 @@ class JobQueue:
     def is_suppressed(self, email: str) -> bool:
         if not email:
             return True
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             row = conn.execute(
                 "SELECT email FROM suppression_list WHERE lower(email) = lower(?)",
                 [email.strip()]
@@ -702,26 +885,77 @@ class JobQueue:
     def suppress_email(self, email: str, reason: str, source: str = "manual") -> None:
         if not email:
             return
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT OR REPLACE INTO suppression_list (email, reason, source, created_at)
                 VALUES (?, ?, ?, ?)
             """, [email.strip(), reason.strip() or "unspecified", source, datetime.now().isoformat()])
             conn.commit()
 
-    def can_send_outbound(self, prospect_id: str, campaign_key: str, recipient_email: str, subject: str, html_body: str) -> tuple[bool, str]:
-        if self.is_suppressed(recipient_email):
+    def gate_outbound_send(
+        self,
+        prospect_id: str,
+        campaign_key: str,
+        recipient_email: str,
+        *,
+        send_type: str = "initial",
+        cooldown_days: int = 0,
+        policy_block_reason: Optional[str] = None,
+    ) -> tuple[bool, str]:
+        """
+        Central send gate: suppression, one sent row per (prospect_id, campaign_key, send_type),
+        and optional compliance cooldown when there has been no reply since the last non-transactional send.
+        """
+        if policy_block_reason:
+            return False, policy_block_reason
+        em = (recipient_email or "").strip()
+        if self.is_suppressed(em):
             return False, "recipient is in suppression list"
-        message_hash = self.message_hash(subject, html_body)
-        with sqlite3.connect(self.db_path) as conn:
+        st = (send_type or "initial").strip().lower()
+
+        pid = prospect_id or em
+        ck = campaign_key or "outreach_initial"
+
+        with self._connect() as conn:
             row = conn.execute("""
-                SELECT id FROM outbound_events
-                WHERE prospect_id = ? AND campaign_key = ? AND message_hash = ?
+                SELECT 1 FROM outbound_events
+                WHERE prospect_id = ? AND campaign_key = ? AND send_type = ? AND status = 'sent'
                 LIMIT 1
-            """, [prospect_id, campaign_key, message_hash]).fetchone()
-        if row:
-            return False, "duplicate outbound blocked by idempotency key"
+            """, [pid, ck, st]).fetchone()
+            if row:
+                return False, f"duplicate_{st}_send_for_campaign"
+
+            cd = int(cooldown_days or 0)
+            if cd > 0 and st in ("initial", "followup", "manual"):
+                last_row = conn.execute("""
+                    SELECT MAX(created_at) FROM outbound_events
+                    WHERE status = 'sent' AND send_type != 'transactional'
+                      AND (prospect_id = ? OR lower(recipient_email) = lower(?))
+                """, [pid, em]).fetchone()
+                last_iso = last_row[0] if last_row and last_row[0] else None
+                if last_iso:
+                    rep = conn.execute("""
+                        SELECT 1 FROM funnel_events
+                        WHERE prospect_id = ? AND stage = 'replied' AND created_at > ?
+                        LIMIT 1
+                    """, [pid, last_iso]).fetchone()
+                    if not rep:
+                        try:
+                            last_t = datetime.fromisoformat(str(last_iso))
+                            days = (datetime.now() - last_t).total_seconds() / 86400.0
+                        except Exception:
+                            days = 999.0
+                        if days < float(cd):
+                            return False, f"compliance_cooldown:{cd}d_no_reply_since_last_send"
+
         return True, ""
+
+    def can_send_outbound(self, prospect_id: str, campaign_key: str, recipient_email: str, subject: str, html_body: str) -> tuple[bool, str]:
+        """Backward-compatible wrapper (ignores subject/html for gating; cooldown not applied)."""
+        _ = self.message_hash(subject, html_body)
+        return self.gate_outbound_send(
+            prospect_id, campaign_key, recipient_email, send_type="initial", cooldown_days=0
+        )
 
     def record_outbound(
         self,
@@ -732,13 +966,16 @@ class JobQueue:
         html_body: str,
         status: str,
         provider_id: str = "",
+        send_type: str = "initial",
     ) -> None:
         message_hash = self.message_hash(subject, html_body)
-        with sqlite3.connect(self.db_path) as conn:
+        ts = datetime.now().isoformat()
+        st = (send_type or "initial").strip().lower()
+        with self._connect() as conn:
             conn.execute("""
                 INSERT OR IGNORE INTO outbound_events
-                (prospect_id, campaign_key, recipient_email, message_hash, status, provider_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (prospect_id, campaign_key, recipient_email, message_hash, status, provider_id, created_at, send_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, [
                 prospect_id,
                 campaign_key,
@@ -746,12 +983,43 @@ class JobQueue:
                 message_hash,
                 status,
                 provider_id,
-                datetime.now().isoformat(),
+                ts,
+                st,
             ])
             conn.commit()
 
+    def list_followup_eligible_rows(self, min_days_since_initial: int) -> List[Dict[str, Any]]:
+        """
+        Follow-up candidates from SQLite only (CSV is not authoritative).
+        Requires initial outbound_events row with send_type=initial, sent, older than threshold,
+        no followup sent for same campaign, no replied funnel event after initial send.
+        """
+        cutoff = (datetime.now() - timedelta(days=max(0, int(min_days_since_initial)))).isoformat()
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("""
+                SELECT o.prospect_id, o.recipient_email, o.campaign_key, o.created_at AS initial_sent_at,
+                       COALESCE(ps.name, '') AS name, COALESCE(ps.company, '') AS company
+                FROM outbound_events o
+                LEFT JOIN prospect_state ps ON ps.prospect_id = o.prospect_id
+                WHERE o.send_type = 'initial'
+                  AND o.status = 'sent'
+                  AND o.created_at < ?
+                  AND NOT EXISTS (
+                      SELECT 1 FROM outbound_events f
+                      WHERE f.prospect_id = o.prospect_id AND f.campaign_key = o.campaign_key
+                        AND f.send_type = 'followup' AND f.status = 'sent'
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1 FROM funnel_events fe
+                      WHERE fe.prospect_id = o.prospect_id AND fe.stage = 'replied'
+                        AND datetime(fe.created_at) > datetime(o.created_at)
+                  )
+            """, [cutoff]).fetchall()
+        return [dict(r) for r in rows]
+
     def count_outbound_since(self, since_iso: str) -> int:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             row = conn.execute(
                 "SELECT COUNT(*) FROM outbound_events WHERE created_at >= ?",
                 [since_iso],
@@ -759,7 +1027,7 @@ class JobQueue:
         return int(row[0] if row else 0)
 
     def record_funnel_event(self, prospect_id: str, stage: str, metadata: Optional[Dict[str, Any]] = None) -> None:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO funnel_events (prospect_id, stage, metadata, created_at)
                 VALUES (?, ?, ?, ?)
@@ -773,7 +1041,7 @@ class JobQueue:
 
     def get_funnel_counts(self, days: int = 7) -> Dict[str, int]:
         cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             rows = conn.execute("""
                 SELECT stage, COUNT(*) AS c
                 FROM funnel_events
@@ -784,7 +1052,7 @@ class JobQueue:
 
     def get_funnel_counts_since_hours(self, hours: int) -> Dict[str, int]:
         cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             rows = conn.execute("""
                 SELECT stage, COUNT(*) AS c
                 FROM funnel_events
@@ -806,7 +1074,7 @@ class JobQueue:
     ) -> None:
         score_value = trust_score if trust_score is not None else self.get_trust_score(prospect_id)
         now = datetime.now().isoformat()
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             if outreach_state is None:
                 row = conn.execute(
                     "SELECT outreach_state FROM prospect_state WHERE prospect_id = ?",
@@ -839,7 +1107,7 @@ class JobQueue:
             conn.commit()
 
     def get_blocked_prospects(self, limit: int = 25) -> List[Dict[str, str]]:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("""
                 SELECT prospect_id, name, company, email, stage, status_reason, trust_score, outreach_state, updated_at
@@ -851,7 +1119,7 @@ class JobQueue:
         return [dict(row) for row in rows]
 
     def log_decision(self, entity_type: str, entity_id: str, decision: str, reasons: List[str]) -> None:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO decision_logs (entity_type, entity_id, decision, reasons, created_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -877,7 +1145,7 @@ class JobQueue:
         if sev not in ("HARD", "SOFT", "INFO"):
             sev = "SOFT"
         ts = datetime.now().isoformat()
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO block_logs (entity_type, entity_id, block_type, severity, reason, details, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -905,7 +1173,7 @@ class JobQueue:
         actual_outcome: str = "pending",
     ) -> int:
         ts = datetime.now().isoformat()
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cur = conn.execute("""
                 INSERT INTO reply_intent_training_data (
                     business_id, campaign_key, message_hash, features_json, predicted_prob,
@@ -929,7 +1197,7 @@ class JobQueue:
         if not bid:
             return
         ts = datetime.now().isoformat()
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 UPDATE reply_intent_training_data
                 SET actual_outcome = 'replied', resolved_at = ?
@@ -944,7 +1212,7 @@ class JobQueue:
     def settle_reply_intent_stale_pending(self, older_than_days: float = 10.0) -> int:
         cutoff = (datetime.now() - timedelta(days=older_than_days)).isoformat()
         ts = datetime.now().isoformat()
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cur = conn.execute("""
                 UPDATE reply_intent_training_data
                 SET actual_outcome = 'no_reply', resolved_at = ?
@@ -970,7 +1238,7 @@ class JobQueue:
     ) -> None:
         run_at = datetime.now().isoformat()
         payload = dict(extra or {})
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO funnel_health_snapshots (
                     run_at, dry_run, generated, qualified, sent, blocked, reply_rate_estimate, payload_json
@@ -994,7 +1262,7 @@ class JobQueue:
         trust_delta: float,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> float:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO trust_events (business_id, event_type, trust_delta, metadata, created_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -1009,7 +1277,7 @@ class JobQueue:
         return self.get_trust_score(business_id)
 
     def get_trust_score(self, business_id: str, half_life_days: float = 21.0) -> float:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             rows = conn.execute("""
                 SELECT trust_delta, created_at FROM trust_events WHERE business_id = ?
             """, [business_id]).fetchall()
@@ -1028,7 +1296,7 @@ class JobQueue:
         return score
 
     def upsert_client_account(self, business_id: str, name: str, status: str = "active") -> None:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO client_accounts (business_id, name, status, updated_at)
                 VALUES (?, ?, ?, ?)
@@ -1040,7 +1308,7 @@ class JobQueue:
             conn.commit()
 
     def count_active_clients(self) -> int:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             row = conn.execute("""
                 SELECT COUNT(*) FROM client_accounts WHERE status = 'active'
             """).fetchone()
@@ -1048,7 +1316,7 @@ class JobQueue:
 
     def set_outreach_freeze(self, frozen: bool, reason: str = "") -> None:
         value = "true" if frozen else "false"
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO system_control (control_key, control_value, updated_at)
                 VALUES ('outreach_frozen', ?, ?)
@@ -1065,7 +1333,7 @@ class JobQueue:
         )
 
     def is_outreach_frozen(self) -> bool:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             row = conn.execute("""
                 SELECT control_value FROM system_control WHERE control_key = 'outreach_frozen'
             """).fetchone()
@@ -1102,7 +1370,7 @@ class JobQueue:
             max_retries=max_retries,
         )
         
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO jobs (id, prospect_id, action, status, context, retry_count, max_retries, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -1131,7 +1399,7 @@ class JobQueue:
         Returns:
             List of Job objects
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             query = "SELECT * FROM jobs WHERE status = ? ORDER BY created_at ASC"
             args = [JobStatus.PENDING.value]
@@ -1152,7 +1420,7 @@ class JobQueue:
         Returns:
             List of Job objects eligible for retry
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("""
                 SELECT * FROM jobs
@@ -1164,7 +1432,7 @@ class JobQueue:
     
     def get_job(self, job_id: str) -> Optional[Job]:
         """Get a single job by ID."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM jobs WHERE id = ?", [job_id]).fetchone()
         
@@ -1172,7 +1440,7 @@ class JobQueue:
     
     def start_job(self, job_id: str) -> None:
         """Mark a job as in-progress."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 UPDATE jobs SET status = ?, started_at = ?
                 WHERE id = ?
@@ -1183,7 +1451,7 @@ class JobQueue:
     
     def complete_job(self, job_id: str, result: str = "") -> None:
         """Mark a job as completed successfully."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 UPDATE jobs SET status = ?, result = ?, completed_at = ?
                 WHERE id = ?
@@ -1213,7 +1481,7 @@ class JobQueue:
         if retry and new_retry_count < job.max_retries:
             new_status = JobStatus.FAILED
         
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 UPDATE jobs SET status = ?, error = ?, retry_count = ?, completed_at = ?
                 WHERE id = ?
@@ -1225,7 +1493,7 @@ class JobQueue:
     
     def get_jobs_for_prospect(self, prospect_id: str) -> List[Job]:
         """Get all jobs (completed, failed, pending) for a prospect."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 "SELECT * FROM jobs WHERE prospect_id = ? ORDER BY created_at ASC",
@@ -1236,7 +1504,7 @@ class JobQueue:
     
     def get_summary(self) -> Dict[str, int]:
         """Get job queue statistics."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             summary = {}
             for status in JobStatus:
                 count = conn.execute(
@@ -1259,7 +1527,7 @@ class JobQueue:
             Number of rows deleted
         """
         cutoff = datetime.now() - timedelta(days=days)
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.execute("""
                 DELETE FROM jobs
                 WHERE (status = ? OR status = ?)

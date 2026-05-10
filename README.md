@@ -2,7 +2,7 @@
 
 ## What this is
 
-**Venture OS** is one founder’s **personal operating workspace**: folders and scripts for moving from raw ideas to shipped experiments, outbound, and KPIs. The technical center of gravity is **`04-coding/scripts/`** — a Python pipeline that generates outreach, runs **guardrails** (qualification, quality, caps, integrity, optional reply-intent), sends via configured providers, and persists **replayable state** in SQLite (`venture_jobs.db`) with **block severity**, **funnel snapshots**, and **lifecycle events**.
+**Venture OS** is one founder’s **personal operating workspace**: folders and scripts for moving from raw ideas to shipped experiments, outbound, and KPIs. The technical center of gravity is **`04-coding/scripts/`** — a Python pipeline that generates outreach, runs **guardrails** (qualification, quality, caps, integrity, optional reply-intent), sends via configured providers, and persists **replayable state** in SQLite (**`venture_jobs.db` at the repo root**) with **block severity**, **funnel snapshots**, and **lifecycle events**.
 
 Supporting pieces: JSON **contracts** (`04-coding/venture-engine/config/`), a small **MCP server** (`venture-mcp-server/`) for IDE automation, and templates for ideas, evaluation, design QA, and sales copy elsewhere in the repo.
 

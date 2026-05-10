@@ -3,6 +3,18 @@
   "setup_price": 2000,
   "monthly_price": 500,
   "delivery_days": 14,
+  "qualification": {
+    "estimated_value": 1500,
+    "min_viable_deal": 1000,
+    "implementation_days": 14,
+    "max_delivery_days": 14,
+    "regulated_industries": [
+      "health",
+      "medical",
+      "finance",
+      "legal"
+    ]
+  },
   "scope": [
     "instant lead response",
     "sms follow-up",

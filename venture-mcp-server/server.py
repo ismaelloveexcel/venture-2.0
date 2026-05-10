@@ -24,7 +24,9 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 # ── Load environment ──────────────────────────────────────────────────────────
-load_dotenv(pathlib.Path(__file__).parent.parent / ".env")
+# MCP clients often pass `${env:VAR}` entries even when empty; those become set in
+# os.environ and would block load_dotenv() defaults. override=True makes repo .env authoritative.
+load_dotenv(pathlib.Path(__file__).parent.parent / ".env", override=True)
 
 OPENAI_API_KEY  = os.environ.get("OPENAI_API_KEY", "")
 BRAVE_API_KEY   = os.environ.get("BRAVE_SEARCH_API_KEY", "")

@@ -25,14 +25,42 @@ from runtime_config import RuntimeConfig, build_config_status
 
 # Job queue support
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "venture-mcp-server"))
-from job_queue import get_queue
+from job_queue import JobQueue, get_queue
 from lifecycle_engine import LifecycleEventType
 from lifecycle_validation import LifecycleEventValidationError
 
 BASE           = pathlib.Path(__file__).parent.parent.parent
 load_dotenv(BASE / ".env")
 
-PORT            = int(os.environ.get("DASHBOARD_PORT", 5000))
+
+def _insecure_webhooks_allowed() -> bool:
+    return os.environ.get("VENTURE_ALLOW_INSECURE_WEBHOOKS", "").lower() in ("1", "true", "yes")
+
+
+def _dashboard_bind_host_and_port() -> tuple[str, int]:
+    """
+    Bind address for the HTTP server. When VENTURE_ALLOW_INSECURE_WEBHOOKS is set (unsigned
+    webhook acceptance), refuse any non-loopback DASHBOARD_BIND so dev mode cannot accidentally
+    expose that path on the LAN.
+    """
+    host = (os.environ.get("DASHBOARD_BIND", "127.0.0.1") or "127.0.0.1").strip()
+    port = int(os.environ.get("DASHBOARD_PORT", "5000"))
+    loopback_only = {"127.0.0.1", "localhost", "::1"}
+    if _insecure_webhooks_allowed():
+        if host.lower() not in loopback_only:
+            print(
+                "\n[fail] VENTURE_ALLOW_INSECURE_WEBHOOKS is enabled but DASHBOARD_BIND is not loopback-only "
+                f"(current DASHBOARD_BIND={host!r}).\n"
+                "Refusing to start: unsigned webhooks must not be reachable off this machine.\n"
+                "Fix: unset VENTURE_ALLOW_INSECURE_WEBHOOKS for real deployments, or set DASHBOARD_BIND=127.0.0.1\n"
+            )
+            raise SystemExit(2)
+        if host.lower() == "localhost":
+            host = "127.0.0.1"
+    return host, port
+
+
+DASHBOARD_BIND, PORT = _dashboard_bind_host_and_port()
 PYTHON          = sys.executable
 PIPELINE        = str(BASE / "04-coding" / "scripts" / "venture_pipeline.py")
 PROSPECTS_FILE  = BASE / "06-sales" / "prospects.csv"
@@ -144,6 +172,42 @@ def get_blocked_status() -> list:
         return []
 
 
+def verify_resend_webhook(headers, body: bytes) -> tuple[bool, dict, str]:
+    """
+    Resend delivers Svix-signed webhooks. Require RESEND_WEBHOOK_SIGNING_SECRET unless
+    VENTURE_ALLOW_INSECURE_WEBHOOKS=true (local dev only).
+    """
+    if not body:
+        return False, {}, "empty body"
+    insecure = os.environ.get("VENTURE_ALLOW_INSECURE_WEBHOOKS", "").lower() in ("1", "true", "yes")
+    if insecure:
+        try:
+            return True, json.loads(body.decode("utf-8")), ""
+        except json.JSONDecodeError as exc:
+            return False, {}, f"invalid json: {exc}"
+    secret = (
+        os.environ.get("RESEND_WEBHOOK_SIGNING_SECRET", "").strip()
+        or os.environ.get("RESEND_WEBHOOK_SECRET", "").strip()
+    )
+    if not secret:
+        return False, {}, (
+            "Missing RESEND_WEBHOOK_SIGNING_SECRET (from Resend → Webhooks). "
+            "For local testing only, set VENTURE_ALLOW_INSECURE_WEBHOOKS=true in .env."
+        )
+    try:
+        from svix.webhooks import Webhook
+
+        hdrs = {k: v for k, v in headers.items()}
+        payload = Webhook(secret).verify(body.decode("utf-8"), hdrs)
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+        if not isinstance(payload, dict):
+            return False, {}, "unexpected webhook payload shape"
+        return True, payload, ""
+    except Exception as exc:
+        return False, {}, str(exc)
+
+
 def _extract_email_from_event(payload: dict) -> str:
     data = payload.get("data", {}) if isinstance(payload, dict) else {}
     to_field = data.get("to") or payload.get("to")
@@ -154,7 +218,11 @@ def _extract_email_from_event(payload: dict) -> str:
     return ""
 
 
-def process_resend_event(payload: dict) -> dict:
+def process_resend_event(payload: dict, *, db_path: str | None = None) -> dict:
+    """
+    Apply a Resend-style webhook payload to trust + lifecycle + funnel.
+    Uses an explicit JobQueue(db_path) so replay CLIs are not coupled to get_queue() singleton order.
+    """
     event_type = str(payload.get("type", "")).lower()
     email = _extract_email_from_event(payload)
     if not event_type:
@@ -162,7 +230,7 @@ def process_resend_event(payload: dict) -> dict:
     if not email:
         return {"ok": False, "error": "missing recipient email"}
 
-    queue = get_queue(db_path=str(JOB_QUEUE_DB))
+    queue = JobQueue(str(db_path or JOB_QUEUE_DB))
     bid = queue.resolve_lifecycle_business_id(email)
     suppressed_types = {
         "email.bounced": "bounce",
@@ -364,9 +432,48 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=500)
         elif path == "/webhooks/resend":
-            data = self._read_json()
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b""
             try:
-                self._send_json(process_resend_event(data))
+                qn = get_queue(db_path=str(JOB_QUEUE_DB))
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)}, status=500)
+                return
+            try:
+                ok, data, err = verify_resend_webhook(self.headers, raw)
+                if not ok:
+                    qn.record_webhook_dlq(
+                        "resend_webhook_verify",
+                        raw.decode("utf-8", errors="replace")[:50000],
+                        (err or "verify_failed")[:2000],
+                    )
+                    self._send_json({"ok": False, "error": err, "dlq": True}, status=202)
+                    return
+                try:
+                    result = process_resend_event(data)
+                    if isinstance(result, dict) and result.get("ok") is False:
+                        qn.record_webhook_dlq(
+                            "resend_webhook_process",
+                            json.dumps(data)[:50000],
+                            str(result.get("error", "process_failed"))[:2000],
+                        )
+                        self._send_json({**result, "dlq": True}, status=202)
+                        return
+                    self._send_json(result)
+                except LifecycleEventValidationError as err:
+                    qn.record_webhook_dlq(
+                        "resend_webhook_process",
+                        json.dumps(data)[:50000],
+                        str(err)[:2000],
+                    )
+                    self._send_json({"ok": False, "error": "lifecycle_validation_failed", "dlq": True}, status=202)
+                except Exception as e:
+                    qn.record_webhook_dlq(
+                        "resend_webhook_process",
+                        json.dumps(data)[:50000],
+                        str(e)[:2000],
+                    )
+                    self._send_json({"ok": False, "error": str(e), "dlq": True}, status=202)
             except Exception as e:
                 self._send_json({"ok": False, "error": str(e)}, status=500)
         else:
@@ -377,8 +484,9 @@ class Handler(BaseHTTPRequestHandler):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    server = HTTPServer(("127.0.0.1", PORT), Handler)
-    url = f"http://localhost:{PORT}"
+    server = HTTPServer((DASHBOARD_BIND, PORT), Handler)
+    display_host = "localhost" if DASHBOARD_BIND == "127.0.0.1" else DASHBOARD_BIND
+    url = f"http://{display_host}:{PORT}"
     print(f"\n  Venture OS Dashboard")
     print(f"  {'─' * 34}")
     print(f"  URL  : {url}")

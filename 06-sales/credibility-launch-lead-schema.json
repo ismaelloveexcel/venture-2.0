@@ -1,0 +1,68 @@
+{
+  "schema_name": "credibility_launch_leads_v1",
+  "purpose": "Pre-send decision table and Signal Lab schema for the Credibility Launch System wedge offer.",
+  "do_not_expand_before": "50 sends completed",
+  "fields": [
+    "company",
+    "website",
+    "first_name",
+    "role",
+    "industry",
+    "employee_count",
+    "location",
+    "trigger",
+    "linkedin_url",
+    "website_quality",
+    "linkedin_quality",
+    "fit_score",
+    "message_version",
+    "service_angle",
+    "status",
+    "notes"
+  ],
+  "allowed_values": {
+    "trigger": [
+      "recently_launched",
+      "rebranded",
+      "hiring",
+      "founder_posting",
+      "recent_growth",
+      "website_stronger_than_linkedin",
+      "weak_linkedin",
+      "clear_service_offer"
+    ],
+    "website_quality": ["strong", "average", "weak"],
+    "linkedin_quality": ["unknown", "strong", "weak", "missing"],
+    "fit_score": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "message_version": ["credibility_v1"],
+    "service_angle": [
+      "credibility_gap",
+      "linkedin_rebuild",
+      "founder_positioning",
+      "content_start"
+    ],
+    "status": ["VALIDATED", "SENT", "REPLIED", "CLOSED", "LEARNING"]
+  },
+  "send_rule": "Send only fit_score >= 7 after human review confirms website, verified weak or missing LinkedIn company presence, founder/owner-level role, contact details, and an observed trigger.",
+  "signal_lab_rule": "Keep fit_score 5-6 rows in credibility-launch-signal-lab.csv with status=LEARNING when LinkedIn presence is unknown or other evidence is incomplete. Do not score unknown LinkedIn as weakness. Do not send until revalidated and rescored to 7+.",
+  "json_output_shape": [
+    {
+      "company": "",
+      "website": "",
+      "first_name": "",
+      "role": "",
+      "industry": "",
+      "employee_count": "",
+      "location": "",
+      "trigger": "",
+      "linkedin_url": "",
+      "website_quality": "",
+      "linkedin_quality": "",
+      "fit_score": "",
+      "message_version": "credibility_v1",
+      "service_angle": "",
+      "status": "VALIDATED",
+      "notes": ""
+    }
+  ]
+}

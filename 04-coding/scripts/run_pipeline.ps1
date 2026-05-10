@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $WorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path
 $PythonExe = Join-Path $WorkspaceRoot ".venv\Scripts\python.exe"
-$Preflight = Join-Path $WorkspaceRoot "04-coding\scripts\preflight_check.py"
+$Preflight = Join-Path $WorkspaceRoot "04-coding\scripts\pre_send_check.py"
 $Pipeline = Join-Path $WorkspaceRoot "04-coding\scripts\venture_pipeline.py"
 
 if (-not (Test-Path $PythonExe)) {
@@ -27,9 +27,19 @@ if (-not (Test-Path $Pipeline)) {
 
 Write-Host "[info] Workspace: $WorkspaceRoot"
 Write-Host "[info] Running preflight checks..."
-& $PythonExe $Preflight
+& $PythonExe $Preflight --mode $Mode
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[fail] Preflight failed. Pipeline run aborted."
+    if ($Mode -eq "live") {
+        Write-Host "[fail] Live preflight failed. Pipeline run aborted."
+        exit $LASTEXITCODE
+    }
+    Write-Host "[warn] Dry-run pre-send gate is not armed yet; continuing dry-run pipeline."
+}
+
+Write-Host "[info] Running operator status snapshot..."
+& $PythonExe $Pipeline --status
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[fail] Status snapshot failed. Pipeline run aborted."
     exit $LASTEXITCODE
 }
 
@@ -38,7 +48,8 @@ $prevErrPref = $ErrorActionPreference
 $ErrorActionPreference = "SilentlyContinue"
 if ($Mode -eq "dry-run") {
     cmd /c "`"$PythonExe`" `"$Pipeline`" --dry-run"
-} else {
+}
+else {
     cmd /c "`"$PythonExe`" `"$Pipeline`""
 }
 $ErrorActionPreference = $prevErrPref

@@ -38,6 +38,13 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - **IF IN DOUBT**: Err on the side of action. If it's a reversible code change or routine improvement, apply it. If it's destructive (delete data, break configs), ask first
 - **OUTCOME**: You should rarely need to say "why don't you just do it yourself?"
 
+## API keys — stop the “read .env” loop
+
+- **`.env` is gitignored.** Copilot / agents must **not** rely on reading `.env` from the repo in chat (it may be blocked or absent in cloud). Keys live **only** on your machine or in **GitHub Copilot MCP secrets** (cloud).
+- **Local Cursor / VS Code:** `.vscode/mcp.json` uses **`envFile`: `${workspaceFolder}/.env`** so the **MCP subprocess** gets variables from disk. After editing `.env`, **reload MCP** (Developer: Reload Window) or restart the IDE.
+- **If tools still say “key missing”:** confirm `.env` sits at **repo root** (same folder as `README.md`), not inside `venture-mcp-server/`. Do **not** paste live keys into Copilot chat—fix the file + reload instead.
+- **GitHub Copilot cloud agent:** it never sees your laptop `.env`. Configure the same variable names under **repo/org Copilot → MCP / secrets** so the hosted MCP can authenticate.
+
 ## MCP Tools Available (call these directly in Copilot Chat)
 - `score_idea(idea)` — auto-scores any idea against the 8-criteria scorecard
 - `research_competitors(niche, idea)` — live Brave Search + AI competitor analysis
@@ -49,7 +56,7 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 ## Automation Pipeline
 - Run `python 04-coding/scripts/venture_pipeline.py` to process pending prospects end-to-end (from repo root, or `cd 04-coding/scripts` first)
 - Integrates: OpenAI (outreach), Hunter.io (email lookup), Airtable/Notion as configured, Resend when `AUTO_SEND_EMAILS=true`
-- **SQLite job queue + state**: `04-coding/scripts/venture_jobs.db` — jobs, suppression, trust, lifecycle events, **`block_logs` with `severity` (HARD | SOFT | INFO)**, **`reply_intent_training_data`**, **`funnel_health_snapshots`**, **`opportunities.state_engine_version`**
+- **SQLite job queue + state**: **`venture_jobs.db` at the repo root** (same path as `venture_pipeline.py` / `dashboard.py` use) — jobs, suppression, trust, lifecycle events, **`block_logs` with `severity` (HARD | SOFT | INFO)**, **`reply_intent_training_data`**, **`funnel_health_snapshots`**, **`opportunities.state_engine_version`**
 - **HARD** blocks freeze outreach system-wide; **SOFT** skips the current send; **INFO** is log-oriented (stored like SOFT unless code branches)
 - **Reply-intent**: optional pre-send filter from `venture-engine/config/reply_intent.model.json`; bypass when trailing 7d sends fall below `REPLY_INTENT_VOLUME_THRESHOLD` (see `.env.example`)
 - **After each run**: funnel snapshot row for dashboard-style review; successful/blocked sends write training rows (`pending` / `not_sent`); `replied` lifecycle events resolve `pending` → `replied`

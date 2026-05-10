@@ -1,65 +1,163 @@
-# Sales Call Script
+# Sales Call Script (Reply -> Paid Pilot)
 
-Use this for every discovery call. Fill in the blanks, don't read it word-for-word.
+Use this on every positive-reply call. Keep the call to 15-20 minutes max.
 
----
+Objective:
+- Qualified -> offer paid pilot
+- Not qualified -> exit fast
 
-## Pre-Call Checklist
-- [ ] Researched their company (LinkedIn, website)
-- [ ] Identified 1-2 specific pain points to probe
-- [ ] Calendly/Zoom link confirmed
-- [ ] Screen share ready if needed
+No long nurture calls. No vague next steps.
 
 ---
 
-## CALL STRUCTURE (20-30 min)
-
-### [0–2 min] Opening
-"Thanks for making time, [Name]. I want to make sure this is valuable for you, so I'd like to spend most of our time learning about your situation. Then at the end, if it makes sense, I'll share what we do. Sound good?"
-
-### [2–10 min] Discovery — Ask, don't pitch
-
-1. "Tell me about your current situation with [area of pain]."
-2. "How long has that been an issue?"
-3. "What have you tried so far to solve it?"
-4. "What's the cost of NOT solving it — in money, time, or frustration?"
-5. "If this was fixed in 90 days, what would that mean for you?"
-
-> **Listen more than you talk. Take notes. Repeat back what they say.**
-
-### [10–18 min] Pivot to Solution (only if pain is confirmed)
-
-"Based on what you've told me, this is exactly the type of problem we help with. Here's how it works: [1-minute explanation of your process]. What we'd do for you specifically is [personalise based on their answers]."
-
-### [18–24 min] Handle Objections
-
-| Objection | Response |
-|---|---|
-| "It's too expensive." | "Compared to what you lose by not solving it, what would make it feel worth it?" |
-| "I need to think about it." | "Of course — what specific part do you need to think through? Let's talk it out now." |
-| "I need to check with my partner/team." | "Makes sense. Can we schedule a 15-min call with both of you this week?" |
-| "I've tried something like this before." | "What happened? [Listen] Here's what we do differently…" |
-
-### [24–30 min] Close or Next Step
-
-**If ready to close:**
-"Great — the next step is simple. [Setup fee] to get started. I'll send you a short agreement and we kick off [timeline]. Does [day] work to get going?"
-
-**If not ready:**
-"Totally fine — what would you need to see to feel confident about moving forward?" → Set a specific follow-up date/time before hanging up.
+## Pre-Call Lock (2 minutes before joining)
+- [ ] One target pain for this ICP is preselected
+- [ ] Pilot scope is pre-defined (one workflow, one measurable outcome)
+- [ ] Pilot terms are fixed (7-14 days, setup fee range, risk reversal)
+- [ ] Call timer set to 20 minutes
 
 ---
 
-## Post-Call Notes Template
+## 1) Frame Control (1-2 min)
 
-```
+Script:
+"Quick context - this is not a sales call. I just want to understand if what you're dealing with is something we can actually fix. If yes, I'll show you how we run a short pilot. If not, I'll tell you straight."
+
+Goal:
+- Lower resistance
+- Set fit-check expectation
+- Establish selective positioning
+
+---
+
+## 2) Problem Extraction (5-7 min)
+
+Ask only these 4 questions:
+
+1. Current state
+"How are you currently handling [target problem]?"
+
+2. Pain intensity
+"What's not working with that right now?"
+
+3. Impact
+"What does that cost you - time, missed deals, revenue, anything measurable?"
+
+4. Attempted solutions
+"Have you tried fixing this already?"
+
+### Binary qualification rule
+Continue only if all are true:
+- Pain is specific
+- Impact is meaningful
+- They have tried something already, or friction is clearly active now
+
+If not qualified, end cleanly:
+"Got it - I don't think we'd be useful here right now."
+
+---
+
+## 3) Controlled Diagnosis (3-5 min)
+
+Restate the problem better than they did.
+
+Script structure:
+"From what you're saying:
+- You're doing X
+- That leads to Y issue
+- Which is costing you Z
+Usually when we see that, the root problem is [mechanism insight]."
+
+Rule:
+- If this diagnosis sounds generic, do not proceed to pilot close.
+
+---
+
+## 4) Offer Bridge (2-3 min)
+
+Do not explain features. Explain mechanism and outcome.
+
+Script:
+"What we do is fix this by [mechanism].
+Instead of [current approach], we [your approach].
+The goal is simple: [measurable outcome]."
+
+Rule:
+- Keep this under 30 seconds.
+
+---
+
+## 5) Pilot Close (core section)
+
+Sell a low-risk pilot, not a long engagement.
+
+### Pilot structure (fixed)
+- Duration: 7-14 days
+- Scope: one channel or one workflow
+- Outcome: one measurable result
+- Risk reversal: explicit stop condition or revision/refund clause
+
+Script:
+"The way we typically start is with a short pilot.
+We focus on one specific outcome: [X].
+It runs for about [timeframe], and by the end you'll know if this actually works for your case.
+If it doesn't produce signal, we stop there."
+
+Close question:
+"Would you be open to testing this?"
+
+Then stop talking.
+
+---
+
+## Common Failure Points (reject in self-review)
+1. Over-explaining
+- If you talk more than they do, conversion drops.
+
+2. Generic diagnosis
+- If the diagnosis sounds reusable, trust drops.
+
+3. Vague pilot outcome
+- If outcome is not measurable, urgency drops.
+
+4. Weak CTA
+- Never use: "What do you think?" or "Does that sound interesting?"
+- Always use: "Would you be open to testing this?"
+
+---
+
+## Mandatory Post-Call Log
+
+Record immediately after every call:
+
+- Qualified: yes/no
+- Pain type (1 line)
+- Impact level: low/med/high
+- Pilot offered: yes/no
+- Pilot accepted: yes/no
+- Objection (exact words)
+- Next step with date
+
+### Compact log template
+
 Date:
 Prospect:
 Company:
-Main pain point:
-Cost of problem (their words):
-Outcome they want:
-Objections raised:
-Decision: [ ] Closed  [ ] Follow-up on [date]  [ ] Not a fit
-Next action:
-```
+Qualified (yes/no):
+Pain type:
+Impact level (low/med/high):
+Pilot offered (yes/no):
+Pilot accepted (yes/no):
+Objection (exact words):
+Next step + date:
+
+---
+
+## 5-Call Optimization Loop
+
+After every 5 calls, review outcomes:
+- Calls happening but no pilots -> offer framing issue
+- No clear pain on calls -> targeting issue
+- Interest but hesitation -> risk reversal too weak
+
+Adjust only one variable per 5-call block.
