@@ -42,10 +42,10 @@ No custom tiers during validation.
 
 ## Lead Qualification: 60-Second Rule
 
-Use a motion-first filter before any LinkedIn review:
+Use a pressure-first filter before any LinkedIn review:
 
 ```text
-structured source export -> motion pre-score -> Signal Lab shortlist -> binary LinkedIn check -> Send Pool
+motion signal detection -> revenue model classification -> distribution gap scoring -> urgency proxy scoring -> binary LinkedIn check
 ```
 
 LinkedIn is a verification tool, not a discovery tool. Inspect only the top-ranked motion candidates, usually the top 20% of a batch.
@@ -63,15 +63,13 @@ The filter is not company age. It is moment of visibility gap:
 new or established + active growth pressure + underdeveloped credibility layer
 ```
 
-Primary trigger types:
+Primary pressure types:
 
-- Weak LinkedIn presence
-- Recently launched or rebranded
-- Hiring
-- Founder posting or building publicly
-- Recent growth
-- Clear service offer
-- Website looks stronger than LinkedIn presence
+- Revenue pressure
+- Scaling pressure
+- Acquisition pressure
+- Visibility pressure
+- Talent pressure
 
 Avoid idea-stage companies with no team, no traction, or no visible growth pressure.
 
@@ -104,7 +102,7 @@ notes
 
 Allowed values:
 
-- `trigger`: `recently_launched`, `rebranded`, `hiring`, `founder_posting`, `recent_growth`, `clear_service_offer`, `website_stronger_than_linkedin`, `weak_linkedin`
+- `trigger`: `revenue_pressure`, `scaling_pressure`, `acquisition_pressure`, `visibility_pressure`, `talent_pressure`
 - `website_quality`: `strong`, `average`, `weak`
 - `linkedin_quality`: `unknown`, `strong`, `weak`, `missing`
 - `fit_score`: `0` to `10`
@@ -132,7 +130,7 @@ To generate a pre-filtered Signal Lab batch from a structured export, use:
 .\.venv\Scripts\python.exe .\04-coding\scripts\credibility_candidate_generator.py --input .\06-sales\credibility-candidate-source-template.csv
 ```
 
-The generator scores motion proxies only and writes `linkedin_quality=unknown`. No generated row is send-ready until the LinkedIn check is completed manually and classified as weak or missing.
+The generator scores buying pressure proxies only and writes `linkedin_quality=unknown`. No generated row is send-ready until the LinkedIn check is completed manually and classified as weak or missing.
 
 If automated lead generation is added, it must output [credibility-launch-lead-schema.json](credibility-launch-lead-schema.json).
 

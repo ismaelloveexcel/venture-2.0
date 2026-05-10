@@ -22,6 +22,11 @@
   ],
   "allowed_values": {
     "trigger": [
+      "revenue_pressure",
+      "scaling_pressure",
+      "acquisition_pressure",
+      "visibility_pressure",
+      "talent_pressure",
       "recently_launched",
       "rebranded",
       "hiring",
@@ -43,7 +48,7 @@
     ],
     "status": ["VALIDATED", "SENT", "REPLIED", "CLOSED", "LEARNING"]
   },
-  "send_rule": "Send only fit_score >= 7 after human review confirms website, verified weak or missing LinkedIn company presence, founder/owner-level role, contact details, and an observed trigger.",
+  "send_rule": "Send only fit_score >= 7 after human review confirms website, verified weak or missing LinkedIn company presence, founder/owner-level role, contact details, and an observed pressure trigger. Treat fit_score as mapped from Buying Intensity Score: 0-4 discard, 5-6 Signal Lab, 7-9 send candidate, 10 priority send.",
   "signal_lab_rule": "Keep fit_score 5-6 rows in credibility-launch-signal-lab.csv with status=LEARNING when LinkedIn presence is unknown or other evidence is incomplete. Do not score unknown LinkedIn as weakness. Do not send until revalidated and rescored to 7+.",
   "json_output_shape": [
     {

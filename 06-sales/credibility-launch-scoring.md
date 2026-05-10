@@ -1,10 +1,10 @@
 # Credibility Launch Lead Scoring
 
-Use this to decide send vs no-send. Do not score company age directly. Score the moment of visibility gap.
+Use this to decide send vs no-send. Do not score company age directly. Score buying pressure and visibility gap.
 
 ## Purpose
 
-This is a motion-first candidate filter plus a final LinkedIn verification gate for B2B trust-based selling.
+This is a pressure-first candidate filter plus a final LinkedIn verification gate for B2B trust-based selling.
 
 Do not optimize for perfect precision yet. For the first 50-100 evaluated leads, use high recall with controlled quality:
 
@@ -14,10 +14,31 @@ Do not optimize for perfect precision yet. For the first 50-100 evaluated leads,
 Pipeline order:
 
 ```text
-structured source export -> motion pre-score -> Signal Lab shortlist -> binary LinkedIn check -> Send Pool
+motion signal detection -> revenue model classification -> distribution gap scoring -> urgency proxy scoring -> binary LinkedIn check
 ```
 
 Do not use LinkedIn as a discovery source. Use LinkedIn only as the final binary verification gate.
+
+## Buying Intensity Score (0-11)
+
+Compute internally before LinkedIn verification:
+
+$$
+Buying\_Intensity\_Score =
+Hiring\_Intent\;(0\!\!\text{-}\!3) +
+Founder\_Growth\_Signal\;(0\!\!\text{-}\!3) +
+Revenue\_Model\_Pressure\;(0\!\!\text{-}\!2) +
+Distribution\_Gap\;(0\!\!\text{-}\!3)
+$$
+
+Map to handling:
+
+| Buying Intensity | Action |
+|---:|---|
+| 0-4 | Discard |
+| 5-6 | Signal Lab |
+| 7-9 | Send Pool candidate |
+| 10-11 | Priority send candidate |
 
 ## Send-Ready Rule
 
@@ -33,23 +54,48 @@ A row is send-ready only if all are true:
 
 If any required field is missing, do not send.
 
-## Motion Pre-Score
+## Score Components
 
-Use motion pre-score before any LinkedIn inspection. This score answers: "is this company in motion right now?"
+### 1) Hiring Intent (0-3)
 
-| Proxy Signal | Points |
-|---|---:|
-| Founder-led decision-maker is visible in source data | 2 |
-| B2B service, SaaS, enterprise, professional, legal, accounting, staffing, or sales category | 2 |
-| 2-20 employees | 1 |
-| Hiring signal or open jobs | 2 |
-| YC / launch / demo-day / Product Hunt signal | 2 |
-| Funding or credible growth news | 2 |
-| Founder visibility or building publicly signal | 1 |
-| Website present | 1 |
-| Strong website quality proxy | 1 |
+Count only hiring tied to revenue generation:
 
-Top-ranked rows go to Signal Lab with `linkedin_quality=unknown`. Only inspect the top 20% manually.
+- sales
+- growth
+- marketing
+- SDR/BDR
+- RevOps
+
+Do not reward engineering/product-only hiring.
+
+### 2) Founder Growth Signal (0-3)
+
+Reward explicit growth push language, for example:
+
+- scaling
+- need more leads
+- expanding pipeline
+- looking for clients
+
+### 3) Revenue Model Pressure (0-2)
+
+Prioritize business models where pipeline inconsistency hurts quickly:
+
+- agency
+- MSP
+- consultancy
+- B2B service firm
+- founder-led sales org
+
+### 4) Distribution Gap (0-3)
+
+Highest score when:
+
+- website is professional and offer is clear
+- outbound/inbound distribution footprint is weak or absent
+- LinkedIn quality has not been scored yet (still unknown until binary check)
+
+Top-ranked rows go to Signal Lab with `linkedin_quality=unknown`. Inspect only top 20% manually.
 
 ## 0-10 Fit Score After LinkedIn Verification
 
@@ -79,7 +125,7 @@ Use `linkedin_quality=unknown` for motion-qualified discovery rows where the com
 | Score | Meaning | Action |
 |---:|---|---|
 | 9-10 | Perfect ICP plus clear growth pressure and credibility gap | Priority send |
-| 7-8 | Strong enough fit with observed trigger | Send |
+| 7-8 | Strong enough fit with observed pressure type | Send |
 | 5-6 | Interesting but unclear or incomplete signal | Signal Lab only |
 | 0-4 | Weak or guessy | Delete |
 
@@ -102,18 +148,15 @@ Do not send Signal Lab leads until they are revalidated and rescored to 7+.
 
 Use `04-coding/scripts/credibility_candidate_generator.py` to populate Signal Lab from structured source exports such as YC, Wellfound, job boards, or funding/news sheets. Start from [credibility-candidate-source-template.csv](credibility-candidate-source-template.csv).
 
-## Allowed Triggers
+## Allowed Triggers (Pressure Types)
 
-Use one observed trigger:
+Use one pressure type:
 
-- `recently_launched`
-- `rebranded`
-- `hiring`
-- `founder_posting`
-- `recent_growth`
-- `clear_service_offer`
-- `website_stronger_than_linkedin`
-- `weak_linkedin`
+- `revenue_pressure`
+- `scaling_pressure`
+- `acquisition_pressure`
+- `visibility_pressure`
+- `talent_pressure`
 
 Bad trigger: `probably weak`.
 
