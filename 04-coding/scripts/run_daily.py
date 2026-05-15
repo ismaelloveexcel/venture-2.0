@@ -31,6 +31,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
 # Ensure sibling imports resolve when executed as script
 _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
@@ -431,18 +433,42 @@ def _telemetry_schema_soft_reasons(parsed: PipelineTelemetry) -> list[str]:
     return []
 
 
+def _validate_pipeline_telemetry_soft(
+    telemetry: dict[str, Any],
+) -> tuple[PipelineTelemetry, list[str]]:
+    """Validate pipeline telemetry without breaking orchestrator flow."""
+    try:
+        return PipelineTelemetry.model_validate(telemetry), []
+    except ValidationError:
+        pass
+
+    reasons: list[str] = []
+    sanitized = dict(telemetry)
+    if "phase1_structured" in sanitized:
+        sanitized.pop("phase1_structured", None)
+        reasons.append("phase1_structured_dropped_invalid")
+        try:
+            return PipelineTelemetry.model_validate(sanitized), reasons
+        except ValidationError:
+            pass
+
+    reasons.append("pipeline_telemetry_invalid")
+    return PipelineTelemetry(), reasons
+
+
 def _merge_pipeline_telemetry(
     outbound: OutboundSection, telemetry: dict, *, dry_run: bool
 ) -> OutboundSection:
     """Attach validated telemetry; promote counts into money_path only when run_health is present."""
-    parsed = PipelineTelemetry.model_validate(telemetry)
+    parsed, validation_reasons = _validate_pipeline_telemetry_soft(telemetry)
     schema_extra = _telemetry_schema_soft_reasons(parsed)
+    extras = schema_extra + validation_reasons
     o = outbound.model_copy(update={"pipeline_telemetry": parsed})
     rh = parsed.run_health
     if not isinstance(rh, dict):
-        if schema_extra:
+        if extras:
             mp = o.money_path.model_copy(
-                update={"reasons": list(o.money_path.reasons) + schema_extra}
+                update={"reasons": list(o.money_path.reasons) + extras}
             )
             o = o.model_copy(update={"money_path": mp})
         return o
@@ -455,7 +481,7 @@ def _merge_pipeline_telemetry(
     else:
         reasons.append("live_pipeline_telemetry")
     reasons.append("pipeline_telemetry")
-    reasons.extend(schema_extra)
+    reasons.extend(extras)
     return o.model_copy(
         update={
             "money_path": o.money_path.model_copy(
@@ -1365,8 +1391,10 @@ def main(argv: list[str] | None = None) -> int:
         else:
             outbound = outbound.model_copy(update={"money_path_source": "orchestrator"})
             if telemetry:
-                parsed = PipelineTelemetry.model_validate(telemetry)
+                parsed, validation_reasons = _validate_pipeline_telemetry_soft(telemetry)
                 outbound = outbound.model_copy(update={"pipeline_telemetry": parsed})
+                if validation_reasons:
+                    outbound.errors.extend(validation_reasons)
 
     # Impossible-state guard: outbound ran but provenance was never set (future refactor safety).
     if execute_outbound and outbound.money_path_source == "none":
