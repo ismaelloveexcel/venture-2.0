@@ -14,5 +14,6 @@
   "launch_day_executor.py",
   "launch_monitor.py",
   "preflight_safety_check.py",
-  "reply_analyzer.py"
+  "reply_analyzer.py",
+  "update_solo_operator_docs.py"
 ]
