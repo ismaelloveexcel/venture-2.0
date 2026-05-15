@@ -439,21 +439,31 @@ def _validate_pipeline_telemetry_soft(
     """Validate pipeline telemetry without breaking orchestrator flow."""
     try:
         return PipelineTelemetry.model_validate(telemetry), []
-    except ValidationError:
-        pass
+    except ValidationError as exc:
+        reasons: list[str] = []
+        invalid_fields: set[str] = set()
+        for err in exc.errors():
+            loc = err.get("loc") or ()
+            if loc and isinstance(loc[0], str):
+                invalid_fields.add(loc[0])
 
-    reasons: list[str] = []
-    sanitized = dict(telemetry)
-    if "phase1_structured" in sanitized:
-        sanitized.pop("phase1_structured", None)
-        reasons.append("phase1_structured_dropped_invalid")
+        sanitized = dict(telemetry)
+        if "phase1_structured" in invalid_fields and "phase1_structured" in sanitized:
+            sanitized.pop("phase1_structured", None)
+            reasons.append("phase1_structured_dropped_invalid")
+
+        other_invalid_fields = invalid_fields - {"phase1_structured"}
+        for field in other_invalid_fields:
+            sanitized.pop(field, None)
+        if other_invalid_fields:
+            reasons.append("pipeline_telemetry_invalid")
+
         try:
             return PipelineTelemetry.model_validate(sanitized), reasons
         except ValidationError:
-            pass
-
-    reasons.append("pipeline_telemetry_invalid")
-    return PipelineTelemetry(), reasons
+            if "pipeline_telemetry_invalid" not in reasons:
+                reasons.append("pipeline_telemetry_invalid")
+            return PipelineTelemetry(), reasons
 
 
 def _merge_pipeline_telemetry(

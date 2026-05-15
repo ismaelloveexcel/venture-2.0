@@ -1889,6 +1889,7 @@ def main():
     phase1_pipeline_started_at = datetime.now(timezone.utc).isoformat().replace(
         "+00:00", "Z"
     )
+    phase1_snapshot_before = _capture_phase1_snapshot()
 
     # Retry failed jobs from previous runs
     retry_failed_jobs()
@@ -1897,8 +1898,6 @@ def main():
     deleted = job_queue.cleanup_old_jobs(days=30)
     if deleted > 0:
         logger.info(f"Cleaned up {deleted} old job records")
-
-    phase1_snapshot_before = _capture_phase1_snapshot()
 
     run_health = {
         "generated": 0,
