@@ -1726,7 +1726,7 @@ def retry_failed_jobs():
 def _capture_phase1_snapshot() -> dict[str, int | dict[str, int]]:
     """Capture sparse baseline counters for Phase 1 structured telemetry deltas."""
     summary = job_queue.get_summary()
-    snapshot: dict[str, int | dict[str, int]] = {
+    phase1_snapshot: dict[str, int | dict[str, int]] = {
         "job_summary": {
             "pending": int(summary.get("pending", 0)),
             "in_progress": int(summary.get("in_progress", 0)),
@@ -1747,38 +1747,42 @@ def _capture_phase1_snapshot() -> dict[str, int | dict[str, int]]:
     try:
         with sqlite3.connect(job_queue.db_path) as conn:
             cur = conn.execute("SELECT COUNT(*) FROM jobs")
-            snapshot["jobs_total"] = int((cur.fetchone() or [0])[0] or 0)
+            phase1_snapshot["jobs_total"] = int((cur.fetchone() or [0])[0] or 0)
             cur = conn.execute("SELECT COUNT(*) FROM lifecycle_events")
-            snapshot["lifecycle_events_total"] = int((cur.fetchone() or [0])[0] or 0)
+            phase1_snapshot["lifecycle_events_total"] = int(
+                (cur.fetchone() or [0])[0] or 0
+            )
             cur = conn.execute("SELECT COUNT(*) FROM block_logs")
-            snapshot["block_logs_total"] = int((cur.fetchone() or [0])[0] or 0)
+            phase1_snapshot["block_logs_total"] = int((cur.fetchone() or [0])[0] or 0)
             cur = conn.execute(
                 "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='HARD'"
             )
-            snapshot["block_logs_hard"] = int((cur.fetchone() or [0])[0] or 0)
+            phase1_snapshot["block_logs_hard"] = int((cur.fetchone() or [0])[0] or 0)
             cur = conn.execute(
                 "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='SOFT'"
             )
-            snapshot["block_logs_soft"] = int((cur.fetchone() or [0])[0] or 0)
+            phase1_snapshot["block_logs_soft"] = int((cur.fetchone() or [0])[0] or 0)
             cur = conn.execute(
                 "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='INFO'"
             )
-            snapshot["block_logs_info"] = int((cur.fetchone() or [0])[0] or 0)
+            phase1_snapshot["block_logs_info"] = int((cur.fetchone() or [0])[0] or 0)
             cur = conn.execute("SELECT COALESCE(SUM(retry_count), 0) FROM jobs")
-            snapshot["jobs_retry_sum"] = int((cur.fetchone() or [0])[0] or 0)
+            phase1_snapshot["jobs_retry_sum"] = int((cur.fetchone() or [0])[0] or 0)
             cur = conn.execute(
                 "SELECT COUNT(*) FROM block_logs WHERE block_type='OPERATOR_PAUSE_BLOCK'"
             )
-            snapshot["operator_pause_blocks_total"] = int((cur.fetchone() or [0])[0] or 0)
+            phase1_snapshot["operator_pause_blocks_total"] = int(
+                (cur.fetchone() or [0])[0] or 0
+            )
             cur = conn.execute(
                 "SELECT COUNT(*) FROM lifecycle_events WHERE source='operator'"
             )
-            snapshot["operator_lifecycle_events_total"] = int(
+            phase1_snapshot["operator_lifecycle_events_total"] = int(
                 (cur.fetchone() or [0])[0] or 0
             )
     except sqlite3.Error as exc:
         logger.warning("Phase 1 snapshot capture failed: %s", exc)
-    return snapshot
+    return phase1_snapshot
 
 
 # ── Main Pipeline ─────────────────────────────────────────────────────────────

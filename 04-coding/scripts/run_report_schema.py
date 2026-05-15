@@ -32,8 +32,8 @@ class PipelineTelemetry(BaseModel):
 class OrchestratorTelemetryModel(BaseModel):
     model_config = {"extra": "forbid"}
 
-    started_at_utc: str = ""
-    finished_at_utc: str = ""
+    started_at_utc: str | None = None
+    finished_at_utc: str | None = None
     execute_outbound: bool = False
     dry_run: bool = False
     venture_pipeline_subprocess_ran: bool = False
