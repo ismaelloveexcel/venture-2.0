@@ -30,6 +30,7 @@ import os
 import csv
 import json
 import pathlib
+import sqlite3
 import sys
 import re
 from collections import defaultdict
@@ -1722,6 +1723,64 @@ def retry_failed_jobs():
             job_queue.fail_job(job.id, error=str(e), retry=True)
 
 
+def _capture_phase1_snapshot() -> dict[str, int | dict[str, int]]:
+    """Capture sparse baseline counters for Phase 1 structured telemetry deltas."""
+    summary = job_queue.get_summary()
+    snapshot: dict[str, int | dict[str, int]] = {
+        "job_summary": {
+            "pending": int(summary.get("pending", 0)),
+            "in_progress": int(summary.get("in_progress", 0)),
+            "completed": int(summary.get("completed", 0)),
+            "failed": int(summary.get("failed", 0)),
+            "abandoned": int(summary.get("abandoned", 0)),
+        },
+        "jobs_total": 0,
+        "lifecycle_events_total": 0,
+        "block_logs_total": 0,
+        "block_logs_hard": 0,
+        "block_logs_soft": 0,
+        "block_logs_info": 0,
+        "jobs_retry_sum": 0,
+        "operator_pause_blocks_total": 0,
+        "operator_lifecycle_events_total": 0,
+    }
+    try:
+        with sqlite3.connect(job_queue.db_path) as conn:
+            cur = conn.execute("SELECT COUNT(*) FROM jobs")
+            snapshot["jobs_total"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute("SELECT COUNT(*) FROM lifecycle_events")
+            snapshot["lifecycle_events_total"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute("SELECT COUNT(*) FROM block_logs")
+            snapshot["block_logs_total"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='HARD'"
+            )
+            snapshot["block_logs_hard"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='SOFT'"
+            )
+            snapshot["block_logs_soft"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='INFO'"
+            )
+            snapshot["block_logs_info"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute("SELECT COALESCE(SUM(retry_count), 0) FROM jobs")
+            snapshot["jobs_retry_sum"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM block_logs WHERE block_type='OPERATOR_PAUSE_BLOCK'"
+            )
+            snapshot["operator_pause_blocks_total"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM lifecycle_events WHERE source='operator'"
+            )
+            snapshot["operator_lifecycle_events_total"] = int(
+                (cur.fetchone() or [0])[0] or 0
+            )
+    except sqlite3.Error as exc:
+        logger.warning("Phase 1 snapshot capture failed: %s", exc)
+    return snapshot
+
+
 # ── Main Pipeline ─────────────────────────────────────────────────────────────
 def main():
     print("\n========================================")
@@ -1822,6 +1881,11 @@ def main():
         print(
             "[ok] Batch 1 lock consumed; this run is now bound to approved recipients."
         )
+
+    phase1_pipeline_started_at = datetime.now(timezone.utc).isoformat().replace(
+        "+00:00", "Z"
+    )
+    phase1_snapshot_before = _capture_phase1_snapshot()
 
     # Retry failed jobs from previous runs
     retry_failed_jobs()
@@ -2598,6 +2662,68 @@ def main():
         f"Failed: {summary['failed']} | Abandoned: {summary['abandoned']}"
     )
 
+    phase1_snapshot_after = _capture_phase1_snapshot()
+    summary_before = phase1_snapshot_before.get("job_summary", {})
+    summary_after = phase1_snapshot_after.get("job_summary", {})
+    phase1_structured = {
+        "version": 1,
+        "window": {
+            "pipeline_started_at_utc": phase1_pipeline_started_at,
+            "pipeline_finished_at_utc": datetime.now(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
+        },
+        "events": [
+            {
+                "event": "queue_operations",
+                "job_summary_before": summary_before,
+                "job_summary_after": summary_after,
+                "jobs_total_delta": int(phase1_snapshot_after["jobs_total"])
+                - int(phase1_snapshot_before["jobs_total"]),
+            },
+            {
+                "event": "state_transitions",
+                "lifecycle_events_delta": int(
+                    phase1_snapshot_after["lifecycle_events_total"]
+                )
+                - int(phase1_snapshot_before["lifecycle_events_total"]),
+            },
+            {
+                "event": "governance_blocks",
+                "block_logs_delta": int(phase1_snapshot_after["block_logs_total"])
+                - int(phase1_snapshot_before["block_logs_total"]),
+                "severity_delta": {
+                    "hard": int(phase1_snapshot_after["block_logs_hard"])
+                    - int(phase1_snapshot_before["block_logs_hard"]),
+                    "soft": int(phase1_snapshot_after["block_logs_soft"])
+                    - int(phase1_snapshot_before["block_logs_soft"]),
+                    "info": int(phase1_snapshot_after["block_logs_info"])
+                    - int(phase1_snapshot_before["block_logs_info"]),
+                },
+            },
+            {
+                "event": "retries_failures",
+                "jobs_retry_sum_delta": int(phase1_snapshot_after["jobs_retry_sum"])
+                - int(phase1_snapshot_before["jobs_retry_sum"]),
+                "failed_status_delta": int(summary_after.get("failed", 0))
+                - int(summary_before.get("failed", 0)),
+                "abandoned_status_delta": int(summary_after.get("abandoned", 0))
+                - int(summary_before.get("abandoned", 0)),
+            },
+            {
+                "event": "operator_interventions",
+                "operator_pause_blocks_delta": int(
+                    phase1_snapshot_after["operator_pause_blocks_total"]
+                )
+                - int(phase1_snapshot_before["operator_pause_blocks_total"]),
+                "operator_lifecycle_events_delta": int(
+                    phase1_snapshot_after["operator_lifecycle_events_total"]
+                )
+                - int(phase1_snapshot_before["operator_lifecycle_events_total"]),
+            },
+        ],
+    }
+
     telemetry_path = os.environ.get("VENTURE_PIPELINE_TELEMETRY_JSON", "").strip()
     if telemetry_path:
         try:
@@ -2610,6 +2736,7 @@ def main():
                 "job_queue_summary": dict(summary),
                 "run_health": dict(run_health),
                 "funnel_counts_7d": dict(fc_7d),
+                "phase1_structured": phase1_structured,
             }
             tpath.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         except OSError as exc:

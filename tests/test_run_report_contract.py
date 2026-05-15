@@ -32,6 +32,40 @@ def test_outbound_pipeline_telemetry_roundtrip(tmp_path: Path):
     assert isinstance(back.outbound.pipeline_telemetry.run_health, dict)
 
 
+def test_outbound_phase1_structured_telemetry_roundtrip(tmp_path: Path):
+    p = tmp_path / "rr_phase1_telemetry.json"
+    r = RunReport(
+        run_id="p1",
+        timestamp_utc="2026-05-15T00:00:00Z",
+        outbound=OutboundSection(
+            status="SUCCESS",
+            pipeline_telemetry={
+                "schema_version": 1,
+                "phase1_structured": {
+                    "version": 1,
+                    "events": [
+                        {"event": "queue_operations", "jobs_total_delta": 3},
+                        {"event": "governance_blocks", "block_logs_delta": 1},
+                    ],
+                },
+            },
+            orchestrator_telemetry={
+                "started_at_utc": "2026-05-15T00:00:00Z",
+                "finished_at_utc": "2026-05-15T00:00:12Z",
+                "execute_outbound": True,
+                "dry_run": True,
+                "venture_pipeline_subprocess_ran": True,
+                "subprocess_return_code": 0,
+            },
+        ),
+    )
+    write_run_report_atomic(p, r)
+    back = parse_run_report(p)
+    assert isinstance(back.outbound.pipeline_telemetry.phase1_structured, dict)
+    assert back.outbound.orchestrator_telemetry.execute_outbound is True
+    assert back.outbound.orchestrator_telemetry.subprocess_return_code == 0
+
+
 def test_cohort_metadata_policy_fingerprint_matches_batch_guard() -> None:
     import hashlib
 

@@ -41,6 +41,7 @@ from run_report_schema import (
     CisEvalSection,
     CohortMetadataModel,
     FunnelHealthSnapshotModel,
+    OrchestratorTelemetryModel,
     OutboundSection,
     OutboundStatus,
     PipelineTelemetry,
@@ -1201,6 +1202,7 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit(5)
 
     execute_outbound = bool(args.execute_outbound or args.execute)
+    orchestrator_started_at = _utc_iso()
 
     run_id = os.environ.get("VENTURE_RUN_ID", "").strip() or uuid.uuid4().hex[:16]
     os.environ["VENTURE_RUN_ID"] = run_id
@@ -1409,6 +1411,21 @@ def main(argv: list[str] | None = None) -> int:
         pc = REPO_ROOT / "clients" / args.client / "prospects.csv"
         if pc.is_file():
             n_records = max(0, sum(1 for _ in pc.open(encoding="utf-8")) - 1)
+
+    outbound = outbound.model_copy(
+        update={
+            "orchestrator_telemetry": OrchestratorTelemetryModel(
+                started_at_utc=orchestrator_started_at,
+                finished_at_utc=_utc_iso(),
+                execute_outbound=execute_outbound,
+                dry_run=bool(args.dry_run),
+                venture_pipeline_subprocess_ran=(
+                    "venture_pipeline_subprocess" in outbound.phases
+                ),
+                subprocess_return_code=outbound.subprocess_return_code,
+            )
+        }
+    )
 
     report = RunReport(
         run_id=run_id,

@@ -26,6 +26,18 @@ class PipelineTelemetry(BaseModel):
     run_health: dict[str, Any] | None = None
     job_queue_summary: dict[str, Any] | None = None
     funnel_counts_7d: dict[str, Any] | None = None
+    phase1_structured: dict[str, Any] | None = None
+
+
+class OrchestratorTelemetryModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    started_at_utc: str = ""
+    finished_at_utc: str = ""
+    execute_outbound: bool = False
+    dry_run: bool = False
+    venture_pipeline_subprocess_ran: bool = False
+    subprocess_return_code: int | None = None
 
 
 class MoneyPathModel(BaseModel):
@@ -267,6 +279,9 @@ class OutboundSection(BaseModel):
     money_path_source: MoneyPathSource = "none"
     # Populated by run_daily when child sets VENTURE_PIPELINE_TELEMETRY_JSON (P3)
     pipeline_telemetry: PipelineTelemetry = Field(default_factory=PipelineTelemetry)
+    orchestrator_telemetry: OrchestratorTelemetryModel = Field(
+        default_factory=OrchestratorTelemetryModel
+    )
     prospect_batch: ProspectBatchModel = Field(default_factory=ProspectBatchModel)
     cohort_metadata: CohortMetadataModel | None = None
     funnel_health_snapshots: list[FunnelHealthSnapshotModel] = Field(
