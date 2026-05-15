@@ -874,28 +874,28 @@ timestamp_utc,run_id,cohort_id,email,name,company_name,role,domain,validation_st
 2026-05-15T06:16:47.422135Z,pytest_e2e_run_daily,,susan@wealthmgmt.pro,Susan Lee,Wealth Management Advisors,Managing Principal,wealthmgmt.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
 2026-05-15T06:16:47.422144Z,pytest_e2e_run_daily,,thomas@execsearch.io,Thomas Anderson,Executive Search Firm,CEO,execsearch.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
 2026-05-15T06:16:47.422187Z,pytest_e2e_run_daily,,victoria@hrconsult.io,Victoria Harris,HR Consulting Plus,Founder,hrconsult.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054586Z,pytest_e2e_run_daily,,amanda@brandstrategy.co,Amanda Foster,Brand Strategy Labs,Principal,brandstrategy.co,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054674Z,pytest_e2e_run_daily,,brandon@socialmedia-pro.com,Brandon Lee,Social Media Agency,Founder,socialmedia-pro.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054545Z,pytest_e2e_run_daily,,brian@mktresearch.pro,Brian Taylor,Market Research Consulting,Research Director,mktresearch.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054563Z,pytest_e2e_run_daily,,chris@bizcstrategy.com,Christopher Davis,Business Strategy Inc,Principal Consultant,bizcstrategy.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054578Z,pytest_e2e_run_daily,,chris@growthhack.academy,Chris Johnson,Growth Hacking Academy,Head of Operations,growthhack.academy,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054649Z,pytest_e2e_run_daily,,daniel@mgmtconsult.com,Daniel Chen,Management Consulting,Managing Partner,mgmtconsult.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054627Z,pytest_e2e_run_daily,,diane@exbrand.io,Diane Moore,Executive Branding,Founder,exbrand.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054714Z,pytest_e2e_run_daily,,heather@emplaw.io,Heather Garcia,Employment Law Services,Partner,emplaw.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054680Z,pytest_e2e_run_daily,,j.brown@legaltech.ai,Jessica Brown,Legal Tech Solutions,Founder,legaltech.ai,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054694Z,pytest_e2e_run_daily,,james@perfmkt.io,James Mitchell,Performance Marketing,Chief Growth Officer,perfmkt.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054523Z,pytest_e2e_run_daily,,joshua@perfmktgroup.com,Joshua Wilson,Performance Marketing Group,VP Growth,perfmktgroup.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054621Z,pytest_e2e_run_daily,,karen@iplaw.io,Karen Miller,Intellectual Property Law,Senior Partner,iplaw.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054613Z,pytest_e2e_run_daily,,kevin@businesscoach.pro,Kevin Lee,Business Coaching Hub,Owner,businesscoach.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054606Z,pytest_e2e_run_daily,,lauren@taxadvisory.io,Lauren Wright,Tax Advisory Group,Partner,taxadvisory.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054663Z,pytest_e2e_run_daily,,linda@salestraining.pro,Linda Evans,Sales Training Academy,CEO,salestraining.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054638Z,pytest_e2e_run_daily,,lisa.garcia@transformcoach.io,Lisa Garcia,Transformational Coaching,Senior Coach,transformcoach.io,REVIEW,ambiguous_title,PASS,PASS,validation_failed,DROP
-2026-05-15T16:53:09.054594Z,pytest_e2e_run_daily,,mike@revenueops.coach,Mike Torres,RevOps Coaching,Head of Growth,revenueops.coach,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054571Z,pytest_e2e_run_daily,,patricia.anderson@corpwellness.pro,Patricia Anderson,Corporate Wellness Coach,Wellness Director,corpwellness.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054657Z,pytest_e2e_run_daily,,patricia@careercoach.pro,Patricia Young,Career Coaching Plus,Principal Coach,careercoach.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054702Z,pytest_e2e_run_daily,,raymond@opsconsult.net,Raymond Taylor,Operations Consulting,Senior Partner,opsconsult.net,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054708Z,pytest_e2e_run_daily,,sarah@digitalgrowth.io,Sarah Chen,Digital Growth Agency,Founder,digitalgrowth.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054554Z,pytest_e2e_run_daily,,sophia@leadershipdev.net,Sophia Washington,Leadership Development,Owner,leadershipdev.net,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054495Z,pytest_e2e_run_daily,,susan@wealthmgmt.pro,Susan Lee,Wealth Management Advisors,Managing Principal,wealthmgmt.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054535Z,pytest_e2e_run_daily,,thomas@execsearch.io,Thomas Anderson,Executive Search Firm,CEO,execsearch.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
-2026-05-15T16:53:09.054687Z,pytest_e2e_run_daily,,victoria@hrconsult.io,Victoria Harris,HR Consulting Plus,Founder,hrconsult.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482807Z,pytest_e2e_run_daily,,alexander@growthpr.io,Alexander Scott,Growth PR Agency,Director,growthpr.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482718Z,pytest_e2e_run_daily,,amanda@softconsult.net,Amanda Patel,Software Consultancy,Managing Director,softconsult.net,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482798Z,pytest_e2e_run_daily,,brian@mktresearch.pro,Brian Taylor,Market Research Consulting,Research Director,mktresearch.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482849Z,pytest_e2e_run_daily,,chris@bizcstrategy.com,Christopher Davis,Business Strategy Inc,Principal Consultant,bizcstrategy.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482703Z,pytest_e2e_run_daily,,david@salesacc.io,David Park,Sales Acceleration Corp,CEO,salesacc.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482711Z,pytest_e2e_run_daily,,donald@orgdev.net,Donald Miller,Organizational Development,Chief Consultant,orgdev.net,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482777Z,pytest_e2e_run_daily,,eric@stratanddesign.com,Eric Anderson,Strategy & Design,Managing Director,stratanddesign.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482842Z,pytest_e2e_run_daily,,heather@emplaw.io,Heather Garcia,Employment Law Services,Partner,emplaw.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482687Z,pytest_e2e_run_daily,,james@perfmkt.io,James Mitchell,Performance Marketing,Chief Growth Officer,perfmkt.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482637Z,pytest_e2e_run_daily,,karen@mindsetcoach.pro,Karen Thompson,Business Mindset Coach,Head Coach,mindsetcoach.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482791Z,pytest_e2e_run_daily,,kevin@businesscoach.pro,Kevin Lee,Business Coaching Hub,Owner,businesscoach.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482829Z,pytest_e2e_run_daily,,lauren@taxadvisory.io,Lauren Wright,Tax Advisory Group,Partner,taxadvisory.io,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482757Z,pytest_e2e_run_daily,,linda@salestraining.pro,Linda Evans,Sales Training Academy,CEO,salestraining.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482729Z,pytest_e2e_run_daily,,lisa.garcia@transformcoach.io,Lisa Garcia,Transformational Coaching,Senior Coach,transformcoach.io,REVIEW,ambiguous_title,PASS,PASS,validation_failed,DROP
+2026-05-15T16:55:29.482770Z,pytest_e2e_run_daily,,lisa@marketing-forge.com,Lisa Wong,Marketing Forge,Director of Sales,marketing-forge.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482813Z,pytest_e2e_run_daily,,m.jordan@branddesign.pro,Michael Jordan,Brand Design Studio,Founder,branddesign.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482785Z,pytest_e2e_run_daily,,michelle@consulting-partners.com,Michelle Torres,Consulting Partners LLC,Director,consulting-partners.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482738Z,pytest_e2e_run_daily,,mike@revenueops.coach,Mike Torres,RevOps Coaching,Head of Growth,revenueops.coach,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482750Z,pytest_e2e_run_daily,,nancy@cre-advisors.com,Nancy Anderson,Commercial Real Estate,VP,cre-advisors.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482696Z,pytest_e2e_run_daily,,nicole@contentmarketing.pro,Nicole Davis,Content Marketing Co,Founder,contentmarketing.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482764Z,pytest_e2e_run_daily,,patricia.anderson@corpwellness.pro,Patricia Anderson,Corporate Wellness Coach,Wellness Director,corpwellness.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482836Z,pytest_e2e_run_daily,,patricia@careercoach.pro,Patricia Young,Career Coaching Plus,Principal Coach,careercoach.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482664Z,pytest_e2e_run_daily,,rachel@digmarketstudio.com,Rachel Green,Digital Marketing Studios,CEO,digmarketstudio.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482823Z,pytest_e2e_run_daily,,robert@accounting-plus.com,Robert Singh,Accounting Plus,Managing Partner,accounting-plus.com,READY,complete_profile,PASS,PASS,,ELIGIBLE
+2026-05-15T16:55:29.482678Z,pytest_e2e_run_daily,,susan@wealthmgmt.pro,Susan Lee,Wealth Management Advisors,Managing Principal,wealthmgmt.pro,READY,complete_profile,PASS,PASS,,ELIGIBLE
