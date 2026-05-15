@@ -1,6 +1,8 @@
 .env
+.env.*
 .venv/
 .cache/
+.cursor/
 __pycache__/
 *.pyc
 *.pyo
@@ -13,7 +15,10 @@ Thumbs.db
 
 # Runtime state and generated operational artifacts
 execution_state.json
-logs/*.json
+logs/
+04-coding/reports/
+run_report.json
+test_output.txt
 04-coding/venture-engine/config/system_state.json
 06-sales/archive/generated-outreach-killed-*.csv
 
