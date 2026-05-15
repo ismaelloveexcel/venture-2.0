@@ -23,6 +23,8 @@ from dotenv import load_dotenv
 
 from batch_guard import (
     BatchGuardError,
+    CANONICAL_SUBJECT,
+    CTA_STRING,
     build_final_payloads,
     get_test_approval_state,
     load_lock,
@@ -32,29 +34,25 @@ from batch_guard import (
     mark_test_approved,
     validate_payload,
 )
-from send_guard import SendGuardBlocked, send_email_safe
+from send_guard import SendGuardBlocked, build_batch1_resend_payload, send_email_safe
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = REPO_ROOT / ".env"
 load_dotenv(ENV_FILE, override=True)
-SIGNATURE = (
-    os.environ.get(
-        "OUTREACH_SIGNATURE",
-        "Best,\nIsmael Sudally\nReplyPilot AI\nOutbound systems for B2B service firms",
-    )
-    .replace("\\n", "\n")
-    .strip()
+SUBJECT = CANONICAL_SUBJECT
+BODY = "\n".join(
+    [
+        "Hi Alex,",
+        "",
+        "Noticed BrightOps Studio works with founder-led B2B teams on growth and acquisition.",
+        "",
+        "A lot of B2B service firms have a strong service, but outbound tends to break once it moves beyond referrals: unclear target accounts, inconsistent first-touch messaging, and no clear way to see what is actually working.",
+        "",
+        "I build client-owned outbound systems focused on one market with structured targeting, message review, sending controls, and reply tracking.",
+        "",
+        CTA_STRING,
+    ]
 )
-SUBJECT = "quick question"
-BODY = """Hi Alex,
-
-Noticed BrightOps Studio works with founder-led B2B teams on growth and acquisition.
-
-A lot of B2B service firms have a strong service, but outbound tends to break once it moves beyond referrals: unclear target accounts, inconsistent first-touch messaging, and no clear way to see what is actually working.
-
-I build client-owned outbound systems focused on one market with structured targeting, message review, sending controls, and reply tracking.
-
-Worth a quick look, or not relevant right now?"""
 
 
 def _mask_email(value: str) -> str:
@@ -76,11 +74,6 @@ def _test_recipient(env: dict[str, str]) -> str:
         return direct.split(",", 1)[0].strip()
     internal = env.get("INTERNAL_TEST_RECIPIENTS", "").replace(";", ",").strip()
     return internal.split(",", 1)[0].strip() if internal else ""
-
-
-def _html_body() -> str:
-    text = f"{BODY.strip()}\n\n{SIGNATURE}"
-    return "<p>" + text.replace("\n", "<br>") + "</p>"
 
 
 def status() -> int:
@@ -127,12 +120,12 @@ def send_test() -> int:
             print(f"  - {key}")
         return 2
 
-    payload = {
-        "from": f"{env['RESEND_FROM_NAME']} <{env['RESEND_FROM_EMAIL']}>",
-        "to": [recipient],
-        "subject": SUBJECT,
-        "html": _html_body(),
-    }
+    payload = build_batch1_resend_payload(
+        from_header=f"{env['RESEND_FROM_NAME']} <{env['RESEND_FROM_EMAIL']}>",
+        to=[recipient],
+        subject=SUBJECT,
+        cold_body_text=BODY.strip(),
+    )
     payload_failures = [
         check
         for check in validate_payload(payload)

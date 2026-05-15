@@ -133,11 +133,12 @@ python 04-coding/scripts/review_queue.py
 ```bash
 # Preview (safe, no emails sent)
 python 04-coding/scripts/pre_send_check.py
-python 04-coding/scripts/venture_pipeline.py --dry-run
+python 04-coding/scripts/run_daily.py bridge status
+VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute --dry-run
 
 # Actual send
 python 04-coding/scripts/pre_send_check.py
-python 04-coding/scripts/venture_pipeline.py
+VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute
 ```
 
 **What happens:**

@@ -65,18 +65,10 @@ def load_config():
 def load_prospects():
     if not os.path.exists(PROSPECTS_FILE):
         print(f"No prospects file found at: {PROSPECTS_FILE}")
-        print("Creating sample file with 1 example row...")
-        os.makedirs(os.path.dirname(PROSPECTS_FILE), exist_ok=True)
-        with open(PROSPECTS_FILE, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=PROSPECT_FIELDS)
-            writer.writeheader()
-            writer.writerow({
-                "name": "Jane Smith", "company": "Bright Smiles Dental", "role": "Owner",
-                "industry": "Dental", "pain_point": "Losing patients who don't rebook after first visit",
-                "linkedin_url": "https://linkedin.com/in/janesmith", "email": "jane@brightsmiles.com",
-                "status": "pending"
-            })
-        print(f"Sample created. Edit {PROSPECTS_FILE} and run again.")
+        print(
+            "This script does not create or overwrite prospects.csv (governed path: "
+            "python 04-coding/scripts/run_daily.py --generate-prospects --prospects-demo)."
+        )
         return []
     with open(PROSPECTS_FILE, newline="", encoding="utf-8") as f:
         return [r for r in csv.DictReader(f) if r.get("status", "").lower() == "pending"]

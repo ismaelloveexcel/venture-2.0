@@ -22,22 +22,34 @@ from dotenv import load_dotenv
 # Add venture-mcp-server to path (for resilience module)
 BASE = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE / "venture-mcp-server"))
+_SCRIPTS_DIR = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(_SCRIPTS_DIR))
+
+from batch_guard import CTA_STRING as BATCH1_CTA_STRING
 
 from openai import OpenAI
 
 load_dotenv(BASE / ".env")
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
-PROSPECTS_FILE = BASE / "06-sales" / "prospects.csv"
-OUTPUT_FILE = BASE / "06-sales" / "generated-outreach.csv"
+from runtime_config import resolve_data_base, resolve_venture_db_path
+
+from prospect_gate import normalize_email
+
+DATA_BASE = resolve_data_base(BASE)
+
+PROSPECTS_FILE = DATA_BASE / "06-sales" / "prospects.csv"
+OUTPUT_FILE = DATA_BASE / "06-sales" / "generated-outreach.csv"
 LOCAL_GENERATION = "--local" in sys.argv or os.environ.get(
     "VENTURE_LOCAL_GENERATION", ""
+).strip().lower() in {"1", "true", "yes", "on"}
+AUTO_APPROVE_OUTREACH = os.environ.get(
+    "VENTURE_AUTO_APPROVE_OUTREACH", ""
 ).strip().lower() in {"1", "true", "yes", "on"}
 DEFAULT_OUTREACH_SIGNATURE = (
     "Best,\n"
     "Ismael Sudally\n"
-    "ReplyPilot AI\n"
-    "Outbound systems for B2B service firms"
+    "Venture 2.0\n"
+    "Revenue growth systems for early-stage B2B ventures"
 )
 OUTREACH_SIGNATURE = (
     os.environ.get("OUTREACH_SIGNATURE", DEFAULT_OUTREACH_SIGNATURE)
@@ -72,35 +84,69 @@ TRUST_REJECT_PATTERNS = (
     r"\bloom\b",
 )
 
-# Initialize OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-
 class FatalGenerationError(RuntimeError):
     """Raised when generation cannot proceed (e.g., invalid API auth)."""
 
 
+_openai_client: OpenAI | None = None
+
+
+def _suppression_enabled() -> bool:
+    return os.environ.get("ENABLE_SUPPRESSION_CHECKS", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_jq = None
+
+
+def _suppression_queue():
+    global _jq
+    if _jq is None:
+        from job_queue import get_queue  # noqa: PLC0415
+
+        _jq = get_queue(str(resolve_venture_db_path(DATA_BASE, BASE)))
+    return _jq
+
+
+def _get_openai_client() -> OpenAI:
+    """Lazy client so dry-run / VENTURE_LOCAL_GENERATION never requires OPENAI_API_KEY at import."""
+    global _openai_client
+    if _openai_client is not None:
+        return _openai_client
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not key:
+        raise FatalGenerationError("OPENAI_API_KEY not set")
+    _openai_client = OpenAI(api_key=key)
+    return _openai_client
+
+
 # Batch 1 prompt: single-variable outbound signal experiment.
-ICP_PROMPT = """You are writing the single locked Batch 1 outbound email for B2B service firms.
+ICP_PROMPT = f"""You are writing the single locked Batch 1 outbound email for B2B service firms.
 
 Objective: preserve one fixed email architecture. The only allowed content variable is the specific observation.
 
 STRICT BODY STRUCTURE:
-Hi {first_name},
+Hi {{first_name}},
 
-Noticed {specific_observation}.
+Noticed {{specific_observation}}.
 
-A lot of B2B service firms have a strong service, but outbound tends to break once it moves beyond referrals: unclear target accounts, inconsistent first-touch messaging, and no clear way to see what is actually working.
+A lot of B2B service firms need more qualified leads, but the motion breaks when targets are fuzzy, first messages blur, and nobody sees what produces conversations.
 
-I build client-owned outbound systems focused on one market with structured targeting, message review, sending controls, and reply tracking.
+I am building a focused lead-generation tool for one market: targeting, message review, send limits, and reply visibility.
 
-Worth a quick look, or not relevant right now?
+{BATCH1_CTA_STRING}
 
 RULES:
-- Do not change the structure, CTA, positioning, or audience anchor.
+- Do not change the structure, fixed CTA line, or audience anchor (B2B service firms).
+- Positioning is locked to the lead-generation tool wedge described in the two paragraphs above (not agency, not generic growth).
 - type_of_firm is always B2B service firms.
 - No call requests.
 - No links, Calendly, Loom, attachments, fake proof, guarantees, or hype language.
+- No product pitch or demo promise in the cold email beyond the fixed CTA line (walkthrough comes only after they reply yes).
 - No bullet points
 - Operator-to-operator tone
 
@@ -161,11 +207,11 @@ def generate_local_message(prospect: dict) -> str:
 
 Noticed {observation}.
 
-A lot of B2B service firms have a strong service, but outbound tends to break once it moves beyond referrals: unclear target accounts, inconsistent first-touch messaging, and no clear way to see what is actually working.
+A lot of B2B service firms need more qualified leads, but the motion breaks when targets are fuzzy, first messages blur, and nobody sees what produces conversations.
 
-I build client-owned outbound systems focused on one market with structured targeting, message review, sending controls, and reply tracking.
+I am building a focused lead-generation tool for one market: targeting, message review, send limits, and reply visibility.
 
-Worth a quick look, or not relevant right now?"""
+{BATCH1_CTA_STRING}"""
 
 
 def strip_outreach_signature(message: str) -> str:
@@ -193,8 +239,6 @@ def founder_trust_issues(message: str) -> list[str]:
     for pattern in TRUST_REJECT_PATTERNS:
         if re.search(pattern, text):
             issues.append(pattern)
-    if OUTREACH_SIGNATURE.lower() not in text:
-        issues.append("missing fixed premium signature")
     return issues
 
 
@@ -212,7 +256,7 @@ def validate_message(message: str, prospect: dict) -> tuple[str, int]:
         return "FAIL", 0
 
     body = strip_outreach_signature(message)
-    trust_issues = founder_trust_issues(message)
+    trust_issues = founder_trust_issues(body)
     if trust_issues:
         return "FAIL", 0
 
@@ -224,9 +268,8 @@ def validate_message(message: str, prospect: dict) -> tuple[str, int]:
     if word_count > 105:
         return "FAIL", 1
 
-    # CTA check: fixed Batch 1 CTA only.
-    required_cta = "worth a quick look, or not relevant right now?"
-    if required_cta not in body.lower():
+    # CTA check: fixed Batch 1 CTA only (canonical string from batch_guard).
+    if BATCH1_CTA_STRING.lower() not in body.lower():
         return "FAIL", 1
 
     forbidden_cta_terms = ["call", "book", "calendly", "meeting", "demo"]
@@ -247,7 +290,7 @@ def validate_message(message: str, prospect: dict) -> tuple[str, int]:
         return "RETRY", 2
 
     # Filler/artifact check
-    filler_phrases = ["hope you're well", "quick question", "lorem", "{", "{{"]
+    filler_phrases = ["hope you're well", "lorem", "{", "{{"]
     has_filler = any(phrase in body.lower() for phrase in filler_phrases)
     if has_filler:
         return "FAIL", 0
@@ -266,9 +309,6 @@ def generate_message(prospect: dict, attempt: int = 1) -> Optional[str]:
     if LOCAL_GENERATION:
         return generate_local_message(prospect)
 
-    if not OPENAI_API_KEY:
-        raise FatalGenerationError("OPENAI_API_KEY not set")
-
     company = prospect.get("company_name", "Unknown")
     role = prospect.get("role", "Unknown")
     observation = build_specific_observation(prospect)
@@ -281,7 +321,7 @@ def generate_message(prospect: dict, attempt: int = 1) -> Optional[str]:
 Use the strict Batch 1 structure exactly."""
 
     try:
-        response = client.chat.completions.create(
+        response = _get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": ICP_PROMPT},
@@ -327,7 +367,14 @@ def run() -> int:
     prospects = []
     with open(PROSPECTS_FILE, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        prospects = [row for row in reader if row.get("readiness_status") == "READY"]
+        prospects = [
+            row
+            for row in reader
+            if (row.get("validation_status") or row.get("readiness_status") or "")
+            .strip()
+            .upper()
+            == "READY"
+        ]
 
     if not prospects:
         print(f"[fail] No READY prospects in {PROSPECTS_FILE}")
@@ -346,6 +393,22 @@ def run() -> int:
 
         company = prospect.get("company_name", "Unknown")
 
+        em = normalize_email((prospect.get("email") or "").strip())
+        if _suppression_enabled() and em and _suppression_queue().is_suppressed(em):
+            print(f"\n[skip] suppressed before generation: {em}")
+            generated.append(
+                {
+                    "company_name": company,
+                    "role": prospect.get("role", ""),
+                    "message": "",
+                    "status": "FAIL",
+                    "auto_score": 0,
+                    "approved": "",
+                }
+            )
+            fail_count += 1
+            continue
+
         # First attempt
         try:
             message = generate_message(prospect, attempt=1)
@@ -358,7 +421,6 @@ def run() -> int:
             status = "FAIL"
             score = 0
         else:
-            message = ensure_outreach_signature(message)
             status, score = validate_message(message, prospect)
 
         # Retry once if RETRY status
@@ -372,12 +434,14 @@ def run() -> int:
                 )
                 return 2
             if message:
-                message = ensure_outreach_signature(message)
                 status, score = validate_message(message, prospect)
             else:
                 status = "FAIL"
                 score = 0
 
+        approved_flag = ""
+        if AUTO_APPROVE_OUTREACH and status == "PASS":
+            approved_flag = "yes"
         generated.append(
             {
                 "company_name": company,
@@ -385,6 +449,7 @@ def run() -> int:
                 "message": message or "",
                 "status": status,
                 "auto_score": score,
+                "approved": approved_flag,
             }
         )
 
@@ -407,7 +472,7 @@ def run() -> int:
         return 2
 
     # Write output
-    fieldnames = ["company_name", "role", "message", "status", "auto_score"]
+    fieldnames = ["company_name", "role", "message", "status", "auto_score", "approved"]
 
     with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)

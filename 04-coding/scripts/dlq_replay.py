@@ -59,7 +59,7 @@ def main() -> int:
         return 2
 
     jq = JobQueue(str(db_path))
-    from dashboard import process_resend_event  # noqa: E402 — after JobQueue import; loads .env via dashboard
+    from resend_webhook_handler import process_resend_event  # noqa: E402
 
     ids = args.ids
     rows = jq.list_webhook_dlq(limit=args.limit, offset=args.offset, ids=ids)

@@ -98,9 +98,10 @@ Expected output: 20-30 approved messages in `06-sales/approved-messages.csv`
 
 ### Step 4: Send (Automated)
 ```bash
-python 04-coding/scripts/venture_pipeline.py --dry-run
+python 04-coding/scripts/run_daily.py bridge status
+VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute --dry-run
 # Verify no errors, then:
-python 04-coding/scripts/venture_pipeline.py
+VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute
 ```
 Sends approved messages at 20/day cap (configurable)
 

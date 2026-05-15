@@ -1,0 +1,216 @@
+{
+  "metadata": {
+    "timestamp_utc": "2026-05-10T21:26:03Z",
+    "input_path": "C:\\Users\\isuda\\Dev\\VENTURE 2.0\\06-sales\\shadow_decisions.jsonl",
+    "input_sha256": "0d91c3c5ea572db0dec31855ec329c43de4819b8da9c0c8bf8e8b3f25ac65d72",
+    "spec_version": "v8.1",
+    "record_count": 9,
+    "random_seed": 42,
+    "bootstrap_n": 1000
+  },
+  "invariance_checks": {
+    "schema_valid": true,
+    "ordering": "company_then_original_index",
+    "tie_handling": "average_rank_percentile_and_spearman_ranks",
+    "reasons": []
+  },
+  "sample_gate": {
+    "valid": false,
+    "error": "INSUFFICIENT_SAMPLE_SIZE",
+    "observed": 9,
+    "required": 50
+  },
+  "metrics_point_estimates": {},
+  "metrics_bootstrap_summary": {},
+  "risk_components": {},
+  "final_decision": "INSUFFICIENT_SAMPLE_SIZE",
+  "semantic_labels": {
+    "spearman": "rank_stability_percentile_space_only",
+    "inversion_rate": "ranking_perturbation_magnitude",
+    "flip_rate": "decision_sensitivity",
+    "mean_delta_pct": "normalized_transformation_effect_mean",
+    "std_delta_pct": "normalized_transformation_effect_spread",
+    "distribution_collapse_ratio": "distribution_stability_raw_std_ratio",
+    "delta_pct": "v3_percentile_minus_v2_percentile_per_record"
+  },
+  "stress_test_summary": {
+    "factorial_axes": {
+      "motion": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "spend": [
+        "weak",
+        "medium",
+        "strong"
+      ],
+      "urgency": [
+        "none",
+        "moderate",
+        "high"
+      ]
+    },
+    "factorial_count": 27,
+    "full_factorial_rows": [
+      {
+        "motion": "low",
+        "spend": "weak",
+        "urgency": "none"
+      },
+      {
+        "motion": "low",
+        "spend": "weak",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "low",
+        "spend": "weak",
+        "urgency": "high"
+      },
+      {
+        "motion": "low",
+        "spend": "medium",
+        "urgency": "none"
+      },
+      {
+        "motion": "low",
+        "spend": "medium",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "low",
+        "spend": "medium",
+        "urgency": "high"
+      },
+      {
+        "motion": "low",
+        "spend": "strong",
+        "urgency": "none"
+      },
+      {
+        "motion": "low",
+        "spend": "strong",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "low",
+        "spend": "strong",
+        "urgency": "high"
+      },
+      {
+        "motion": "medium",
+        "spend": "weak",
+        "urgency": "none"
+      },
+      {
+        "motion": "medium",
+        "spend": "weak",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "medium",
+        "spend": "weak",
+        "urgency": "high"
+      },
+      {
+        "motion": "medium",
+        "spend": "medium",
+        "urgency": "none"
+      },
+      {
+        "motion": "medium",
+        "spend": "medium",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "medium",
+        "spend": "medium",
+        "urgency": "high"
+      },
+      {
+        "motion": "medium",
+        "spend": "strong",
+        "urgency": "none"
+      },
+      {
+        "motion": "medium",
+        "spend": "strong",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "medium",
+        "spend": "strong",
+        "urgency": "high"
+      },
+      {
+        "motion": "high",
+        "spend": "weak",
+        "urgency": "none"
+      },
+      {
+        "motion": "high",
+        "spend": "weak",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "high",
+        "spend": "weak",
+        "urgency": "high"
+      },
+      {
+        "motion": "high",
+        "spend": "medium",
+        "urgency": "none"
+      },
+      {
+        "motion": "high",
+        "spend": "medium",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "high",
+        "spend": "medium",
+        "urgency": "high"
+      },
+      {
+        "motion": "high",
+        "spend": "strong",
+        "urgency": "none"
+      },
+      {
+        "motion": "high",
+        "spend": "strong",
+        "urgency": "moderate"
+      },
+      {
+        "motion": "high",
+        "spend": "strong",
+        "urgency": "high"
+      }
+    ],
+    "boundary_rows": [
+      {
+        "motion": "low",
+        "spend": "weak",
+        "urgency": "none"
+      },
+      {
+        "motion": "high",
+        "spend": "strong",
+        "urgency": "high"
+      },
+      {
+        "motion": "low",
+        "spend": "strong",
+        "urgency": "high"
+      },
+      {
+        "motion": "high",
+        "spend": "weak",
+        "urgency": "none"
+      }
+    ],
+    "note": "Synthetic factorial factors only; no CIS-derived leakage."
+  }
+}

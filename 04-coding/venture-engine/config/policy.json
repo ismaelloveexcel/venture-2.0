@@ -1,10 +1,10 @@
 {
-  "decided_at": "2026-05-10T05:16:17.359843+00:00Z",
-  "mode": "CONSERVATIVE",
-  "reason": "CAUTION: dlq=0, failure_rate=0.0%, reply_rate=0.0%",
-  "followup_depth": 1,
-  "cooldown_multiplier": 1.2,
-  "send_velocity": "normal",
-  "replay_enabled": true,
-  "manual_reset_required": false
+  "decided_at": "2026-05-12T05:40:36.622381+00:00Z",
+  "mode": "SAFE_MODE",
+  "reason": "CRITICAL: dlq=0, orphans=2, duplicates=0",
+  "followup_depth": 0,
+  "cooldown_multiplier": 2.0,
+  "send_velocity": "paused",
+  "replay_enabled": false,
+  "manual_reset_required": true
 }

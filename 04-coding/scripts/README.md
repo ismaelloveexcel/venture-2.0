@@ -22,7 +22,10 @@ Three-script execution pack for non-technical operators:
 python prospect_builder.py          # 5 min
 python message_generator_solo.py    # 10 min
 python review_queue.py              # 20-30 min (approve/reject)
-# Then: venture_pipeline.py --dry-run && venture_pipeline.py (send)
+# Then:
+# python run_daily.py bridge status
+# VENTURE_CANONICAL_ENTRY=1 python run_daily.py --execute --dry-run
+# VENTURE_CANONICAL_ENTRY=1 python run_daily.py --execute
 ```
 
 **Operator overhead:** 30-40 min setup (Day 8), then ~10 min daily
@@ -31,6 +34,12 @@ See [DAY8_EXECUTION_GUIDE.md](DAY8_EXECUTION_GUIDE.md) for full details.
 
 ---
 ## Primary commands
+
+### Canonical daily (vFINAL.1)
+
+| Script | Purpose |
+|--------|---------|
+| `run_daily.py` | **Operator default:** one subprocess to `venture_pipeline.py` when `--execute-outbound`, optional `--cis`, atomic `run_report.json`. See repo root **`OPERATOR_RUNBOOK.md`**. |
 
 ### Runtime
 
@@ -116,7 +125,8 @@ Run from this directory (or repo root with adjusted paths). Example:
 
 ```powershell
 cd 04-coding/scripts
-uv run --with httpx --with python-dotenv python venture_pipeline.py --dry-run
+uv run python run_daily.py bridge status
+uv run --env-file ..\\..\\.env python run_daily.py --execute --dry-run
 uv run python system_state_snapshot.py
 uv run python policy_engine.py
 uv run python weekly_optimizer.py
@@ -131,12 +141,12 @@ Use **repo-root `.venv`** (or another fixed interpreter) in the task action so r
 - **Daily:** `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\VENTURE 2.0\04-coding\scripts\ops_daily.ps1"`
 - **Daily (recommended single task):** `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\VENTURE 2.0\04-coding\scripts\ops_autopilot_daily.ps1"`
 - **Weekly:** same pattern with `ops_weekly.ps1`
-- **Pipeline:** run `venture_pipeline.py` in a separate task; stagger times so daily health does not overlap a long pipeline window if both are heavy on the same machine.
+- **Pipeline:** run canonical `run_daily.py --execute` in a separate task; stagger times so daily health does not overlap a long pipeline window if both are heavy on the same machine.
 
 Suggested cadence for confidence-first operation:
 
 - 08:00 daily: `ops_autopilot_daily.ps1`
-- 08:15 daily: `venture_pipeline.py` run task (skip this if autopilot is allowed to auto-run pipeline)
+- 08:15 daily: `run_daily.py --execute` run task (skip this if autopilot is allowed to auto-run pipeline)
 - Sunday 09:00: `ops_weekly.ps1`
 
 ### One-command daily startup (manual operator path)
@@ -158,8 +168,8 @@ Treat a non-zero exit as a hard stop. Fix only the failed invariant, rerun the g
 `run_pipeline.ps1` now executes in this order:
 
 1. Batch 1 pre-send gate (`live` blocks on failure; `dry-run` reports and continues)
-2. `venture_pipeline.py --status`
-3. `venture_pipeline.py --dry-run` (or live with `-Mode live`)
+2. `run_daily.py bridge status`
+3. `run_daily.py --execute --dry-run` (or live with `-Mode live`)
 
 Use the mandatory daily scorecard template after each run: `03-reevaluation/daily-scorecard-template.md`.
 

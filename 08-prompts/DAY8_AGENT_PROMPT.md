@@ -217,7 +217,7 @@ STATUS: ✅ DAY 8 COMPLETE — READY FOR DAY 9 SEND
 
 NEXT STEPS (Day 9):
 1. Run: python pre_send_check.py
-2. Run: python venture_pipeline.py
+2. Run: VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute
 3. Monitor: streamlit run dashboard_streamlit.py
 
 Key metrics to track Days 9–14:

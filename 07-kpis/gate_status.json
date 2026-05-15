@@ -1,0 +1,9 @@
+{
+  "timestamp_utc": "2026-05-14T04:49:24Z",
+  "gate_a_score_pct": 100.0,
+  "gate_a_pass": true,
+  "gate_b_positive_reply_rate_pct": 0.0,
+  "gate_b_pass": false,
+  "stop_loss_triggered": false,
+  "reasons": []
+}

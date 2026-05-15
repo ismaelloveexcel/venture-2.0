@@ -3,61 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Venture OS</title>
+  <title>Venture OS — execution control plane (local)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #0d0d14; color: #e2e8f0; font-family: system-ui, sans-serif; }
-    .card { background: #15151f; border: 1px solid #22223a; border-radius: 14px; }
+    :root {
+      --bg: #0a0f0d;
+      --surface: #121a17;
+      --border: #1e2a26;
+      --text: #e4ebe8;
+      --muted: #8a9a94;
+      --accent: #2d6a4f;
+      --accent-dim: #245542;
+      --warn: #b8860b;
+      --bad: #9b3b3b;
+    }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
     .input-field {
       display: block; width: 100%; margin-top: 6px; padding: 9px 12px;
-      background: #0d0d14; border: 1px solid #2a2a42; border-radius: 8px;
-      color: #e2e8f0; font-size: 14px; outline: none; transition: border-color .15s;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 14px; outline: none; transition: border-color .15s;
     }
-    .input-field:focus { border-color: #6366f1; }
-    .input-field::placeholder { color: #4b5563; }
-    .btn-primary { background: #4f46e5; color: #fff; font-weight: 500; padding: 10px 22px;
+    .input-field:focus { border-color: var(--accent); }
+    .input-field::placeholder { color: #5c6b64; }
+    .btn-primary { background: var(--accent); color: #fff; font-weight: 600; padding: 10px 22px;
       border-radius: 8px; border: none; cursor: pointer; transition: background .15s; font-size: 14px; }
-    .btn-primary:hover:not(:disabled) { background: #4338ca; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-dim); }
     .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-ghost { background: #1e1e2e; color: #9ca3af; font-weight: 500; padding: 10px 20px;
-      border-radius: 8px; border: 1px solid #2a2a42; cursor: pointer; transition: all .15s; font-size: 14px; }
-    .btn-ghost:hover { background: #252535; color: #e2e8f0; }
+    .btn-ghost { background: #151d1a; color: var(--muted); font-weight: 500; padding: 10px 20px;
+      border-radius: 8px; border: 1px solid var(--border); cursor: pointer; transition: all .15s; font-size: 14px; }
+    .btn-ghost:hover { background: #1a2420; color: var(--text); }
     .tab-btn { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 500;
       border: none; cursor: pointer; transition: all .15s; }
-    .tab-btn.active { background: #4f46e5; color: #fff; }
-    .tab-btn:not(.active) { background: #1e1e2e; color: #6b7280; }
-    .tab-btn:not(.active):hover { background: #252535; color: #9ca3af; }
-    .terminal { background: #080810; border: 1px solid #1e1e2e; border-radius: 10px;
-      padding: 16px; color: #4ade80; font-family: 'Courier New', monospace; font-size: 12.5px;
+    .tab-btn.active { background: var(--accent); color: #fff; }
+    .tab-btn:not(.active) { background: #151d1a; color: #6b7a74; }
+    .tab-btn:not(.active):hover { background: #1a2420; color: #a8b5af; }
+    .terminal { background: #060908; border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px; color: #7dd3a0; font-family: ui-monospace, monospace; font-size: 12.5px;
       line-height: 1.6; min-height: 80px; max-height: 340px; overflow-y: auto;
       white-space: pre-wrap; word-break: break-word; }
     .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 500; }
-    .badge-pending { background: #451a03; color: #fb923c; }
-    .badge-sent    { background: #052e16; color: #4ade80; }
-    .badge-other   { background: #1e1e2e; color: #6b7280; }
+    .badge-pending { background: #2a2210; color: #e3c76a; }
+    .badge-sent    { background: #0f2418; color: #7dd3a0; }
+    .badge-other   { background: #151d1a; color: #6b7a74; }
     .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
     .dot-on  { background: #4ade80; }
-    .dot-off { background: #374151; }
-    .progress-bar-track { background: #1e1e2e; border-radius: 99px; height: 6px; overflow: hidden; }
-    .progress-bar-fill  { background: linear-gradient(90deg, #4f46e5, #7c3aed); height: 100%;
+    .dot-off { background: #3d4a44; }
+    .progress-bar-track { background: #151d1a; border-radius: 99px; height: 6px; overflow: hidden; }
+    .progress-bar-fill  { background: var(--accent); height: 100%;
       border-radius: 99px; transition: width .5s ease; }
-    .spinner { width: 16px; height: 16px; border: 2px solid #4f46e5;
+    .spinner { width: 16px; height: 16px; border: 2px solid var(--accent);
       border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0d0d14; }
-    ::-webkit-scrollbar-thumb { background: #2a2a42; border-radius: 3px; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   </style>
 </head>
 <body class="min-h-screen">
 
   <!-- ── Header ── -->
-  <div style="background:#10101a;border-bottom:1px solid #1e1e2e" class="sticky top-0 z-10">
+  <div style="background:#0f1613;border-bottom:1px solid #1e2a26" class="sticky top-0 z-10">
     <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div style="background:#4f46e5;width:32px;height:32px;border-radius:8px" class="flex items-center justify-center text-white font-bold text-sm">V</div>
+        <div style="background:#2d6a4f;width:32px;height:32px;border-radius:8px" class="flex items-center justify-center text-white font-bold text-sm">V</div>
         <div>
           <span class="text-white font-semibold">Venture OS</span>
-          <span class="text-gray-500 text-sm ml-2">local dashboard</span>
+          <span class="text-gray-500 text-sm ml-2">execution control plane · local</span>
         </div>
       </div>
       <div id="api-status" class="flex items-center gap-4 text-xs"></div>
@@ -66,32 +77,36 @@
 
   <div class="max-w-5xl mx-auto px-6 py-8">
 
-    <!-- ── KPI Cards ── -->
-    <div class="grid grid-cols-2 gap-4 mb-6 sm:grid-cols-4">
+    <!-- ── Artifact strip: values from weekly-kpi-data.csv, reply log, prospects file (not scoring) ── -->
+    <div class="grid grid-cols-2 gap-4 mb-2 sm:grid-cols-4">
       <div class="card p-5">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Monthly Revenue</p>
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">weekly-kpi-data.csv — revenue</p>
         <p class="text-2xl font-bold text-white" id="kpi-mrr">—</p>
         <div class="progress-bar-track mt-3"><div class="progress-bar-fill" id="kpi-bar" style="width:0%"></div></div>
         <p class="text-gray-600 text-xs mt-1.5" id="kpi-pct">loading…</p>
       </div>
       <div class="card p-5">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Gap to $10k</p>
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">weekly-kpi-data.csv — gap</p>
         <p class="text-2xl font-bold text-amber-400" id="kpi-gap">—</p>
-        <p class="text-gray-600 text-xs mt-3">target: $10,000/mo</p>
+        <p class="text-gray-600 text-xs mt-3">operator spreadsheet only — not a shipped guarantee</p>
       </div>
       <div class="card p-5">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Reply Rate</p>
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">reply_intent_log.csv — reply %</p>
         <p class="text-2xl font-bold" id="kpi-reply">—</p>
-        <p class="text-gray-600 text-xs mt-3">4-week avg · target ≥5%</p>
+        <p class="text-gray-600 text-xs mt-3">from reply_intent_log.csv · not predictive</p>
       </div>
       <div class="card p-5">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Pending Prospects</p>
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">prospects.csv — pending count</p>
         <p class="text-2xl font-bold text-white" id="kpi-pending">—</p>
-        <p class="text-gray-600 text-xs mt-3">ready to process</p>
+        <p class="text-gray-600 text-xs mt-3">rows in prospects file</p>
       </div>
     </div>
+    <p class="text-gray-600 text-xs mb-6 max-w-4xl">
+      Governed runs: <code class="text-gray-500">run_daily.py</code> per <code class="text-gray-500">OPERATOR_RUNBOOK.md</code>.
+      Values above are raw fields from files under <code class="text-gray-500">07-kpis/</code> and <code class="text-gray-500">06-sales/</code> — not scores, not models, not a second source of truth vs <code class="text-gray-500">run_report.json</code>.
+    </p>
 
-    <!-- ── Job Queue Status ── -->
+    <!-- ── Job queue (venture_jobs.db) ── -->
     <div class="grid grid-cols-2 gap-4 mb-8 sm:grid-cols-5">
       <div class="card p-4">
         <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Pending</p>
@@ -120,11 +135,32 @@
       </div>
     </div>
 
+    <!-- ── Operator snapshot (run_report + skips) ── -->
+    <div class="card p-5 mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-white font-semibold text-sm">Latest run &amp; outbound skips</h2>
+        <button type="button" class="btn-ghost text-xs py-1 px-3" onclick="loadOperatorSnapshot()">↻ Refresh</button>
+      </div>
+      <p class="text-gray-500 text-xs mb-3">Reads repo-root <code class="text-gray-400">run_report.json</code> and <code class="text-gray-400">DATA_BASE/logs/send_skipped_log.csv</code> after <code class="text-gray-400">run_daily.py</code>.</p>
+      <div id="operator-snapshot" class="text-sm text-gray-300 font-mono whitespace-pre-wrap">Loading…</div>
+    </div>
+
+    <div class="card p-5 mb-6">
+      <h2 class="text-white font-semibold text-sm">Interpretation → writing (not ad hoc)</h2>
+      <p class="text-gray-500 text-xs mt-2 mb-3">
+        Cohort changes, resume-after-halt, ICP edits, and commercial pivots belong in prose the team can grep — not undocumented side channels.
+      </p>
+      <ul class="text-sm text-gray-400 space-y-2 list-disc pl-5">
+        <li><code class="text-gray-500">03-reevaluation/decision-log.md</code> — decisions, overrides, “why we resumed.”</li>
+        <li><code class="text-gray-500">07-kpis/operator_execution_log.csv</code> — time-ordered operator actions where applicable.</li>
+        <li>Doctrine: <code class="text-gray-500">docs/SEMANTIC_CONTRACT.md</code> §8.3 (written interpretation; no “AI verdict” layer on the money path).</li>
+      </ul>
+    </div>
+
     <!-- ── Tabs ── -->
     <div class="flex gap-2 mb-6 flex-wrap">
-      <button class="tab-btn active" id="tab-pipeline" onclick="showTab('pipeline')">▶ Run Pipeline</button>
+      <button class="tab-btn active" id="tab-pipeline" onclick="showTab('pipeline')">▶ Pipeline script</button>
       <button class="tab-btn" id="tab-prospects" onclick="showTab('prospects')">Prospects</button>
-      <button class="tab-btn" id="tab-score" onclick="showTab('score')">Score an Idea</button>
       <button class="tab-btn" id="tab-add" onclick="showTab('add')">+ Add Prospect</button>
     </div>
 
@@ -132,22 +168,23 @@
     <div id="panel-pipeline" class="card p-6">
       <div class="flex items-start justify-between mb-5">
         <div>
-          <h2 class="text-white font-semibold text-base">Run the Full Pipeline</h2>
+          <h2 class="text-white font-semibold text-base">Run <code class="text-gray-400 text-sm">venture_pipeline.py</code> (dev / legacy)</h2>
           <p class="text-gray-500 text-sm mt-1">
-            Email lookup → outreach generation → Notion sync → follow-up check → KPI digest
+            Fires the pipeline subprocess for local debugging. <strong class="text-gray-400">Canonical operator path</strong> for governed outbound is
+            <code class="text-gray-400">run_daily.py</code> (eligibility audit, dry-run, report) — see <code class="text-gray-400">OPERATOR_RUNBOOK.md</code>.
           </p>
         </div>
         <button class="btn-primary flex items-center gap-2" id="run-btn" onclick="runPipeline()">
           ▶ Run Now
         </button>
       </div>
-      <div id="run-status" class="hidden items-center gap-2 mb-3 text-sm text-indigo-300">
-        <span class="spinner"></span> Pipeline running — this takes 20–60 seconds…
+      <div id="run-status" class="hidden items-center gap-2 mb-3 text-sm" style="color:#7dd3a0">
+        <span class="spinner"></span> Pipeline running — wait for completion…
       </div>
       <div class="terminal" id="pipeline-output">Click "Run Now" to execute the pipeline.</div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <div class="card p-4">
-          <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">7-Day Funnel</p>
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">7-day lifecycle counts</p>
           <div id="funnel-summary" class="text-sm text-gray-300">Loading funnel…</div>
         </div>
         <div class="card p-4">
@@ -156,12 +193,12 @@
         </div>
       </div>
       <div class="card p-4 mt-4">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">Daily Operator Checklist</p>
+        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">Daily governance checks</p>
         <ul class="text-sm text-gray-300 space-y-1">
-          <li>1) Preflight passes with no [fail] items.</li>
-          <li>2) Blocked prospects reviewed and resolved.</li>
-          <li>3) Funnel bottleneck identified before sending.</li>
-          <li>4) Run in dry-run first, then live mode.</li>
+          <li>1) Latest <code class="text-gray-500">run_report.json</code> outbound status + errors tail clean.</li>
+          <li>2) Skips / audit join: review <code class="text-gray-500">send_skipped_log.csv</code> and audit log per runbook.</li>
+          <li>3) Cohort envelope (subject + CTA) unchanged since freeze — or <code class="text-gray-500">message_version</code> bumped.</li>
+          <li>4) Prefer <code class="text-gray-500">run_daily.py --dry-run</code> before any live send.</li>
         </ul>
       </div>
     </div>
@@ -177,29 +214,11 @@
       </div>
     </div>
 
-    <!-- ── Score Idea Panel ── -->
-    <div id="panel-score" class="card p-6 hidden">
-      <h2 class="text-white font-semibold text-base mb-1">Score a Venture Idea</h2>
-      <p class="text-gray-500 text-sm mb-4">AI scores your idea against 8 business criteria and gives a GO / RESEARCH / SKIP verdict.</p>
-      <textarea id="idea-input"
-        class="input-field resize-none"
-        rows="4"
-        placeholder="Describe your idea… e.g. An AI chatbot that handles appointment rebooking for dental clinics, reducing no-shows by 40%"></textarea>
-      <div class="flex items-center gap-3 mt-3">
-        <button class="btn-primary flex items-center gap-2" id="score-btn" onclick="scoreIdea()">
-          Score It
-        </button>
-        <span id="score-status" class="hidden items-center gap-2 text-sm text-indigo-300">
-          <span class="spinner"></span> Asking AI…
-        </span>
-      </div>
-      <div id="score-result" class="terminal mt-4 hidden"></div>
-    </div>
-
     <!-- ── Add Prospect Panel ── -->
     <div id="panel-add" class="card p-6 hidden">
       <h2 class="text-white font-semibold text-base mb-1">Add a New Prospect</h2>
-      <p class="text-gray-500 text-sm mb-5">Fill in what you know — the pipeline will find missing emails and write their outreach message automatically.</p>
+      <p class="text-gray-500 text-sm mb-2">Governed batches use <code class="text-gray-400">run_daily.py --generate-prospects</code> (prospect_builder + audit). This form is disabled from writing <code class="text-gray-400">prospects.csv</code> directly.</p>
+      <p class="text-amber-400/90 text-sm mb-5">Use the CLI path above; the button below will show the server error if invoked.</p>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label class="text-gray-400 text-xs uppercase tracking-widest">Full Name <span class="text-red-400">*</span></label>
@@ -241,8 +260,38 @@
   </div><!-- /max-w -->
 
   <script>
+    // ── Operator snapshot (run_report + send_skipped) ─────────────────────
+    async function loadOperatorSnapshot() {
+      const el = document.getElementById('operator-snapshot');
+      try {
+        const d = await fetch('/api/operator-status').then(r => r.json());
+        const lines = [];
+        lines.push('run_id:          ' + (d.run_id || '—'));
+        lines.push('outbound status: ' + (d.outbound_status || '—'));
+        lines.push('run_report:      ' + d.run_report_path);
+        lines.push('DATA_BASE:       ' + d.data_base);
+        if (d.generation_digest_path) lines.push('gen digest:      ' + d.generation_digest_path);
+        lines.push('send_skipped:    ' + d.send_skipped_log_path);
+        const skips = d.skipped_rows || [];
+        if (skips.length) {
+          lines.push('');
+          lines.push('Recent skips (why):');
+          skips.forEach(s => {
+            lines.push('  • ' + (s.email || '?') + ' | ' + (s.skip_reason || '') );
+            lines.push('    → ' + (s.why || ''));
+          });
+        } else {
+          lines.push('');
+          lines.push('(no recent rows in send_skipped_log.csv)');
+        }
+        el.textContent = lines.join('\n');
+      } catch(e) {
+        el.textContent = 'Could not load operator status: ' + e.message;
+      }
+    }
+
     // ── Tab management ─────────────────────────────────────────────────────
-    const TABS = ['pipeline','prospects','score','add'];
+    const TABS = ['pipeline','prospects','add'];
     function showTab(name) {
       TABS.forEach(t => {
         document.getElementById('panel-' + t).classList.add('hidden');
@@ -254,7 +303,7 @@
       if (name === 'prospects') loadProspects();
     }
 
-    // ── KPI cards ─────────────────────────────────────────────────────────
+    // ── Artifact strip (weekly-kpi-data, reply log, prospects file) ─────────
     async function loadKPIs() {
       try {
         const d = await fetch('/api/kpis').then(r => r.json());
@@ -265,10 +314,10 @@
         const rrEl = document.getElementById('kpi-reply');
         rrEl.textContent = rr.toFixed(1) + '%';
         rrEl.className   = 'text-2xl font-bold ' + (rr >= 5 ? 'text-emerald-400' : rr > 0 ? 'text-amber-400' : 'text-gray-500');
-        document.getElementById('kpi-pct').textContent  = d.pct.toFixed(0) + '% of $10k target';
+        document.getElementById('kpi-pct').textContent  = d.pct.toFixed(0) + '% of internal target (CSV)';
         document.getElementById('kpi-bar').style.width  = Math.min(d.pct, 100) + '%';
         if (d.revenue >= d.target) document.getElementById('kpi-mrr').classList.add('text-emerald-400');
-      } catch(e) { console.warn('KPI load failed', e); }
+      } catch(e) { console.warn('artifact strip load failed', e); }
     }
 
     // ── API status dots ────────────────────────────────────────────────────
@@ -302,6 +351,7 @@
         loadKPIs();
         loadFunnel();
         loadBlocked();
+        loadOperatorSnapshot();
       } catch(e) {
         out.textContent = 'Network error: ' + e.message;
       }
@@ -338,6 +388,17 @@
       }
     }
 
+    async function loadJobQueue() {
+      try {
+        const d = await fetch('/api/job-queue').then(r => r.json());
+        document.getElementById('jq-pending').textContent     = d.pending;
+        document.getElementById('jq-completed').textContent   = d.completed;
+        document.getElementById('jq-failed').textContent      = d.failed;
+        document.getElementById('jq-inprogress').textContent  = d.in_progress;
+        document.getElementById('jq-total').textContent       = d.total;
+      } catch(e) { console.warn('Job queue load failed', e); }
+    }
+
     // ── Prospects table ────────────────────────────────────────────────────
     async function loadProspects() {
       const el = document.getElementById('prospects-content');
@@ -345,7 +406,7 @@
       try {
         const rows = await fetch('/api/prospects').then(r => r.json());
         if (!rows.length) {
-          el.innerHTML = '<p class="text-gray-500 text-sm">No prospects yet. Use the "Add Prospect" tab to add your first one.</p>';
+          el.innerHTML = '<p class="text-gray-500 text-sm">No prospects yet. Run <code class="text-gray-400">run_daily.py --generate-prospects</code> or add via governed flow.</p>';
           return;
         }
         const cols = ['name','company','role','industry','pain_point','email','status'];
@@ -380,33 +441,7 @@
       return 'badge-other';
     }
 
-    // ── Score idea ─────────────────────────────────────────────────────────
-    async function scoreIdea() {
-      const idea = document.getElementById('idea-input').value.trim();
-      if (!idea) { document.getElementById('idea-input').focus(); return; }
-      const btn    = document.getElementById('score-btn');
-      const status = document.getElementById('score-status');
-      const res    = document.getElementById('score-result');
-      btn.disabled = true;
-      btn.textContent = 'Scoring…';
-      status.style.display = 'flex';
-      res.classList.remove('hidden');
-      res.textContent = '';
-      try {
-        const r = await fetch('/score-idea', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ idea })
-        });
-        const d = await r.json();
-        res.textContent = d.result;
-      } catch(e) {
-        res.textContent = 'Error: ' + e.message;
-      }
-      status.style.display = 'none';
-      btn.textContent = 'Score It';
-      btn.disabled = false;
-    }
+    // ── Score idea (removed from UI: not part of outbound governance / invites "AI verdict" framing) ──
 
     // ── Add prospect ───────────────────────────────────────────────────────
     async function addProspect() {
@@ -432,7 +467,7 @@
         });
         const d = await r.json();
         if (d.success) {
-          showMsg('add-msg', '✓ Prospect added! Go to "Run Pipeline" to generate their outreach.', 'text-emerald-400');
+          showMsg('add-msg', '✓ Record accepted by API (if enabled). Governed writes: run_daily.py --generate-prospects per runbook.', 'text-emerald-400');
           ['p-name','p-company','p-role','p-industry','p-pain','p-email','p-linkedin']
             .forEach(id => document.getElementById(id).value = '');
           loadKPIs();
@@ -456,7 +491,6 @@
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         const active = document.querySelector('.tab-btn.active').id.replace('tab-','');
         if (active === 'pipeline') runPipeline();
-        if (active === 'score')    scoreIdea();
         if (active === 'add')      addProspect();
       }
     });
@@ -466,21 +500,11 @@
     loadEnvStatus();
     loadFunnel();
     loadBlocked();
-      loadJobQueue();
-      // Refresh job queue every 5 seconds
-      setInterval(loadJobQueue, 5000);
-
-      // ── Job Queue ─────────────────────────────────────────────────────────
-      async function loadJobQueue() {
-        try {
-          const d = await fetch('/api/job-queue').then(r => r.json());
-          document.getElementById('jq-pending').textContent     = d.pending;
-          document.getElementById('jq-completed').textContent   = d.completed;
-          document.getElementById('jq-failed').textContent      = d.failed;
-          document.getElementById('jq-inprogress').textContent  = d.in_progress;
-          document.getElementById('jq-total').textContent       = d.total;
-        } catch(e) { console.warn('Job queue load failed', e); }
-      }
+    loadOperatorSnapshot();
+    loadJobQueue();
+    // Refresh job queue every 5 seconds
+    setInterval(loadJobQueue, 5000);
+    setInterval(loadOperatorSnapshot, 30000);
   </script>
 </body>
 </html>

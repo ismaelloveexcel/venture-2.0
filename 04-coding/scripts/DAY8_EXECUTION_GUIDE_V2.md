@@ -187,10 +187,11 @@ python 04-coding/scripts/review_queue.py
 ### Step 5: Send (Automated) — Day 9
 ```bash
 # Preview (no emails sent):
-python 04-coding/scripts/venture_pipeline.py --dry-run
+python 04-coding/scripts/run_daily.py bridge status
+VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute --dry-run
 
 # Verify no errors, then send:
-python 04-coding/scripts/venture_pipeline.py
+VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute
 ```
 
 Sends approved messages (20/day cap, configurable in .env)

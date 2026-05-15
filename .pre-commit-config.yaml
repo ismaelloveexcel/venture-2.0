@@ -1,0 +1,17 @@
+# Venture OS (P4): optional local hooks — install: pip install pre-commit && pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: venture-validate-repo-contract
+        name: validate_repo_contract
+        entry: python 04-coding/scripts/validate_repo_contract.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit, pre-push]
+      - id: venture-pytest-contract-subset
+        name: pytest contract + money-path gates (full suite in CI)
+        # Includes Phase C/D launch + emergency pause tests via fast_test_subset.py paths.
+        entry: python 04-coding/scripts/fast_test_subset.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

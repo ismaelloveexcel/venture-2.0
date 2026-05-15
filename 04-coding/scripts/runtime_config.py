@@ -6,8 +6,33 @@ from __future__ import annotations
 
 import os
 import re
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
+
+
+def resolve_data_base(repo_root: Path | None = None) -> Path:
+    """
+    Canonical data root for prospect + pipeline artifacts (Option B).
+
+    Same rule as ``venture_pipeline``: ``VENTURE_CLIENT_WORKSPACE`` if set,
+    else ``repo_root`` (repository root).
+    """
+    root = repo_root or Path(__file__).resolve().parents[2]
+    ws = os.environ.get("VENTURE_CLIENT_WORKSPACE", "").strip()
+    if ws:
+        return Path(ws).expanduser().resolve()
+    return root
+
+
+def resolve_venture_db_path(data_base: Path, repo_root: Path) -> Path:
+    """SQLite path for job_queue / suppression (matches venture_pipeline defaults)."""
+    env = os.environ.get("VENTURE_DB_PATH", "").strip()
+    if env:
+        return Path(env).expanduser().resolve()
+    if os.environ.get("VENTURE_CLIENT_WORKSPACE", "").strip():
+        return data_base / "database.sqlite"
+    return repo_root / "venture_jobs.db"
 
 _PLACEHOLDER_HINTS = ("...", "your", "example", "secret_")
 
@@ -83,6 +108,10 @@ class RuntimeConfig:
     motion_shadow_mode: bool
     spend_filter_required: bool
     spend_min_trigger_count: int
+    # === V3 CIS CONFIGURATION ===
+    cis_routing_mode: str  # "dual_shadow", "v2_only", "v3_only"
+    cis_hot_threshold: int  # CIS score threshold for HOT band (default 80)
+    cis_possible_threshold: int  # CIS score threshold for POSSIBLE band (default 50)
 
     @classmethod
     def from_env(cls) -> "RuntimeConfig":
@@ -120,6 +149,10 @@ class RuntimeConfig:
             motion_shadow_mode=_env_bool("MOTION_SHADOW_MODE", True),
             spend_filter_required=_env_bool("SPEND_FILTER_REQUIRED", True),
             spend_min_trigger_count=_env_int("SPEND_MIN_TRIGGER_COUNT", 1),
+            # === V3 CIS CONFIGURATION ===
+            cis_routing_mode=os.environ.get("CIS_ROUTING_MODE", "dual_shadow").strip().lower(),
+            cis_hot_threshold=_env_int("CIS_HOT_THRESHOLD", 80),
+            cis_possible_threshold=_env_int("CIS_POSSIBLE_THRESHOLD", 50),
         )
 
 

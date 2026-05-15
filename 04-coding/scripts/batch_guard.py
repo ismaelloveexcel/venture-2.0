@@ -43,7 +43,7 @@ def _csv_env_set(key: str, default: set[str]) -> set[str]:
     return {value.strip().lower() for value in values if value.strip()}
 
 
-ALLOWED_SENDER_DOMAINS = _csv_env_set("ALLOWED_SENDER_DOMAINS", {"replypilot.ai"})
+ALLOWED_SENDER_DOMAINS = _csv_env_set("ALLOWED_SENDER_DOMAINS", {"abtmail.co"})
 FREE_EMAIL_DOMAINS = {
     "aol.com",
     "gmail.com",
@@ -57,15 +57,20 @@ FREE_EMAIL_DOMAINS = {
 }
 ALLOWED_SEND_TYPES_BATCH1 = {"initial_test", "initial_prospect"}
 TRANSACTIONAL_DIGEST_SEND_TYPE = "transactional_digest"
-CANONICAL_SUBJECT = "quick question"
-CTA_STRING = "Worth a quick look, or not relevant right now?"
+CANONICAL_SUBJECT = "outbound fit for your venture"
+CTA_STRING = (
+    "If this might help, hit Reply, type yes, and send — subject unchanged is fine. "
+    "I will follow up with a short walkthrough. Not a fit? No need to reply."
+)
 MAX_BATCH1_RECIPIENTS = 5
-HMAC_CONTEXT = "replypilot-batch-lock-v1"
+HMAC_CONTEXT = "auditbound-batch-lock-v1"
 DEFAULT_SIGNATURE = (
-    "Best,\n"
     "Ismael Sudally\n"
-    "ReplyPilot AI\n"
-    "Outbound systems for B2B service firms"
+    "Founder, Auditbound\n"
+    "Outbound accountability for agencies\n"
+    "auditbound.io | isudally@outlook.com\n\n"
+    "See how a client campaign gets reconstructed in 60 seconds:\n"
+    "[CALENDLY_BOOKING_URL]"
 )
 
 FORBIDDEN_PATTERNS = (
@@ -229,12 +234,17 @@ def load_lock(path: Path = DEFAULT_LOCK_FILE, *, allow_missing: bool = True) -> 
     if not isinstance(lock, dict):
         raise LockIntegrityError("batch.lock root must be an object")
     verify_lock(lock)
+    ls = str(lock.get("lock_schema") or "").strip()
+    if ls and ls not in ("auditbound-v1", "replypilot-v1"):
+        raise LockIntegrityError(f"unsupported lock_schema: {ls}")
     return lock
 
 
 def write_lock(lock_without_hmac: dict[str, Any], path: Path = DEFAULT_LOCK_FILE) -> dict[str, Any]:
     path.parent.mkdir(parents=True, exist_ok=True)
-    signed = sign_lock(lock_without_hmac)
+    body = dict(lock_without_hmac)
+    body["lock_schema"] = "auditbound-v1"
+    signed = sign_lock(body)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(signed, indent=2) + "\n", encoding="utf-8")
     tmp.replace(path)
@@ -283,6 +293,7 @@ def _empty_lock(batch_hash: str = "") -> dict[str, Any]:
         "run_id": None,
         "batch_mode": "BATCH_1",
         "mode": "unarmed",
+        "lock_schema": "auditbound-v1",
     }
 
 
@@ -374,6 +385,23 @@ def _html_to_text(html: str) -> str:
     return unescape(text).strip()
 
 
+def _signature_anchor_line() -> str:
+    raw = (os.environ.get("EMAIL_SIGNATURE_TEXT", "") or "").strip().replace("\\n", "\n")
+    if raw:
+        return raw.split("\n")[0].strip().lower()
+    return "ismael sudally"
+
+
+def _forbidden_scan_text(combined_text: str) -> str:
+    """Apply link/forbidden scans only to cold copy (before signature block)."""
+    raw = combined_text or ""
+    anchor = _signature_anchor_line()
+    idx = raw.lower().find(anchor)
+    if idx == -1:
+        return raw
+    return raw[:idx]
+
+
 def render_email_html(message: str, *, require_footer: bool, from_email: str) -> str:
     html = "<p>" + (message or "").replace("\n", "<br>") + "</p>"
     if require_footer and from_email and "unsubscribe" not in html.lower():
@@ -442,14 +470,14 @@ def build_final_payloads(
         email = (row.get("email") or "").strip()
         if not email:
             continue
-        payload = {
-            "from": sender,
-            "to": [email],
-            "subject": CANONICAL_SUBJECT,
-            "html": render_email_html(
-                message, require_footer=bool(require_footer), from_email=from_email
-            ),
-        }
+        from send_guard import build_batch1_resend_payload  # noqa: PLC0415
+
+        payload = build_batch1_resend_payload(
+            from_header=sender,
+            to=[email.strip().lower()],
+            subject=CANONICAL_SUBJECT,
+            cold_body_text=str(message).strip(),
+        )
         payloads.append(
             {
                 "payload": payload,
@@ -478,7 +506,8 @@ def manifest_for_payloads(payloads: list[dict[str, Any]]) -> dict[str, Any]:
 def validate_payload(payload: dict[str, Any]) -> list[GuardCheck]:
     checks: list[GuardCheck] = []
     html = str(payload.get("html") or "")
-    text = _html_to_text(html)
+    explicit_plain = str(payload.get("text") or "").strip()
+    text = explicit_plain if explicit_plain else _html_to_text(html)
     lower = text.lower()
     subject = str(payload.get("subject") or "").strip()
     checks.append(
@@ -517,8 +546,8 @@ def validate_payload(payload: dict[str, Any]) -> list[GuardCheck]:
         GuardCheck(
             "signature_present",
             "FAIL",
-            DEFAULT_SIGNATURE.lower() in lower,
-            "fixed ReplyPilot signature required",
+            ("ismael sudally" in lower and "auditbound" in lower),
+            "signature block (Auditbound) required in final body",
         )
     )
     checks.append(
@@ -529,8 +558,10 @@ def validate_payload(payload: dict[str, Any]) -> list[GuardCheck]:
             "no unresolved template variables allowed",
         )
     )
+    cold_scan = _forbidden_scan_text(text)
+    cold_html = _forbidden_scan_text(_html_to_text(html))
     for pattern in FORBIDDEN_PATTERNS:
-        hit = re.search(pattern, html, flags=re.I) or re.search(pattern, text, flags=re.I)
+        hit = re.search(pattern, cold_html, flags=re.I) or re.search(pattern, cold_scan, flags=re.I)
         checks.append(
             GuardCheck(
                 f"forbidden:{pattern}",

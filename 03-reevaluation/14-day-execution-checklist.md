@@ -4,7 +4,7 @@ Purpose: convert the audit into daily execution for one operator.
 
 ## Day 1: Baseline and keys
 - [ ] Set valid `OPENAI_API_KEY` and `HUNTER_API_KEY` in `.env`
-- [ ] Run `python 04-coding/scripts/venture_pipeline.py --dry-run`
+- [ ] Run `VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute --dry-run`
 - [ ] Confirm no `401 Unauthorized` errors
 
 Exit criteria:

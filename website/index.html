@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AuditBound — Outbound Execution Governance for Agencies</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  </head>
+  <body>
+    <video
+      id="bg-video"
+      class="bg-video"
+      autoplay
+      muted
+      loop
+      playsinline
+    ></video>
+
+    <header class="hero reveal">
+      <p class="eyebrow">Outbound Execution Governance</p>
+      <h1>
+        When a client asks "prove you sent that to the right person," can you
+        answer in 30 seconds?
+      </h1>
+      <p class="lede">
+        AuditBound is the governance layer for agencies running outbound. Not
+        more leads. Proof of execution, with receipts.
+      </p>
+      <div class="hero-cta-row">
+        <a
+          class="btn primary"
+          href="https://cal.com/ismael-sudally/auditbound-campaign-audit-call"
+          rel="noopener noreferrer"
+          target="_blank"
+          >Schedule an Execution Audit</a
+        >
+        <a class="btn ghost" href="#how-it-works">See how it works</a>
+      </div>
+      <p class="proof">
+        For outbound agencies. In your first call, we identify where your stack
+        has traceability gaps and why they become client risk.
+      </p>
+    </header>
+
+    <main>
+      <section id="problem" class="reveal">
+        <h2>The Outbound Liability Gap</h2>
+        <p
+          style="
+            font-size: 1.05rem;
+            color: var(--fg);
+            line-height: 1.8;
+            max-width: 52ch;
+          "
+        >
+          You're running outbound through Apollo or Smartlead or Instantly.
+          Sequences run. Emails send. Some replies come in.
+        </p>
+        <p
+          style="
+            font-size: 1.05rem;
+            color: var(--fg);
+            line-height: 1.8;
+            max-width: 52ch;
+          "
+        >
+          But when a client calls and asks:
+        </p>
+        <div class="scenarios">
+          <div class="scenario-card">
+            <p class="scenario-label">
+              "Which exact people did you send to? Why? Who approved?"
+            </p>
+            <p class="scenario-result">
+              You rebuild the story from fragmented logs and Slack threads.
+            </p>
+          </div>
+          <div class="scenario-card">
+            <p class="scenario-label">
+              "A message went to the wrong domain. How did that happen?"
+            </p>
+            <p class="scenario-result">
+              You can't reconstruct the decision trail to explain it.
+            </p>
+          </div>
+          <div class="scenario-card">
+            <p class="scenario-label">
+              "Prove this campaign was reviewed before it shipped."
+            </p>
+            <p class="scenario-result">
+              You show them a Slack conversation, not a system record.
+            </p>
+          </div>
+        </div>
+        <p
+          style="
+            font-size: 1.05rem;
+            color: var(--fg);
+            line-height: 1.8;
+            max-width: 52ch;
+            margin-top: 2rem;
+          "
+        >
+          That gap is operational risk. That's where client trust breaks down.
+          <br /><br />
+          <strong>AuditBound closes that gap.</strong>
+        </p>
+      </section>
+
+      <section id="how-it-works" class="reveal">
+        <h2>Outbound Governance: Three Core Functions</h2>
+        <p style="color: var(--muted); max-width: 52ch; margin-bottom: 2rem">
+          AuditBound sits on top of your existing outbound stack (Apollo,
+          Smartlead, Instantly, Clay). It adds the governance layer your stack
+          doesn't come with.
+        </p>
+        <div class="cards cards-3">
+          <article>
+            <h3>Eligibility Gates</h3>
+            <p>
+              Before anything sends: deterministic checks run. Prospect
+              validation. Suppression rules. Team approval workflow. No send
+              without sign-off. You control exactly who gets reached.
+            </p>
+          </article>
+          <article>
+            <h3>Audit Trail System</h3>
+            <p>
+              Every cohort lives in an append-only log. Who was eligible, why.
+              Who approved. What shipped. Tied to run IDs that never change.
+              When a client asks "prove it," you have receipts.
+            </p>
+          </article>
+          <article>
+            <h3>Execution Review</h3>
+            <p>
+              Weekly: we inspect your logs and identify gaps. Where approval is
+              loose. Where rules need tightening. Patterns that signal
+              operational drift. Compliance improves. Mistakes decrease. Trust
+              increases.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="for-teams" class="reveal">
+        <h2>Built for Teams With Accountability Pressure</h2>
+        <div class="cards">
+          <article>
+            <h3>Founder Running Multi-Client Outbound</h3>
+            <p>
+              "I can't afford for my team to send to the wrong person. One
+              mistake affects that client relationship permanently. I need
+              visibility into what shipped and why."
+            </p>
+          </article>
+          <article>
+            <h3>Ops Leader Responsible for Execution</h3>
+            <p>
+              "I own the outbound operation. Compliance or leadership asks
+              questions, I answer in 30 seconds with proof. Without that, I'm
+              managing chaos, not operations."
+            </p>
+          </article>
+          <article>
+            <h3>Growing Agency With Multiple Campaigns</h3>
+            <p>
+              "We went from 1 client to 5, and Apollo alone isn't enough
+              anymore. We need guardrails or we'll eventually send something
+              that breaks something important."
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="not-for" class="reveal">
+        <h2>Not Your Tool If...</h2>
+        <p style="color: var(--muted); max-width: 52ch; margin-bottom: 2rem">
+          AuditBound is specifically positioned for a narrow ICP. If this is
+          you, we're not the right fit.
+        </p>
+        <ul style="color: var(--fg); font-size: 1.05rem">
+          <li>
+            <strong>You're a solo founder sending your own outreach.</strong>
+            You don't need governance, you need speed.
+          </li>
+          <li>
+            <strong>You optimize for maximum volume and reply rate.</strong> We
+            trade throughput for explainability. Not our game.
+          </li>
+          <li>
+            <strong
+              >You think better sequences will solve your problems.</strong
+            >
+            You might have a governance problem, not a tooling problem.
+          </li>
+          <li>
+            <strong
+              >You've never had a client question your outbound
+              execution.</strong
+            >
+            You might not need us yet. Call back when you do.
+          </li>
+          <li>
+            <strong>You want to replace Apollo with something "better."</strong>
+            We don't replace outbound tools. We govern them.
+          </li>
+        </ul>
+      </section>
+
+      <section id="execution-model" class="reveal">
+        <h2>Your First 14 Days: Audit, Govern, Iterate</h2>
+        <div class="execution-timeline">
+          <div class="phase">
+            <h3>Week 1: Execution Audit</h3>
+            <ul>
+              <li>You share 30 days of outbound history</li>
+              <li>We review: How do you make decisions? How do you approve?</li>
+              <li>
+                We identify: Where's the traceability gap? What's missing?
+              </li>
+              <li>You get: 1-hour call + written findings</li>
+            </ul>
+          </div>
+          <div class="phase">
+            <h3>Week 2: Build Governance</h3>
+            <ul>
+              <li>
+                We implement: Eligibility gates, suppression rules, approval
+                workflows
+              </li>
+              <li>You test: Send a small cohort, see the gates in action</li>
+              <li>
+                You refine: Lock in the rules that make sense for your operation
+              </li>
+            </ul>
+          </div>
+          <div class="phase">
+            <h3>Weeks 3–4: Go Live</h3>
+            <ul>
+              <li>First full cohort ships under governance</li>
+              <li>Audit log created (append-only, immutable)</li>
+              <li>
+                Weekly sync: We review logs, identify patterns, tighten rules
+              </li>
+              <li>You go live: Outbound now has an accountability layer</li>
+            </ul>
+          </div>
+        </div>
+        <p style="color: var(--muted); margin-top: 2rem; max-width: 52ch">
+          The outcome: Explainable execution. Proof. Governance. When the next
+          question comes, you're ready.
+        </p>
+      </section>
+
+      <section id="before-after" class="reveal">
+        <h2>What Governance Actually Changes</h2>
+        <div class="comparison">
+          <div class="comparison-column">
+            <h3>Without an Accountability Layer</h3>
+            <ul>
+              <li>"We're sending with Apollo"</li>
+              <li>"We're getting replies"</li>
+              <li>"We have Slack conversations about campaigns"</li>
+              <li>
+                Client asks about specific send: "Let me check the filters..."
+              </li>
+              <li>A mistake happens: "We're investigating..."</li>
+              <li>Compliance asks: No official audit trail</li>
+              <li>You're managing: chaos, fragmentation, risk</li>
+            </ul>
+          </div>
+          <div class="comparison-column">
+            <h3>With AuditBound</h3>
+            <ul>
+              <li>"We're sending through AuditBound on top of Apollo"</li>
+              <li>"Every cohort has deterministic gates before send"</li>
+              <li>"Every decision is documented in an append-only log"</li>
+              <li>
+                Client asks about specific send: "Here's the run ID. Here's
+                eligibility. Here's approval."
+              </li>
+              <li>
+                A mistake happens: "Here's what went wrong. Here's the gap that
+                let it through."
+              </li>
+              <li>
+                Compliance asks: Official audit trail satisfies the request
+              </li>
+              <li>You're managing: governance, visibility, confidence</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" class="reveal">
+        <h2>Common Questions</h2>
+        <details>
+          <summary>Is this software, a service, or both?</summary>
+          <p>
+            It's a productized service. You're buying operational excellence and
+            governance oversight, not a dashboard to manage yourself. We
+            implement the system, manage the gates, review the logs weekly, and
+            show you exactly what to improve.
+          </p>
+        </details>
+        <details>
+          <summary>Do we still use Apollo / Smartlead / Instantly?</summary>
+          <p>
+            Yes. AuditBound sits on top of your existing stack. We don't replace
+            the sequencer. We govern it. Think of it as: compliance layer +
+            operational oversight on top of your outbound tool.
+          </p>
+        </details>
+        <details>
+          <summary>What if we're already sending without this?</summary>
+          <p>
+            Then you're running outbound blind. You can send, but you can't
+            prove the decisions. Once a client escalates or compliance asks
+            questions, you'll understand the gap. We've worked with teams who
+            said "we didn't think we needed this until something broke."
+          </p>
+        </details>
+        <details>
+          <summary>Why not build this ourselves?</summary>
+          <p>
+            You could. We've worked with teams who tried. It takes 4–6 months,
+            requires a database engineer, and pulls your ops person off client
+            work. For agencies with 2–10 clients, that's not a good trade. We've
+            already built and operated this system. You get governance without
+            the overhead.
+          </p>
+        </details>
+        <details>
+          <summary>How does pricing work?</summary>
+          <p>
+            We charge based on cohort complexity and volume. More clients =
+            larger cohorts = higher value to you (less risk, better
+            defensibility). Our model aligns with your growth, not throughput.
+            Let's talk on the audit call about your situation.
+          </p>
+        </details>
+      </section>
+
+      <section id="cta" class="cta reveal">
+        <h2>The Execution Audit: What Happens</h2>
+        <p>
+          30 minutes. We walk through your current outbound process, identify
+          where governance gaps exist and what they cost you, and show you how
+          to close them.
+        </p>
+        <p style="color: var(--muted)">
+          You'll leave with: clarity on your liability, a specific
+          implementation plan, and confidence that your outbound is defensible.
+        </p>
+        <a
+          class="btn primary"
+          href="https://cal.com/ismael-sudally/auditbound-campaign-audit-call"
+          rel="noopener noreferrer"
+          target="_blank"
+          >Schedule Your Execution Audit</a
+        >
+      </section>
+    </main>
+
+    <footer>
+      <p>AuditBound | Outbound Execution Governance for Agencies</p>
+    </footer>
+
+    <script>
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("in");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12 },
+      );
+
+      document
+        .querySelectorAll(".reveal")
+        .forEach((el) => observer.observe(el));
+
+      // Initialize HLS video stream
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        const video = document.getElementById("bg-video");
+        hls.loadSource(
+          "https://stream.mux.com/BuGGTsiXq1T00WUb8qfURrHkTCbhrkfFLSv4uAOZzdhw.m3u8",
+        );
+        hls.attachMedia(video);
+
+        // Slow down video for softer spiral effect
+        video.addEventListener("loadedmetadata", () => {
+          video.playbackRate = 0.65;
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -166,6 +166,23 @@ class MotionSettings:
 
 
 @dataclass(frozen=True)
+class VariantExperimentalDimension:
+    """Factorial experiment design: each variant differs on exactly ONE semantic axis."""
+    spend_axis: int  # 0=baseline, 1=moderate, 2=strong
+    motion_axis: int  # 0=baseline, 1=moderate, 2=high
+    urgency_axis: int  # 0=baseline, 1=moderate, 2=high
+    
+    def purity_check(self, baseline: "VariantExperimentalDimension") -> bool:
+        """Variant is pure if it differs from baseline on exactly 1 axis."""
+        diffs = sum([
+            self.spend_axis != baseline.spend_axis,
+            self.motion_axis != baseline.motion_axis,
+            self.urgency_axis != baseline.urgency_axis,
+        ])
+        return diffs == 1
+
+
+@dataclass(frozen=True)
 class CandidateScore:
     buying_intensity: int
     motion_score: int
@@ -175,6 +192,10 @@ class CandidateScore:
     pressure_tier: str
     urgency_proxy: bool
     reasons: tuple[str, ...]
+    # === V3 FIELDS (NEW) ===
+    conversion_intent_score: int  # 0-100 unified score
+    cis_components: dict[str, int]  # breakdown: spend, motion, firmographic, linkedin, weights
+    cis_routing_band: str  # "HOT", "POSSIBLE", or "DISCARD"
 
 
 def _load_schema() -> dict:
@@ -195,6 +216,99 @@ def _load_motion_settings() -> MotionSettings:
         spend_min_trigger_count=max(1, cfg.spend_min_trigger_count),
         random_seed=42,
     )
+
+
+# === V3: FROZEN BASELINE DISTRIBUTIONS (CRITICAL FOR STATISTICAL VALIDITY) ===
+BASELINE_DISTRIBUTIONS_PATH = SALES_DIR / "baseline_distributions.json"
+
+
+def initialize_baseline_distributions(shadow_log_path: Path) -> dict:
+    """Extract and freeze v2/v3 score distributions from shadow logs (run once before Phase 2).
+    
+    This function should NOT be called during Phase 2 shadow mode.
+    Use phase0_freeze_baselines.py as the standalone Phase 0 execution.
+    """
+    from shadow_drift_tracker import compute_percentile_buckets
+    
+    v2_scores, v3_scores = [], []
+    record_count = 0
+    
+    if shadow_log_path.exists():
+        with shadow_log_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                    record_count += 1
+                    if "v2_motion_score" in record:
+                        v2_scores.append(int(record["v2_motion_score"] * 10))
+                    if "v3_cis" in record:
+                        v3_scores.append(int(record["v3_cis"]))
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    continue
+    
+    v2_scores.sort()
+    v3_scores.sort()
+    
+    distributions = {
+        "frozen_at": datetime.now(timezone.utc).isoformat(),
+        "v2": {
+            "count": len(v2_scores),
+            "mean": int(sum(v2_scores) / len(v2_scores)) if v2_scores else 0,
+            "min": min(v2_scores) if v2_scores else 0,
+            "max": max(v2_scores) if v2_scores else 100,
+            "scores": v2_scores,
+            "percentiles": compute_percentile_buckets(v2_scores),
+        },
+        "v3": {
+            "count": len(v3_scores),
+            "mean": int(sum(v3_scores) / len(v3_scores)) if v3_scores else 0,
+            "min": min(v3_scores) if v3_scores else 0,
+            "max": max(v3_scores) if v3_scores else 100,
+            "scores": v3_scores,
+            "percentiles": compute_percentile_buckets(v3_scores),
+        },
+        "source_record_count": record_count,
+    }
+    
+    BASELINE_DISTRIBUTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    BASELINE_DISTRIBUTIONS_PATH.write_text(json.dumps(distributions, indent=2), encoding="utf-8")
+    return distributions
+
+
+def load_baseline_distributions() -> dict:
+    """Load pre-computed baseline distributions (frozen, never updated during shadow mode).
+    
+    PHASE 2 REQUIREMENT: File MUST exist. If missing, baseline freeze was not run.
+    Error indicates Phase 0 was skipped.
+    """
+    if not BASELINE_DISTRIBUTIONS_PATH.exists():
+        raise FileNotFoundError(
+            f"\n\n❌ BASELINE DISTRIBUTIONS NOT FROZEN (Phase 0 not executed)\n"
+            f"Path: {BASELINE_DISTRIBUTIONS_PATH}\n\n"
+            f"BEFORE running Phase 2 shadow mode, you must:\n"
+            f"  python -c \"from credibility_candidate_generator import initialize_baseline_distributions; "
+            f"from pathlib import Path; initialize_baseline_distributions(Path('06-sales/shadow_decisions.jsonl'))\"\n\n"
+            f"See: V3_IMPLEMENTATION_PLAN.md Section 6.2 (Phase 0)"
+        )
+    return json.loads(BASELINE_DISTRIBUTIONS_PATH.read_text(encoding="utf-8"))
+
+
+def compute_percentile_rank(score: int, baseline_distribution: list[int]) -> int:
+    """Compute percentile using FROZEN baseline (never contaminated by current batch).
+    
+    Args:
+        score: The score to rank
+        baseline_distribution: Sorted list of scores from frozen baseline
+    
+    Returns:
+        Percentile rank 0-100
+    """
+    if not baseline_distribution:
+        return 50
+    count_below = sum(1 for s in baseline_distribution if s <= score)
+    return max(0, min(100, int((count_below / len(baseline_distribution)) * 100)))
 
 
 def _lower(value: object) -> str:
@@ -330,6 +444,232 @@ def _motion_class(motion_score: int, settings: MotionSettings) -> str:
     return "NO"
 
 
+# === V3: CIS SCORING FUNCTIONS (CONVERSION INTENT SCORE) ===
+
+def _compute_spend_trajectory(row: dict[str, str], spend_triggers: tuple[str, ...]) -> int:
+    """Spend trajectory score (0-100). Signals: hiring velocity, sales shift, tool stack, funding, outbound scaling."""
+    trigger_text = " ".join([
+        _get(row, "trigger"),
+        _get(row, "source"),
+        _get(row, "news", "funding_news"),
+        _get(row, "jobs", "job_titles", "job_postings"),
+        _get(row, "description"),
+    ])
+    
+    score = 0
+    
+    # Hiring velocity increase
+    if _contains_any(trigger_text, ("hiring", "urgent hiring", "repeat hiring", "multiple openings")):
+        if _contains_any(trigger_text, ("sales", "bdr", "ae", "revops", "growth")):
+            score += 25
+    
+    # Sales hiring shift
+    if _contains_any(trigger_text, ("sales hiring", "bdr hiring", "ae hiring", "revops hiring")):
+        score += 20
+    
+    # Tool stack transition
+    if "tool_transition" in spend_triggers:
+        score += 15
+    
+    # Fundraising / capital inflow
+    if "budget_release" in spend_triggers or _contains_any(trigger_text, ("funded", "raised", "seed funding")):
+        score += 20
+    
+    # Outbound scaling
+    if _contains_any(trigger_text, ("outbound", "demand gen", "lead gen", "pipeline")):
+        score += 15
+    
+    return min(70, max(0, score))
+
+
+def _compute_firmographic_fit(row: dict[str, str]) -> int:
+    """Firmographic fit (0-100): industry match, stage, ICP alignment."""
+    industry = _get(row, "industry", "category", "tags", "description").lower()
+    employee_text = _get(row, "employee_count", "employees", "team_size")
+    
+    score = 20  # baseline
+    
+    # Industry ICP fit
+    if any(term in industry for term in ("saas", "software", "b2b", "agency", "service", "consulting")):
+        score += 35
+    
+    # Stage alignment (10-500 employees)
+    try:
+        emp_count = int("".join(c for c in employee_text if c.isdigit()) or "0")
+        if 10 <= emp_count <= 500:
+            score += 25
+        elif 5 <= emp_count < 10:
+            score += 15
+    except Exception:
+        pass
+    
+    # Tech/Software/Agency vertical bonus
+    if any(term in industry for term in ("tech", "software", "digital", "agency")):
+        score += 20
+    
+    # Geography bonus
+    score += 10
+    
+    return min(100, max(0, score))
+
+
+def _compute_linkedin_constraint_score(row: dict[str, str]) -> int:
+    """LinkedIn quality as constraint (0-100): weak/missing=100, unknown=50, strong=0."""
+    linkedin_quality = _normalized_linkedin_quality(row)
+    
+    if linkedin_quality in {"weak", "missing"}:
+        return 100
+    elif linkedin_quality == "unknown":
+        return 50
+    else:  # strong
+        return 0
+
+
+def compute_conversion_intent_score(
+    row: dict[str, str],
+    motion_score: int,
+    buying_intensity: int,
+    spend_triggers: tuple[str, ...],
+) -> tuple[int, dict]:
+    """
+    Compute unified CONVERSION_INTENT_SCORE (0-100).
+    Uses dynamic reweighting (not clipping) to preserve distribution shape for percentile validity.
+    """
+    spend_score = _compute_spend_trajectory(row, spend_triggers)
+    motion_signal_score = motion_score * 10
+    firmographic_score = _compute_firmographic_fit(row)
+    linkedin_score = _compute_linkedin_constraint_score(row)
+    
+    # === DYNAMIC REWEIGHTING (low spend reduces motion leverage) ===
+    if spend_score < 40:
+        motion_weight = 0.25
+        spend_weight = 0.45
+    else:
+        motion_weight = 0.40
+        spend_weight = 0.30
+    
+    firmographic_weight = 0.20
+    linkedin_weight = 0.10
+    
+    cis = int(
+        (spend_score * spend_weight) +
+        (motion_signal_score * motion_weight) +
+        (firmographic_score * firmographic_weight) +
+        (linkedin_score * linkedin_weight)
+    )
+    cis = max(0, min(100, cis))
+    
+    return cis, {
+        "spend_trajectory": spend_score,
+        "motion_signal": motion_signal_score,
+        "firmographic_fit": firmographic_score,
+        "linkedin_constraint": linkedin_score,
+        "spend_weight": spend_weight,
+        "motion_weight": motion_weight,
+        "reweighting_applied": spend_score < 40,
+    }
+
+
+def compute_conversion_intent_score_divergent(
+    row: dict[str, str],
+    motion_score: int,
+    buying_intensity: int,
+    spend_triggers: tuple[str, ...],
+) -> int:
+    """
+    V3 DIVERGENT SCORING: Forced reweighting to intentionally differ from v2.
+    
+    Strategy: Amplify intent signals, reduce spend dominance, penalize weak signals.
+    Target: 10-30% rank inversions while maintaining Spearman >= 0.6.
+    """
+    spend_score = _compute_spend_trajectory(row, spend_triggers)
+    motion_signal_score = motion_score * 10
+    firmographic_score = _compute_firmographic_fit(row)
+    linkedin_score = _compute_linkedin_constraint_score(row)
+    
+    # === FORCED DIVERGENCE WEIGHTS ===
+    # Amplify motion (buying pressure signal)
+    motion_weight = 0.50  # ↑ from 0.25/0.40
+    
+    # Reduce spend dominance
+    spend_weight = 0.25  # ↓ from 0.30/0.45
+    
+    # Increase firmographic + LinkedIn (intent constraints)
+    firmographic_weight = 0.15  # ↓ slightly (less is more for constraints)
+    linkedin_weight = 0.10  # maintain (gatekeeping value)
+    
+    # Compute base score
+    base_cis = (
+        (spend_score * spend_weight) +
+        (motion_signal_score * motion_weight) +
+        (firmographic_score * firmographic_weight) +
+        (linkedin_score * linkedin_weight)
+    )
+    
+    # === INTENT AMPLIFICATION ===
+    # Explicitly penalize weak trigger signals
+    trigger_text = " ".join(str(v) for v in row.values() if v).lower()
+    explicit_intent_bonus = 0
+    if any(t in trigger_text for t in ("revenue_pressure", "budget_release", "urgency")):
+        explicit_intent_bonus = 15
+    elif any(t in trigger_text for t in ("scaling_pressure", "hiring")):
+        explicit_intent_bonus = 8
+    
+    # Penalize weak/missing signals
+    noise_penalty = 0
+    if linkedin_score < 30:
+        noise_penalty += 10
+    if motion_signal_score < 20:
+        noise_penalty += 5
+    
+    # Final score (normalized 0-100)
+    v3_div_score = int(base_cis + explicit_intent_bonus - noise_penalty)
+    v3_div_score = max(0, min(100, v3_div_score))
+    
+    return v3_div_score
+
+
+def _cis_routing_band(cis: int) -> str:
+    """Map CIS (0-100) to routing band."""
+    if cis >= 80:
+        return "HOT"
+    if cis >= 50:
+        return "POSSIBLE"
+    return "DISCARD"
+
+
+def _extract_variant_dimension(
+    trigger: str,
+    spend_context: str,
+    hypothesis: str,
+    cis_band: str,
+) -> VariantExperimentalDimension:
+    """Map variant characteristics to experimental axes (factorial design)."""
+    spend_axis = 0
+    if spend_context in ("budget_release", "funding_news"):
+        spend_axis = 2
+    elif spend_context in ("tool_transition", "partner_switch"):
+        spend_axis = 1
+    
+    motion_axis = 0
+    if cis_band == "HOT":
+        motion_axis = 2
+    elif cis_band == "POSSIBLE":
+        motion_axis = 1
+    
+    urgency_axis = 0
+    if "urgency" in hypothesis.lower() or trigger == "revenue_pressure":
+        urgency_axis = 2
+    elif trigger in ("scaling_pressure", "acquisition_pressure"):
+        urgency_axis = 1
+    
+    return VariantExperimentalDimension(
+        spend_axis=spend_axis,
+        motion_axis=motion_axis,
+        urgency_axis=urgency_axis,
+    )
+
+
 def score_candidate(row: dict[str, str]) -> CandidateScore:
     role = _get(row, "role", "title", "founder_role")
     industry = _get(row, "industry", "category", "tags", "description")
@@ -397,6 +737,16 @@ def score_candidate(row: dict[str, str]) -> CandidateScore:
     motion_score = max(0, min(10, round((buying_intensity / 11) * 10)))
     service_angle = "credibility_gap" if distribution_gap >= 2 else "founder_positioning"
 
+    # === V3: COMPUTE CONVERSION_INTENT_SCORE ===
+    spend_triggers_temp = _spend_triggers(row)
+    cis, cis_components = compute_conversion_intent_score(
+        row=row,
+        motion_score=motion_score,
+        buying_intensity=buying_intensity,
+        spend_triggers=spend_triggers_temp,
+    )
+    cis_routing_band = _cis_routing_band(cis)
+
     return CandidateScore(
         buying_intensity=min(buying_intensity, 11),
         motion_score=motion_score,
@@ -406,17 +756,27 @@ def score_candidate(row: dict[str, str]) -> CandidateScore:
         pressure_tier=pressure_tier,
         urgency_proxy=urgency_proxy,
         reasons=tuple(reasons),
+        conversion_intent_score=cis,
+        cis_components=cis_components,
+        cis_routing_band=cis_routing_band,
     )
 
 
 @dataclass(frozen=True)
 class ScoredCandidate:
     row: dict[str, str]
-    motion_class: str
+    motion_class: str  # V2 routing: "HOT", "POSSIBLE", "NO"
     score: CandidateScore
     spend_eligible: bool
     spend_triggers: tuple[str, ...]
     message_angle: str
+    # === V3 NEW FIELDS ===
+    v3_routing_band: str  # V3 routing: "HOT", "POSSIBLE", "DISCARD"
+    message_variant_id: str  # unique identifier for message treatment
+    motion_type_targeted: str  # e.g., "spend_driven", "friction_driven", "transition_driven"
+    spend_context_tag: str  # spend trigger type (if any)
+    hypothesis_label: str  # message testing hypothesis
+    variant_dimension: VariantExperimentalDimension  # factorial experiment design
 
 
 def _spend_triggers(row: dict[str, str]) -> tuple[str, ...]:
@@ -452,6 +812,29 @@ def _normalized_linkedin_quality(row: dict[str, str]) -> str:
     return "unknown"
 
 
+def _map_motion_type_to_message_family(trigger: str, motion_score: int) -> str:
+    """Map trigger type to message family for testing."""
+    if trigger in ("revenue_pressure", "scaling_pressure"):
+        return "spend_driven"
+    elif trigger in ("talent_pressure", "acquisition_pressure"):
+        return "friction_driven"
+    elif trigger == "visibility_pressure":
+        return "transition_driven"
+    return "general_pressure"
+
+
+def _generate_hypothesis_label(trigger: str, cis_band: str) -> str:
+    """Generate message hypothesis for A/B testing."""
+    base = {
+        "revenue_pressure": "spending_scaling",
+        "talent_pressure": "hiring_urgency",
+        "scaling_pressure": "founder_growth",
+        "acquisition_pressure": "pipeline_building",
+        "visibility_pressure": "brand_gap",
+    }.get(trigger, "general_fit")
+    return f"{base}_{cis_band.lower()}"
+
+
 def build_candidate_row(row: dict[str, str], schema_fields: list[str], settings: MotionSettings) -> ScoredCandidate:
     score = score_candidate(row)
     motion_class = _motion_class(score.motion_score, settings)
@@ -471,6 +854,40 @@ def build_candidate_row(row: dict[str, str], schema_fields: list[str], settings:
     if website_quality not in {"strong", "average", "weak"}:
         website_quality = "average"
 
+    # === V3: MESSAGE VARIANT FIELDS ===
+    variant_id = f"{_lower(company[:10] if company else 'unknown')}_{score.cis_routing_band[:3]}_{int(datetime.now(timezone.utc).timestamp())}"
+    motion_type_targeted = _map_motion_type_to_message_family(score.trigger, score.motion_score)
+    spend_context_tag = spend_triggers[0] if spend_triggers else "no_trigger"
+    hypothesis_label = _generate_hypothesis_label(score.trigger, score.cis_routing_band)
+    v3_routing_band = score.cis_routing_band
+    variant_dimension = _extract_variant_dimension(score.trigger, spend_context_tag, hypothesis_label, v3_routing_band)
+
+    # === VARIANT PURITY ENFORCEMENT (NEW) ===
+    # PHASE 2 requires: each variant differs on exactly ONE axis from baseline (0,0,0)
+    baseline_variant = VariantExperimentalDimension(spend_axis=0, motion_axis=0, urgency_axis=0)
+    is_pure = variant_dimension.purity_check(baseline_variant)
+    
+    if not is_pure:
+        # Safety: variant violates factorial design; reset to baseline
+        # This prevents contamination of learning signal
+        variant_dimension = baseline_variant
+        purity_note = f"; PURITY_RESET: was {variant_dimension.spend_axis}{variant_dimension.motion_axis}{variant_dimension.urgency_axis}, reset to baseline"
+    else:
+        purity_note = ""
+
+    # === V3: ADD TO NOTES ===
+    cis_notes = "; ".join([
+        f"cis={score.conversion_intent_score}",
+        f"cis_band={v3_routing_band}",
+        f"cis_spend={score.cis_components['spend_trajectory']}",
+        f"cis_motion={score.cis_components['motion_signal']}",
+        f"cis_firmographic={score.cis_components['firmographic_fit']}",
+        f"cis_linkedin={score.cis_components['linkedin_constraint']}",
+        f"variant_id={variant_id}",
+        f"variant_dim=spend{variant_dimension.spend_axis}motion{variant_dimension.motion_axis}urgency{variant_dimension.urgency_axis}",
+        f"variant_purity={'✓' if is_pure else '✗ RESET'}{purity_note}",
+    ])
+
     notes = "; ".join(
         [
             "candidate_pool=true",
@@ -485,6 +902,7 @@ def build_candidate_row(row: dict[str, str], schema_fields: list[str], settings:
             f"pressure_tier={score.pressure_tier}",
             f"urgency_proxy={'true' if score.urgency_proxy else 'false'}",
             f"pressure_reasons={'+'.join(score.reasons) or 'none'}",
+            cis_notes,
             "LinkedIn is not scored here; use it only as final binary verification before send.",
         ]
     )
@@ -514,6 +932,12 @@ def build_candidate_row(row: dict[str, str], schema_fields: list[str], settings:
         spend_eligible=spend_eligible,
         spend_triggers=spend_triggers,
         message_angle=message_angle,
+        v3_routing_band=v3_routing_band,
+        message_variant_id=variant_id,
+        motion_type_targeted=motion_type_targeted,
+        spend_context_tag=spend_context_tag,
+        hypothesis_label=hypothesis_label,
+        variant_dimension=variant_dimension,
     )
 
 
@@ -692,6 +1116,12 @@ def main() -> int:
         hot_written = len(hot_output_rows)
 
     now = datetime.now(timezone.utc).isoformat()
+    
+    # === V3: LOAD BASELINE DISTRIBUTIONS (FROZEN, NEVER UPDATED) ===
+    baselines = load_baseline_distributions()
+    v2_baseline = baselines.get("v2", {}).get("scores", [])
+    v3_baseline = baselines.get("v3", {}).get("scores", [])
+    
     shadow_records: list[dict] = []
     for candidate in candidates:
         effective_route = candidate.motion_class
@@ -701,6 +1131,28 @@ def main() -> int:
             effective_route = "POSSIBLE_LINKEDIN_UNVERIFIED"
         if candidate.motion_class == "HOT" and settings.shadow_mode:
             effective_route = "HOT_SHADOW_ONLY"
+        
+        # === V3: COMPUTE PERCENTILE RANKS ===
+        v2_score_scaled = int(candidate.score.motion_score * 10)
+        v3_score = candidate.score.conversion_intent_score
+        
+        # === V3 DIVERGENT: COMPUTE FORCED DIVERGENCE SCORE ===
+        v3_divergent_score = compute_conversion_intent_score_divergent(
+            candidate.row,
+            candidate.score.motion_score,
+            candidate.score.buying_intensity,
+            candidate.spend_triggers,
+        )
+        
+        v2_percentile = compute_percentile_rank(v2_score_scaled, v2_baseline)
+        v3_percentile = compute_percentile_rank(v3_score, v3_baseline)
+        v3_divergent_percentile = compute_percentile_rank(v3_divergent_score, v3_baseline)
+        percentile_drift = abs(v3_percentile - v2_percentile)
+        bucket_alignment = "aligned" if percentile_drift <= 15 else "diverged"
+        
+        # === V3: EXTRACT VARIANT DETAILS ===
+        variant_dim_str = f"spend_{candidate.variant_dimension.spend_axis}_motion_{candidate.variant_dimension.motion_axis}_urgency_{candidate.variant_dimension.urgency_axis}"
+        
         record = {
             "timestamp": now,
             "company": candidate.row.get("company", ""),
@@ -716,6 +1168,22 @@ def main() -> int:
             "effective_route": effective_route,
             "reasons": list(candidate.score.reasons),
             "shadow_mode": settings.shadow_mode,
+            # === V3 ENRICHMENT ===
+            "v2_motion_score": candidate.score.motion_score,
+            "v2_percentile": v2_percentile,
+            "v3_cis": v3_score,
+            "v3_percentile": v3_percentile,
+            "v3_divergent_cis": v3_divergent_score,
+            "v3_divergent_percentile": v3_divergent_percentile,
+            "v3_routing_band": candidate.v3_routing_band,
+            "percentile_drift": percentile_drift,
+            "bucket_alignment": bucket_alignment,
+            "message_variant_id": candidate.message_variant_id,
+            "variant_dimension": variant_dim_str,
+            "motion_type_targeted": candidate.motion_type_targeted,
+            "spend_context_tag": candidate.spend_context_tag,
+            "hypothesis_label": candidate.hypothesis_label,
+            "cis_components": candidate.score.cis_components,
         }
         shadow_records.append(record)
 

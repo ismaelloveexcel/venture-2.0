@@ -1,0 +1,18 @@
+[
+  "advance_venture_phase.py",
+  "prospect_builder.py",
+  "run_daily.py",
+  "run_pipeline.py",
+  "client_manager.py",
+  "policy_engine.py",
+  "operator_verdict.py",
+  "dlq_replay.py",
+  "pre_send_check.py",
+  "bootstrap_secrets_from_notion.py",
+  "credibility_candidate_generator.py",
+  "send_outreach_test.py",
+  "launch_day_executor.py",
+  "launch_monitor.py",
+  "preflight_safety_check.py",
+  "reply_analyzer.py"
+]

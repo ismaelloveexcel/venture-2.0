@@ -282,6 +282,20 @@ def main() -> int:
         print(f"[weekly_optimizer] Wrote {REPLY_INTENT_RETRAIN_PATH}")
 
     print(f"[weekly_optimizer] Wrote {OUTPUT_PATH}")
+
+    eng = BASE / "04-coding" / "venture-engine"
+    if str(eng) not in sys.path:
+        sys.path.insert(0, str(eng))
+    try:
+        from reply_intent_trainer import run_weekly_retrain  # noqa: E402
+
+        tr = run_weekly_retrain(
+            db_path=DB_PATH,
+            model_path=BASE / "04-coding" / "venture-engine" / "config" / "reply_intent.model.json",
+        )
+        print(f"[weekly_optimizer] reply_intent_trainer: {tr}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"[weekly_optimizer] reply_intent_trainer skipped: {exc}")
     return 0
 
 

@@ -110,8 +110,8 @@ Translation:
 4. Fill daily scorecard
 
 ### Day 9 (5 min)
-- Run `venture_pipeline.py --dry-run` (preview)
-- Run `venture_pipeline.py` (send first 20)
+- Run `VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute --dry-run` (preview)
+- Run `VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute` (send first 20)
 
 ### Days 10–12 (as needed)
 - Handle replies: email back with Calendly link if interested

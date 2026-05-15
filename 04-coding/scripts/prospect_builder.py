@@ -6,68 +6,70 @@ Primary source: Apollo.io People Search API (B2B leads by title/industry/company
 Fallback:       Hunter.io domain search
 Demo mode:      Template dataset (--demo flag)
 
-Output: CSV with readiness_status (READY | REVIEW | REJECT)
+Output: CSV with validation_status (READY | REVIEW | REJECT), validation_reason,
+source (demo_template | apollo | hunter_enriched | fallback_template), run_id.
+Each run overwrites DATA_BASE/06-sales/prospects.csv by default (no append).
 
 Usage:
     python prospect_builder.py                          # Apollo (real leads)
     python prospect_builder.py --demo                  # template data for testing
-    python prospect_builder.py --input-csv path/to/prospects.csv
+    python prospect_builder.py --output-file 06-sales/prospects.csv
+    python prospect_builder.py --count 25 --cohort1-csv 06-sales/cohort1-prospects-template.csv
 """
 
+import argparse
 import csv
+import json
+import random
 import sys
 import pathlib
+import time
+import uuid
 from typing import Optional
 import httpx
 from dotenv import load_dotenv
 import os
 
 BASE = pathlib.Path(__file__).resolve().parents[2]
+REPO_ROOT = BASE
 load_dotenv(BASE / ".env")
+
+from runtime_config import resolve_data_base, resolve_venture_db_path
+
+DATA_BASE = resolve_data_base(REPO_ROOT)
 
 APOLLO_API_KEY = os.environ.get("APOLLO_API_KEY", "").strip()
 HUNTER_API_KEY = os.environ.get("HUNTER_API_KEY", "").strip()
-OUTPUT_FILE = BASE / "06-sales" / "prospects.csv"
+OUTPUT_FILE = DATA_BASE / "06-sales" / "prospects.csv"
 
-# ── Apollo ICP targeting defaults ────────────────────────────────────────────
-# Titles that indicate decision-maker authority for B2B outreach automation
+# ── Apollo ICP targeting — Cohort 1 (Auditbound outbound agencies) ───────────
+# Titles: founder / co-founder / owner (Apollo matches similar phrasing).
 APOLLO_TITLES = [
     "founder",
     "co-founder",
-    "ceo",
-    "chief executive officer",
     "owner",
-    "managing director",
-    "director of sales",
-    "head of sales",
-    "vp of sales",
-    "chief revenue officer",
-    "head of growth",
-    "director of marketing",
 ]
 
-# Apollo industry tags (use Apollo's taxonomy)
+# Industry tag names (Apollo taxonomy; relax strings if API returns 422).
 APOLLO_INDUSTRIES = [
-    "marketing and advertising",
-    "management consulting",
-    "staffing and recruiting",
-    "computer software",
-    "internet",
-    "information technology and services",
-    "professional training and coaching",
-    "financial services",
+    "marketing services",
+    "lead generation",
+    "sales consulting",
+    "outbound agency",
 ]
+
+# Keyword filter across people + orgs (Apollo q_keywords).
+APOLLO_Q_KEYWORDS = "outbound cold email done-for-you lead gen"
+
+# Employer headcount range "min,max" per Apollo docs.
+APOLLO_EMPLOYEE_RANGES = ["1,10"]
 
 # Pain-signal heuristics mapped from industry/title combos
 _PAIN_SIGNAL_MAP = {
-    "marketing and advertising": "client_acquisition",
-    "management consulting": "pipeline_visibility",
-    "staffing and recruiting": "candidate_shortage",
-    "computer software": "low_reply_rate",
-    "internet": "scaling_outbound",
-    "information technology and services": "deal_cycles_long",
-    "professional training and coaching": "program_enrollment",
-    "financial services": "hnw_client_acquisition",
+    "marketing services": "client_acquisition",
+    "lead generation": "scaling_outbound",
+    "sales consulting": "pipeline_visibility",
+    "outbound agency": "scaling_outbound",
 }
 
 
@@ -92,7 +94,7 @@ def fetch_prospects_from_apollo(count: int = 50) -> list[dict]:
     Maps Apollo response fields → prospect_builder CSV schema.
     Free tier: 50 verified contact exports/month.
 
-    Apollo docs: https://docs.apollo.io/reference/people-search
+    Apollo docs: People Search (POST /v1/people/search). Emails may require separate enrichment on some tiers.
     """
     if not APOLLO_API_KEY:
         print("[warn] APOLLO_API_KEY not set — skipping Apollo sourcing")
@@ -106,21 +108,24 @@ def fetch_prospects_from_apollo(count: int = 50) -> list[dict]:
         with httpx.Client(timeout=15) as client:
             while len(prospects) < count:
                 payload = {
-                    "api_key": APOLLO_API_KEY,
                     "person_titles": APOLLO_TITLES,
-                    "organization_industry_tag_ids": [],  # use q_organization_industry instead
+                    "include_similar_titles": False,
+                    "organization_industry_tag_ids": [],
                     "q_organization_industry_tag_names": APOLLO_INDUSTRIES,
+                    "organization_num_employees_ranges": APOLLO_EMPLOYEE_RANGES,
+                    "q_keywords": APOLLO_Q_KEYWORDS,
                     "contact_email_status": ["verified"],
                     "per_page": per_page,
                     "page": page,
                 }
 
                 r = client.post(
-                    "https://api.apollo.io/v1/mixed_people/search",
+                    "https://api.apollo.io/v1/people/search",
                     json=payload,
                     headers={
                         "Content-Type": "application/json",
                         "Cache-Control": "no-cache",
+                        "X-Api-Key": APOLLO_API_KEY,
                     },
                 )
 
@@ -135,7 +140,7 @@ def fetch_prospects_from_apollo(count: int = 50) -> list[dict]:
                     break
 
                 data = r.json()
-                people = data.get("people", [])
+                people = data.get("people") or data.get("contacts") or []
 
                 if not people:
                     break  # exhausted results
@@ -148,21 +153,48 @@ def fetch_prospects_from_apollo(count: int = 50) -> list[dict]:
                     name = f"{first} {last}".strip() or person.get("name", "")
                     email = (person.get("email") or "").strip()
                     title = (person.get("title") or "").strip()
-                    company = (org.get("name") or person.get("organization_name") or "").strip()
-                    domain = (org.get("primary_domain") or person.get("organization_domain") or "").strip()
-                    industry = (org.get("industry") or person.get("industry") or "").strip()
+                    company = (
+                        org.get("name") or person.get("organization_name") or ""
+                    ).strip()
+                    domain = (
+                        org.get("primary_domain")
+                        or person.get("organization_domain")
+                        or ""
+                    ).strip()
+                    industry = (
+                        org.get("industry") or person.get("industry") or ""
+                    ).strip()
                     linkedin = (person.get("linkedin_url") or "").strip()
+                    founded_raw = org.get("founded_year")
+                    if founded_raw is None or founded_raw == "":
+                        founded_year: str | int = ""
+                    else:
+                        founded_year = founded_raw
+                    ps = _infer_pain_signal(industry, title)
+                    pers_note = ""
+                    if company and ps:
+                        pers_note = f"{company}: {ps.replace('_', ' ')}."
+                    elif ps:
+                        pers_note = ps.replace("_", " ")
 
-                    prospects.append({
-                        "company_name": company,
-                        "domain": domain,
-                        "name": name,
-                        "email": email,
-                        "role": title,
-                        "industry": industry,
-                        "pain_signal": _infer_pain_signal(industry, title),
-                        "linkedin_url": linkedin,
-                    })
+                    prospects.append(
+                        {
+                            "company_name": company,
+                            "domain": domain,
+                            "name": name,
+                            "first_name": first,
+                            "last_name": last,
+                            "email": email,
+                            "role": title,
+                            "industry": industry,
+                            "pain_signal": ps,
+                            "linkedin_url": linkedin,
+                            "founded_year": founded_year,
+                            "estimated_clients": "",
+                            "personalisation_note": pers_note,
+                            "source": "apollo",
+                        }
+                    )
 
                     if len(prospects) >= count:
                         break
@@ -178,38 +210,158 @@ def fetch_prospects_from_apollo(count: int = 50) -> list[dict]:
     print(f"[ok] Apollo sourced {len(prospects)} prospects")
     return prospects
 
+
 # Hard filter rules (deterministic only)
 REJECT_DOMAINS = {"gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com"}
-REQUIRED_ROLES = {
+EXCLUDE_TITLE_MARKERS = (
+    "assistant",
+    "intern",
+    "coordinator",
+    " receptionist",
+    "associate ",
+    " junior",
+    "jr.",
+)
+
+DECISION_TITLE_MARKERS = (
     "founder",
-    "owner",
+    "co-founder",
     "ceo",
+    "coo",
+    "cfo",
     "cto",
+    "owner",
+    "president",
+    "chief ",
+    "head ",
+    " head",
     "director",
-    "head",
-    "manager",
-    "lead",
-}
-ICP_INDUSTRIES = {"agency", "coaching", "saas", "consulting", "services"}
+    "vp",
+    "vice president",
+    "principal",
+    "partner",
+    "managing director",
+    "general manager",
+)
+
+
+def _title_excluded(title_lower: str) -> bool:
+    return any(m in title_lower for m in EXCLUDE_TITLE_MARKERS)
+
+
+def _title_decision_like(title_lower: str) -> bool:
+    if _title_excluded(title_lower):
+        return False
+    return any(m in title_lower for m in DECISION_TITLE_MARKERS)
+
+
+PROSPECT_CSV_FIELDNAMES = [
+    "company_name",
+    "domain",
+    "name",
+    "email",
+    "role",
+    "industry",
+    "pain_signal",
+    "linkedin_url",
+    "validation_status",
+    "validation_reason",
+    "source",
+    "run_id",
+]
+REQUIRED_PROSPECT_COLUMNS = frozenset(PROSPECT_CSV_FIELDNAMES)
+
+# Cohort 1 list shape (06-sales/cohort1-prospects-template.csv); optional second export.
+COHORT1_CSV_FIELDNAMES: tuple[str, ...] = (
+    "first_name",
+    "last_name",
+    "company",
+    "role",
+    "linkedin_url",
+    "founded_year",
+    "estimated_clients",
+    "email",
+    "personalisation_note",
+)
+
+
+def _split_display_name(full: str) -> tuple[str, str]:
+    n = (full or "").strip()
+    if not n:
+        return "", ""
+    parts = n.split(None, 1)
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], parts[1]
+
+
+def eligible_row_to_cohort1_fields(row: dict) -> dict[str, str]:
+    """Map internal READY row → cohort1 CSV columns (never emits non-row secrets)."""
+    first = (row.get("first_name") or "").strip()
+    last = (row.get("last_name") or "").strip()
+    if not first and not last:
+        first, last = _split_display_name(str(row.get("name") or ""))
+    fy_raw = row.get("founded_year")
+    if fy_raw is None or fy_raw == "":
+        fy_s = ""
+    else:
+        fy_s = str(fy_raw).strip()
+    ps = (row.get("pain_signal") or "").strip()
+    co = (row.get("company_name") or "").strip()
+    role = (row.get("role") or "").strip()
+    note = (row.get("personalisation_note") or "").strip()
+    if not note and co and ps:
+        note = f"{co}: {ps.replace('_', ' ')}."
+    elif not note and ps:
+        note = ps.replace("_", " ")
+    return {
+        "first_name": first,
+        "last_name": last,
+        "company": co,
+        "role": role,
+        "linkedin_url": (row.get("linkedin_url") or "").strip(),
+        "founded_year": fy_s,
+        "estimated_clients": (row.get("estimated_clients") or "").strip(),
+        "email": (row.get("email") or "").strip(),
+        "personalisation_note": note,
+    }
+
+
+def write_cohort1_prospects_csv(path: pathlib.Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(
+            fh, fieldnames=list(COHORT1_CSV_FIELDNAMES), extrasaction="ignore"
+        )
+        w.writeheader()
+        for r in rows:
+            w.writerow(eligible_row_to_cohort1_fields(r))
+
+
+def resolve_cli_data_path(rel_or_abs: str) -> pathlib.Path:
+    """Resolve --output-file / --cohort1-csv: absolute, or relative to DATA_BASE."""
+    p = pathlib.Path(rel_or_abs.strip())
+    if p.is_absolute():
+        return p.resolve()
+    return (DATA_BASE / p).resolve()
 
 
 def validate_prospect(row: dict) -> tuple[str, str]:
     """
     Apply hard rules to classify prospect.
 
-    Returns: (status, reason)
-    - READY: valid email + domain + role
-    - REVIEW: missing email but strong domain + role
-    - REJECT: fails hard rules
+    Returns: (validation_status, validation_reason)
+    - READY: decision-like title + valid email + domain
+    - REVIEW: ambiguous title, or missing email with strong domain + decision title
+    - REJECT: fails hard structural / generic-domain / excluded-title rules
     """
 
-    # Extract fields (handle None values)
     company = (row.get("company_name") or "").strip()
     domain = (row.get("domain") or "").strip()
-    role = (row.get("role") or "").strip().lower()
+    role = (row.get("role") or "").strip()
+    role_lower = role.lower()
     email = (row.get("email") or "").strip()
 
-    # Hard rejects
     if not company:
         return "REJECT", "missing_company"
 
@@ -219,71 +371,128 @@ def validate_prospect(row: dict) -> tuple[str, str]:
     if not role:
         return "REJECT", "missing_role"
 
-    # Domain validation
     if domain.lower() in REJECT_DOMAINS:
         return "REJECT", "generic_domain"
 
-    # Role authority check
-    role_match = any(req in role for req in REQUIRED_ROLES)
-    if not role_match:
-        return "REJECT", "non_decision_role"
+    if _title_excluded(role_lower):
+        return "REJECT", "excluded_title"
 
-    # Classify by completeness
+    if not _title_decision_like(role_lower):
+        return "REVIEW", "ambiguous_title"
+
     if email and "@" in email and domain.lower() not in REJECT_DOMAINS:
         return "READY", "complete_profile"
-    elif domain and role_match:
+    if domain:
         return "REVIEW", "missing_email_strong_domain"
-    else:
-        return "REJECT", "incomplete_profile"
+    return "REJECT", "incomplete_profile"
+
+
+def _assert_prospect_batch_schema(rows: list[dict], run_id: str) -> None:
+    from prospect_gate import normalize_email
+
+    rid = (run_id or "").strip()
+    for i, r in enumerate(rows):
+        missing = sorted(REQUIRED_PROSPECT_COLUMNS - set(r.keys()))
+        if missing:
+            raise ValueError(f"prospect row {i} missing keys: {missing}")
+        if (r.get("validation_status") or "").strip().upper() != "READY":
+            raise ValueError(f"prospect row {i}: validation_status must be READY for CSV export")
+        if (r.get("run_id") or "").strip() != rid:
+            raise ValueError(
+                f"prospect row {i}: run_id mismatch (expected {rid!r}, got {r.get('run_id')!r})"
+            )
+        em = normalize_email(r.get("email"))
+        if not em:
+            raise ValueError(f"prospect row {i}: email required after gate")
+        if (r.get("email") or "") != em:
+            raise ValueError(
+                f"prospect row {i}: email must be canonical lower(trim); use prospect_gate.normalize_email"
+            )
 
 
 def fetch_prospects_from_hunter(domain_keyword: str, count: int = 50) -> list[dict]:
     """
     Fetch prospects from Hunter.io domain search API.
 
-    Note: This requires Hunter API with domain search access.
-    Falls back to returning template if API unavailable.
+    Retries with exponential backoff (3 retries after first attempt; delays 2s, 4s, 8s)
+    on rate limits / transient errors. On total failure logs a warning and returns [].
     """
-
     if not HUNTER_API_KEY:
         print("[warn] HUNTER_API_KEY not set. Using template data.")
         return []
 
-    prospects = []
+    url = "https://api.hunter.io/v2/domain-search"
+    params = {
+        "domain": domain_keyword,
+        "limit": min(count, 100),
+        "api_key": HUNTER_API_KEY,
+    }
 
-    try:
-        # Hunter.io domain search endpoint
-        # Note: this is a simplified example; actual implementation would paginate
-        url = f"https://api.hunter.io/v2/domain-search"
-        params = {
-            "domain": domain_keyword,
-            "limit": min(count, 100),
-            "api_key": HUNTER_API_KEY,
-        }
+    max_attempts = 4  # initial + 3 retries
+    base_delay_s = 2.0
 
-        with httpx.Client(timeout=10) as client:
-            r = client.get(url, params=params)
+    for attempt in range(max_attempts):
+        if attempt > 0:
+            delay = base_delay_s * (2 ** (attempt - 1))
+            print(
+                f"[warn] Hunter retry {attempt}/{max_attempts - 1} after {delay:.0f}s backoff"
+            )
+            time.sleep(delay)
+        try:
+            with httpx.Client(timeout=10) as client:
+                r = client.get(url, params=params)
+        except (httpx.HTTPError, OSError) as e:
+            print(f"[warn] Hunter request error: {e}")
+            if attempt == max_attempts - 1:
+                print(
+                    "[warn] Hunter unreachable after retries — skipping Hunter sourcing "
+                    "(template fallback may apply if no other source filled quota)."
+                )
+            continue
 
-            if r.status_code == 200:
+        if r.status_code == 200:
+            prospects: list[dict] = []
+            try:
                 data = r.json()
-                for emp in data.get("data", {}).get("employees", []):
-                    prospects.append(
-                        {
-                            "company_name": emp.get("company", ""),
-                            "domain": emp.get("domain", ""),
-                            "name": emp.get("first_name", ""),
-                            "email": emp.get("email", ""),
-                            "role": emp.get("position", ""),
-                            "industry": "saas",
-                        }
-                    )
-            else:
-                print(f"[warn] Hunter API returned {r.status_code}")
+            except json.JSONDecodeError:
+                print("[warn] Hunter returned non-JSON body")
+                if attempt < max_attempts - 1:
+                    continue
+                print(
+                    "[warn] Hunter unreachable after retries — skipping Hunter sourcing "
+                    "(template fallback may apply if no other source filled quota)."
+                )
+                return []
 
-    except Exception as e:
-        print(f"[warn] Hunter API call failed: {e}")
+            for emp in data.get("data", {}).get("employees", []):
+                pos = (emp.get("position") or "").strip()
+                prospects.append(
+                    {
+                        "company_name": emp.get("company", ""),
+                        "domain": emp.get("domain", ""),
+                        "name": emp.get("first_name", ""),
+                        "email": emp.get("email", ""),
+                        "role": pos,
+                        "industry": "saas",
+                        "pain_signal": _infer_pain_signal("saas", pos),
+                        "linkedin_url": "",
+                        "source": "hunter_enriched",
+                    }
+                )
+            return prospects
 
-    return prospects
+        retryable = r.status_code == 429 or (500 <= r.status_code < 600)
+        print(f"[warn] Hunter API HTTP {r.status_code}: {r.text[:200]!r}")
+        if retryable and attempt < max_attempts - 1:
+            continue
+        if attempt == max_attempts - 1:
+            print(
+                "[warn] Hunter failed after retries — skipping Hunter sourcing "
+                "(template fallback may apply if no other source filled quota)."
+            )
+        break
+
+    return []
 
 
 def build_prospect_list(
@@ -764,134 +973,17 @@ def build_prospect_list(
         },
     ]
 
-    # ── Source priority: Apollo → Hunter → template ──────────────────────────
-    # 1. Apollo (real verified B2B leads — primary source)
-    if APOLLO_API_KEY:
-        apollo_results = fetch_prospects_from_apollo(count)
-        prospects.extend(apollo_results)
-
-    # 2. Hunter domain search (secondary, if Apollo didn't fill quota)
-    if len(prospects) < count and HUNTER_API_KEY:
-        remaining = count - len(prospects)
-        for keyword in industry_keywords[:3]:
-            api_results = fetch_prospects_from_hunter(keyword, remaining // 3 + 1)
-            prospects.extend(api_results)
-            if len(prospects) >= count:
-                break
-
-    # 3. Template fallback (demo / no API keys)
-    if not prospects or allow_template:
-        prospects.extend(template_prospects)
-
-    return prospects[:count]
-
-
-def run(industry_keywords: list[str] = None, count: int = 50) -> int:
-    """
-    Main execution: source prospects, validate, output CSV
-    """
-
-    if industry_keywords is None:
-        industry_keywords = ["agency", "coaching", "saas"]
-
-    print(f"\n=== Prospect Builder ===\n")
-    print(f"[info] Sourcing {count} prospects")
-    print(f"[info] Industries: {', '.join(industry_keywords)}")
-
-    # Source prospects
-    raw_prospects = build_prospect_list(industry_keywords, count)
-
-    if not raw_prospects:
-        print("[fail] No prospects sourced. Check Hunter API key.")
-        return 1
-
-    print(f"[ok] Sourced {len(raw_prospects)} raw prospects")
-
-    # Apply rules and classify
-    validated = []
-    ready_count = 0
-    review_count = 0
-    reject_count = 0
-
-    for prospect in raw_prospects:
-        status, reason = validate_prospect(prospect)
-
-        prospect["readiness_status"] = status
-        prospect["validation_reason"] = reason
-
-        validated.append(prospect)
-
-        if status == "READY":
-            ready_count += 1
-        elif status == "REVIEW":
-            review_count += 1
-        else:
-            reject_count += 1
-
-    print(f"\n[ok] Validated {len(validated)} prospects:")
-    print(f"  READY: {ready_count}")
-    print(f"  REVIEW: {review_count}")
-    print(f"  REJECT: {reject_count}")
-
-    # Write output CSV
-    if not validated:
-        print("[fail] No valid prospects after filtering.")
-        return 1
-
-    fieldnames = [
-        "company_name",
-        "domain",
-        "name",
-        "email",
-        "role",
-        "industry",
-        "pain_signal",
-        "readiness_status",
-        "validation_reason",
-    ]
-
-    with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        for prospect in validated:
-            writer.writerow({k: prospect.get(k, "") for k in fieldnames})
-
-    print(f"\n[ok] Prospects written to {OUTPUT_FILE}")
-    print(f"\nNext: run message_generator.py\n")
-
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(run())
-        {
-            "company_name": "Strategic IT Consulting",
-            "domain": "stratit.io",
-            "name": "Matthew Garcia",
-            "email": "matthew@stratit.io",
-            "role": "CTO/Founder",
-            "industry": "consulting",
-            "pain_signal": "technology_adoption",
-        },
-        {
-            "company_name": "Wealth Management Advisors",
-            "domain": "wealthmgmt.pro",
-            "name": "Susan Lee",
-            "email": "susan@wealthmgmt.pro",
-            "role": "Managing Principal",
-            "industry": "services",
-            "pain_signal": "hnw_client_acquisition",
-        },
-        {
-            "company_name": "Intellectual Property Law",
-            "domain": "iplaw.io",
-            "name": "Karen Miller",
-            "email": "karen@iplaw.io",
-            "role": "Senior Partner",
-            "industry": "services",
-            "pain_signal": "patent_prosecution_backlog",
-        },
-    ]
+    if allow_template:
+        tpl = list(template_prospects)
+        random.shuffle(tpl)
+        return [
+            dict(x)
+            | {
+                "linkedin_url": (x.get("linkedin_url") or ""),
+                "source": "demo_template",
+            }
+            for x in tpl[:count]
+        ]
 
     # ── Source priority: Apollo → Hunter → template ──────────────────────────
     # 1. Apollo (real verified B2B leads — primary source)
@@ -908,14 +1000,30 @@ if __name__ == "__main__":
             if len(prospects) >= count:
                 break
 
-    # 3. Template fallback (demo / no API keys)
-    if not prospects or allow_template:
-        prospects.extend(template_prospects)
+    # 3. Template fallback (no API keys) — shuffled copy so each run order differs
+    if not prospects:
+        tpl = list(template_prospects)
+        random.shuffle(tpl)
+        for x in tpl:
+            prospects.append(
+                dict(x)
+                | {
+                    "linkedin_url": (x.get("linkedin_url") or ""),
+                    "source": "fallback_template",
+                }
+            )
 
     return prospects[:count]
 
 
-def run(industry_keywords: list[str] = None, count: int = 50) -> int:
+def run(
+    industry_keywords: list[str] | None = None,
+    *,
+    count: int = 50,
+    allow_template: bool = False,
+    output_file: pathlib.Path | None = None,
+    cohort1_csv: pathlib.Path | None = None,
+) -> int:
     """
     Main execution: source prospects, validate, output CSV
     """
@@ -923,152 +1031,231 @@ def run(industry_keywords: list[str] = None, count: int = 50) -> int:
     if industry_keywords is None:
         industry_keywords = ["agency", "coaching", "saas"]
 
+    run_id = os.environ.get("VENTURE_RUN_ID", "").strip() or uuid.uuid4().hex[:16]
+
+    out_path = output_file if output_file is not None else OUTPUT_FILE
+
     print(f"\n=== Prospect Builder ===\n")
     print(f"[info] Sourcing {count} prospects")
+    print(f"[info] run_id: {run_id}")
+    print(f"[info] DATA_BASE: {DATA_BASE}")
+    print(f"[info] Output: overwrite {out_path} (single batch per run)")
+    if cohort1_csv is not None:
+        print(f"[info] Cohort1 CSV: {cohort1_csv} ({len(COHORT1_CSV_FIELDNAMES)} columns)")
     print(f"[info] Industries: {', '.join(industry_keywords)}")
-    if APOLLO_API_KEY:
-        print(f"[info] Primary source: Apollo.io")
+    if allow_template:
+        print("[info] Primary source: template (--demo, shuffled; no API calls)")
+    elif APOLLO_API_KEY:
+        print("[info] Primary source: Apollo.io")
     elif HUNTER_API_KEY:
-        print(f"[info] Primary source: Hunter.io (no Apollo key)")
+        print("[info] Primary source: Hunter.io (no Apollo key)")
     else:
-        print(f"[info] Primary source: template data (no API keys set)")
+        print("[info] Primary source: template (no API keys)")
 
-    # Source prospects
-    raw_prospects = build_prospect_list(industry_keywords, count)
+    raw_prospects = build_prospect_list(
+        industry_keywords, count, allow_template=allow_template
+    )
 
     if not raw_prospects:
-        print("[fail] No prospects sourced. Check APOLLO_API_KEY or HUNTER_API_KEY.")
+        print(
+            "[fail] No prospects sourced. Set APOLLO_API_KEY / HUNTER_API_KEY or use --demo."
+        )
         return 1
 
     print(f"[ok] Sourced {len(raw_prospects)} raw prospects")
 
-    # Apply rules and classify
-    validated = []
-    ready_count = 0
-    review_count = 0
-    reject_count = 0
+    from prospect_gate import (
+        append_prospect_audit_log,
+        normalize_email,
+        run_prospect_gate,
+        run_strict_forensic_checks,
+        verify_gate_eligible_audit_parity,
+        verify_written_eligible_prospects_csv,
+        write_eligible_prospects_csv,
+        write_prospect_generation_digest,
+        write_strict_mode_summary,
+    )
 
-    for prospect in raw_prospects:
-        status, reason = validate_prospect(prospect)
-
-        prospect["readiness_status"] = status
-        prospect["validation_reason"] = reason
-
-        validated.append(prospect)
-
-        if status == "READY":
-            ready_count += 1
-        elif status == "REVIEW":
-            review_count += 1
-        else:
-            reject_count += 1
-
-    print(f"\n[ok] Validated {len(validated)} prospects:")
-    print(f"  READY: {ready_count}")
-    print(f"  REVIEW: {review_count}")
-    print(f"  REJECT: {reject_count}")
-
-    # Write output CSV
-    if not validated:
-        print("[fail] No valid prospects after filtering.")
+    db_path = resolve_venture_db_path(DATA_BASE, REPO_ROOT)
+    cohort_id = os.environ.get("VENTURE_COHORT_ID", "").strip()
+    try:
+        gate = run_prospect_gate(
+            raw_rows=raw_prospects,
+            run_id=run_id,
+            validate_prospect_fn=validate_prospect,
+            db_path=db_path,
+            cohort_id=cohort_id,
+        )
+    except ValueError as exc:
+        print(f"\n[fail] Audit log schema error: {exc}")
         return 1
 
-    fieldnames = [
-        "company_name",
-        "domain",
-        "name",
-        "email",
-        "role",
-        "industry",
-        "pain_signal",
-        "linkedin_url",
-        "readiness_status",
-        "validation_reason",
-    ]
+    eligible = gate.eligible_rows
+    parity_pre = verify_gate_eligible_audit_parity(
+        eligible_rows=eligible, audit_rows=gate.audit_rows, run_id=run_id
+    )
+    if parity_pre:
+        print("\n[fail] Gate invariant broken (eligible vs audit ELIGIBLE mismatch):")
+        for line in parity_pre:
+            print(f"  - {line}")
+        return 2
 
-    with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        for prospect in validated:
-            writer.writerow({k: prospect.get(k, "") for k in fieldnames})
+    try:
+        append_prospect_audit_log(DATA_BASE, gate.audit_rows)
+    except ValueError as exc:
+        print(f"\n[fail] Audit log schema error: {exc}")
+        return 1
 
-    print(f"\n[ok] Prospects written to {OUTPUT_FILE}")
-    print(f"\nNext: run message_generator_solo.py\n")
+    if not gate.db_ok:
+        print(
+            "\n[warn] SQLite suppression DB unavailable — rows classified DROP "
+            "(suppression_db_unavailable). Audit: DATA_BASE/07-kpis/prospect_audit_log.csv. "
+            "Exit 0 per contract; treat as CRITICAL before outbound.\n"
+        )
+
+    for row in eligible:
+        for k in PROSPECT_CSV_FIELDNAMES:
+            row.setdefault(k, "")
+        row["email"] = normalize_email(row.get("email"))
+
+    review_count = sum(
+        1
+        for r in gate.audit_rows
+        if (r.get("validation_status") or "").strip().upper() == "REVIEW"
+    )
+    reject_count = sum(
+        1
+        for r in gate.audit_rows
+        if (r.get("validation_status") or "").strip().upper() == "REJECT"
+    )
+    ready_count = len(eligible)
+
+    print(f"\n[ok] Gate results ({len(gate.audit_rows)} audited):")
+    print(f"  ELIGIBLE (READY, written to prospects.csv): {ready_count}")
+    print(f"  REVIEW (audit only): {review_count}")
+    print(f"  REJECT (audit only): {reject_count}")
+
+    strict_prospect = os.environ.get("STRICT_PROSPECT_MODE", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    strict_audit_halt = os.environ.get("VENTURE_STRICT_PROSPECT_AUDIT", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+    if not eligible:
+        print(
+            "\n[warn] No ELIGIBLE prospects after gate (prospects.csv will be header-only)."
+        )
+
+    _assert_prospect_batch_schema(eligible, run_id)
+
+    write_eligible_prospects_csv(out_path, eligible, list(PROSPECT_CSV_FIELDNAMES))
+
+    rt_errs = verify_written_eligible_prospects_csv(
+        out_path,
+        eligible_rows=eligible,
+        run_id=run_id,
+        fieldnames=list(PROSPECT_CSV_FIELDNAMES),
+    )
+    if rt_errs:
+        print("\n[fail] prospects.csv round-trip verification failed:")
+        for line in rt_errs:
+            print(f"  - {line}")
+        return 3
+
+    if cohort1_csv is not None:
+        write_cohort1_prospects_csv(cohort1_csv, eligible)
+
+    if strict_prospect or strict_audit_halt:
+        summary = run_strict_forensic_checks(
+            audit_rows=gate.audit_rows,
+            eligible_rows=eligible,
+            run_id=run_id,
+        )
+        if strict_prospect:
+            write_strict_mode_summary(DATA_BASE, summary)
+            n_viol = sum(int(v.get("count") or 0) for v in summary.get("violations") or [])
+            if summary.get("strict_ok"):
+                print("STRICT_MODE: OK | violations=0")
+            else:
+                print(f"STRICT_MODE: VIOLATIONS DETECTED | count={n_viol}")
+        if strict_audit_halt and not summary.get("strict_ok"):
+            print("\n[fail] VENTURE_STRICT_PROSPECT_AUDIT: forensic / parity checks failed (halt).")
+            return 11
+
+    write_prospect_generation_digest(
+        DATA_BASE,
+        run_id=run_id,
+        payload={
+            "gate_eligible_audit_parity_ok": True,
+            "csv_round_trip_ok": True,
+            "rows_written": len(eligible),
+            "output_path": str(out_path.resolve()),
+            "cohort1_csv_path": str(cohort1_csv.resolve()) if cohort1_csv else "",
+        },
+    )
+
+    from operator_ux import print_prospect_builder_success_banner
+
+    print_prospect_builder_success_banner(
+        output_file=out_path,
+        data_base=DATA_BASE,
+        run_id=run_id,
+        rows_written=ready_count,
+    )
 
     return 0
 
 
-if __name__ == "__main__":
-    sys.exit(run())
-fallback (demo / no API keys)
-    if not prospects or allow_template:
-        prospects.extend(template_prospects)
-
-    return prospects[:count]
-
-
-def run(industry_keywords: list[str] = None, count: int = 50) -> int:
-    if industry_keywords is None:
-        industry_keywords = ["agency", "coaching", "saas"]
-
-    print(f"\n=== Prospect Builder ===\n")
-    print(f"[info] Sourcing {count} prospects")
-    print(f"[info] Industries: {', '.join(industry_keywords)}")
-    if APOLLO_API_KEY:
-        print(f"[info] Primary source: Apollo.io")
-    elif HUNTER_API_KEY:
-        print(f"[info] Primary source: Hunter.io (no Apollo key)")
-    else:
-        print(f"[info] Primary source: template data (no API keys set)")
-
-    raw_prospects = build_prospect_list(industry_keywords, count)
-
-    if not raw_prospects:
-        print("[fail] No prospects sourced. Check APOLLO_API_KEY or HUNTER_API_KEY.")
-        return 1
-
-    print(f"[ok] Sourced {len(raw_prospects)} raw prospects")
-
-    validated = []
-    ready_count = review_count = reject_count = 0
-
-    for prospect in raw_prospects:
-        status, reason = validate_prospect(prospect)
-        prospect["readiness_status"] = status
-        prospect["validation_reason"] = reason
-        validated.append(prospect)
-        if status == "READY":
-            ready_count += 1
-        elif status == "REVIEW":
-            review_count += 1
-        else:
-            reject_count += 1
-
-    print(f"\n[ok] Validated {len(validated)} prospects:")
-    print(f"  READY: {ready_count}")
-    print(f"  REVIEW: {review_count}")
-    print(f"  REJECT: {reject_count}")
-
-    if not validated:
-        print("[fail] No valid prospects after filtering.")
-        return 1
-
-    fieldnames = [
-        "company_name", "domain", "name", "email", "role",
-        "industry", "pain_signal", "linkedin_url",
-        "readiness_status", "validation_reason",
-    ]
-
-    with open(OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        for prospect in validated:
-            writer.writerow({k: prospect.get(k, "") for k in fieldnames})
-
-    print(f"\n[ok] Prospects written to {OUTPUT_FILE}")
-    print(f"\nNext: run message_generator_solo.py\n")
-    return 0
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Source prospects into 06-sales/prospects.csv (READY/REVIEW/REJECT).",
+    )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Merge template prospects (testing; also use when no API keys)",
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=50,
+        metavar="N",
+        help="Max prospects to write (default 50)",
+    )
+    parser.add_argument(
+        "--output-file",
+        default=None,
+        metavar="PATH",
+        help="Canonical prospects CSV (READY rows). Default: DATA_BASE/06-sales/prospects.csv",
+    )
+    parser.add_argument(
+        "--cohort1-csv",
+        default=None,
+        metavar="PATH",
+        help="Also write Cohort 1 template CSV (paths relative to DATA_BASE unless absolute).",
+    )
+    args = parser.parse_args()
+    out_override = (
+        resolve_cli_data_path(args.output_file) if args.output_file else None
+    )
+    c1_path = resolve_cli_data_path(args.cohort1_csv) if args.cohort1_csv else None
+    return run(
+        count=args.count,
+        allow_template=args.demo,
+        output_file=out_override,
+        cohort1_csv=c1_path,
+    )
 
 
 if __name__ == "__main__":
-    sys.exit(run())
+    _exit_code = main()
+    if _exit_code != 0:
+        from operator_ux import print_prospect_builder_exit_card
+
+        print_prospect_builder_exit_card(_exit_code)
+    sys.exit(_exit_code)

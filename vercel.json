@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/styles.css", "destination": "/website/styles.css" },
+    { "source": "/logo.png", "destination": "/website/logo.png" },
+    { "source": "/", "destination": "/website/index.html" }
+  ]
+}

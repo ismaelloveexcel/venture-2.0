@@ -37,7 +37,7 @@
     {
       "label": "⚡ Run Full Venture Pipeline",
       "type": "shell",
-      "command": ".venv/Scripts/python.exe 04-coding/scripts/venture_pipeline.py",
+      "command": "set VENTURE_CANONICAL_ENTRY=1 && .venv/Scripts/python.exe 04-coding/scripts/run_daily.py --execute",
       "group": "none",
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
@@ -45,7 +45,7 @@
     {
       "label": "🧪 Dry Run Pipeline (no emails/syncs)",
       "type": "shell",
-      "command": ".venv/Scripts/python.exe 04-coding/scripts/venture_pipeline.py --dry-run",
+      "command": "set VENTURE_CANONICAL_ENTRY=1 && .venv/Scripts/python.exe 04-coding/scripts/run_daily.py --execute --dry-run",
       "group": "none",
       "presentation": { "reveal": "always", "panel": "shared" },
       "problemMatcher": []
@@ -93,7 +93,7 @@
     {
       "label": "📋 Sync All to Notion",
       "type": "shell",
-      "command": ".venv/Scripts/python.exe 04-coding/scripts/venture_pipeline.py",
+      "command": "set VENTURE_CANONICAL_ENTRY=1 && .venv/Scripts/python.exe 04-coding/scripts/run_daily.py --execute",
       "group": "none",
       "presentation": {
         "reveal": "always",

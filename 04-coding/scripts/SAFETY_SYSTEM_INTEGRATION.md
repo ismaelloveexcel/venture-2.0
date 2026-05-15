@@ -112,7 +112,8 @@ python 04-coding/scripts/pre_send_check.py
 
 #### Step 2: If cleared, run pipeline
 ```bash
-python 04-coding/scripts/venture_pipeline.py
+python 04-coding/scripts/run_daily.py bridge status
+VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute
 ```
 
 **What happens:**
@@ -144,9 +145,10 @@ preflight_check → prospect_builder → message_generator → review_queue
 ### Day 9: First Send
 ```
 Step 1: python pre_send_check.py          (new: clear to send?)
-Step 2: python venture_pipeline.py --dry-run (preview)
-Step 3: python venture_pipeline.py         (actually send)
-Step 4: streamlit run dashboard_streamlit  (monitor)
+Step 2: python run_daily.py bridge status
+Step 3: VENTURE_CANONICAL_ENTRY=1 python run_daily.py --execute --dry-run (preview)
+Step 4: VENTURE_CANONICAL_ENTRY=1 python run_daily.py --execute            (actually send)
+Step 5: streamlit run dashboard_streamlit  (monitor)
 ```
 
 ### Days 10–13: Daily Check
@@ -188,7 +190,8 @@ Make GO / ITERATE / KILL decision
 - [ ] dashboard_streamlit.py updated to import signal engine
 - [ ] Test pre_send_check: `python scripts/pre_send_check.py`
 - [ ] Test dashboard: `streamlit run scripts/dashboard_streamlit.py`
-- [ ] venture_pipeline.py can run (`python scripts/venture_pipeline.py --help`)
+- [ ] run_daily status can run (`python scripts/run_daily.py bridge status`)
+- [ ] canonical execute can run (`VENTURE_CANONICAL_ENTRY=1 python scripts/run_daily.py --execute --dry-run`)
 
 ---
 

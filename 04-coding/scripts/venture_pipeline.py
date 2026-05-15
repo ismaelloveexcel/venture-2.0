@@ -1,9 +1,15 @@
 """
-Venture OS — Full Automation Pipeline
-Chains: Prospect Discovery → Email Lookup → Outreach Generation → Notion Sync → Airtable Sync → KPI Update
+Venture OS — pipeline module (legacy / diagnostic)
 
-Run: python 04-coding/scripts/venture_pipeline.py
-Status only: python 04-coding/scripts/venture_pipeline.py --status
+**Production-style runs:** `python 04-coding/scripts/run_daily.py` per `AGENTS.md`
+and `docs/SEMANTIC_CONTRACT.md` §8.1 — this file is **not** the default human entrypoint.
+
+**This module's `__main__`:** gated on `VENTURE_DEV_MAIN=1` (local dev only), except
+`venture_pipeline.py --status` (read-only, no env). Do not train operators to "just
+run venture_pipeline" for live sends.
+
+Chains (when invoked for dev): Prospect Discovery → Email Lookup → Outreach Generation → Notion Sync → Airtable Sync → KPI Update
+
 Requires: pip install openai httpx python-dotenv
 
 What it does automatically:
@@ -28,7 +34,7 @@ import sys
 import re
 from collections import defaultdict
 from functools import lru_cache
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import logging
 
 import httpx
@@ -37,6 +43,8 @@ from runtime_config import (
     RuntimeConfig,
     collect_config_warnings,
     collect_live_mode_blockers,
+    resolve_data_base,
+    resolve_venture_db_path,
 )
 from batch_guard import (
     BatchGuardError,
@@ -45,7 +53,7 @@ from batch_guard import (
     make_run_id,
     run_batch_preflight,
 )
-from send_guard import send_email_safe
+from send_guard import materialize_outbound_payload, send_email_safe
 from compliance_policy import (
     describe_compliance_policy_line,
     evaluate_compliance_cooldown_for_run,
@@ -58,6 +66,13 @@ from cta_router import choose_cta
 from qualification_guard import evaluate_qualification
 from execution_firewall import final_send_check
 from no_response_diagnostics import analyze_no_response_patterns
+from outbound_eligibility import (
+    OutboundEligibilityAuditError,
+    canonical_execution_run_id,
+    emit_no_eligible_prospects_event,
+    filter_prospects_for_outbound_send,
+)
+from prospect_gate import normalize_email
 
 # Resilience & logging
 sys.path.insert(
@@ -70,6 +85,7 @@ from resilience import (
     airtable_api_call,
 )
 from logging_config import setup_logging
+from message_generator_solo import strip_outreach_signature
 from job_queue import get_queue, JobAction, JobStatus
 from lifecycle_engine import LifecycleEventType
 from reply_intent import build_feature_dict, predict_reply_probability
@@ -86,9 +102,7 @@ def _runtime_path(env_key: str, default: pathlib.Path) -> pathlib.Path:
 
 
 CLIENT_WORKSPACE = os.environ.get("VENTURE_CLIENT_WORKSPACE", "").strip()
-DATA_BASE = (
-    pathlib.Path(CLIENT_WORKSPACE).expanduser().resolve() if CLIENT_WORKSPACE else BASE
-)
+DATA_BASE = resolve_data_base(BASE)
 DOTENV_PATH = _runtime_path("VENTURE_DOTENV_PATH", DATA_BASE / ".env")
 load_dotenv(DOTENV_PATH)
 
@@ -97,22 +111,95 @@ logger = setup_logging(
     log_dir=str(_runtime_path("VENTURE_LOG_DIR", DATA_BASE / "logs")),
     name="venture-pipeline",
 )
-DB_PATH = _runtime_path(
-    "VENTURE_DB_PATH",
-    (
-        DATA_BASE / "database.sqlite"
-        if CLIENT_WORKSPACE
-        else BASE / "venture_jobs.db"
-    ),
-)
-job_queue = get_queue(
-    db_path=str(DB_PATH)
-)
+DB_PATH = _runtime_path("VENTURE_DB_PATH", resolve_venture_db_path(DATA_BASE, BASE))
+job_queue = get_queue(db_path=str(DB_PATH))
 
 logger.info("=" * 80)
 logger.info(f"Pipeline started (dry_run={DRY_RUN})")
 
 BATCH_RUN_ID = os.environ.get("BATCH_RUN_ID", "").strip() or make_run_id("pipeline")
+
+_SEND_LOG_HEADER = "timestamp_utc,run_id,send_attempt_id,email,company,cohort_id,message_version,message_hash,send_status"
+
+
+def _send_log_path() -> pathlib.Path:
+    root = DATA_BASE if CLIENT_WORKSPACE else BASE
+    return root / "logs" / "send_log.csv"
+
+
+def _append_send_log_row(
+    *,
+    email: str,
+    company: str,
+    subject: str,
+    html_body: str,
+    send_attempt_id: str,
+) -> None:
+    """Single writer for logs/send_log.csv (v1.4); no-op if cohort env not set."""
+    cohort_id = os.environ.get("VENTURE_COHORT_ID", "").strip()
+    if not cohort_id or not send_attempt_id:
+        return
+    run_key = os.environ.get("VENTURE_RUN_ID", "").strip() or BATCH_RUN_ID
+    msg_ver = os.environ.get("VENTURE_MESSAGE_VERSION", "").strip() or "unknown"
+    msg_hash = job_queue.message_hash(subject, html_body)
+    path = _send_log_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.is_file():
+        path.write_text(_SEND_LOG_HEADER + "\n", encoding="utf-8")
+    else:
+        first = path.read_text(encoding="utf-8").splitlines()[:1]
+        if not first or first[0].strip() != _SEND_LOG_HEADER:
+            logger.warning("send_log.csv header mismatch; skipping append")
+            return
+    needle = f",{run_key},{send_attempt_id},"
+    if needle in path.read_text(encoding="utf-8"):
+        return
+    ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    send_status = "dry_run" if DRY_RUN else "sent"
+    with path.open("a", newline="", encoding="utf-8") as fh:
+        csv.writer(fh).writerow(
+            [
+                ts,
+                run_key,
+                send_attempt_id,
+                email,
+                company or "",
+                cohort_id,
+                msg_ver,
+                msg_hash,
+                send_status,
+            ]
+        )
+        fh.flush()
+
+
+def _safe_messages_log_stem(cohort_id: str) -> str:
+    """Filesystem-safe stem for logs/messages/{stem}.txt (Windows-safe)."""
+    cid = (cohort_id or "").strip()
+    if not cid:
+        return ""
+    return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)[:200]
+
+
+def _write_cohort_message_snapshot_once(subject: str, html_body: str) -> None:
+    """Write-once cohort message text for audit (first successful send path in a run)."""
+    cohort_id = os.environ.get("VENTURE_COHORT_ID", "").strip()
+    stem = _safe_messages_log_stem(cohort_id)
+    if not stem or not (subject or "").strip():
+        return
+    root = DATA_BASE if CLIENT_WORKSPACE else BASE
+    out_dir = root / "logs" / "messages"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{stem}.txt"
+    if path.is_file():
+        return
+    plain = re.sub(r"<[^>]+>", " ", html_body or "")
+    plain = " ".join(plain.split())
+    path.write_text(
+        f"subject: {subject.strip()}\n\nbody_text:\n{plain}\n",
+        encoding="utf-8",
+    )
+
 
 PROSPECTS_FILE = _runtime_path(
     "VENTURE_PROSPECTS_FILE",
@@ -444,8 +531,8 @@ def apply_email_compliance_footer(
 DEFAULT_OUTREACH_SIGNATURE = (
     "Best,\n"
     "Ismael Sudally\n"
-    "ReplyPilot AI\n"
-    "Outbound systems for B2B service firms"
+    "Venture 2.0\n"
+    "Revenue growth systems for early-stage B2B ventures"
 )
 OUTREACH_SIGNATURE = (
     os.environ.get("OUTREACH_SIGNATURE", DEFAULT_OUTREACH_SIGNATURE)
@@ -490,8 +577,6 @@ def founder_trust_issues(message: str) -> list[str]:
     for pattern in _TRUST_REJECT_PATTERNS:
         if re.search(pattern, text):
             issues.append(f"founder_trust_reject:{pattern}")
-    if OUTREACH_SIGNATURE.lower() not in text:
-        issues.append("missing fixed premium signature")
     return issues
 
 
@@ -604,7 +689,7 @@ def sync_prospect_status_to_source_csv(
         if st:
             row["status"] = st
         if src.get("email"):
-            row["email"] = src["email"]
+            row["email"] = normalize_email(src["email"])
     with open(prospects_path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         w.writeheader()
@@ -724,13 +809,21 @@ def load_pending_prospects() -> list[dict]:
         rows = list(reader)
         fieldnames = set(reader.fieldnames or [])
 
-    # Day 8 prospect_builder.py schema: company_name/readiness_status/pain_signal.
+    # Day 8+ prospect_builder schema: company_name, validation_status (or legacy readiness_status), pain_signal.
     # Use only rows whose generated messages were explicitly approved.
-    if "readiness_status" in fieldnames and "company_name" in fieldnames:
+    day8_schema = "company_name" in fieldnames and (
+        "validation_status" in fieldnames or "readiness_status" in fieldnames
+    )
+    if day8_schema:
         approved_messages = load_approved_generated_messages()
         pending: list[dict] = []
         for row in rows:
-            if (row.get("readiness_status") or "").strip().upper() != "READY":
+            gate = (
+                (row.get("validation_status") or row.get("readiness_status") or "")
+                .strip()
+                .upper()
+            )
+            if gate != "READY":
                 continue
             key = f"{(row.get('company_name') or '').strip().lower()}|{(row.get('role') or '').strip().lower()}"
             message = approved_messages.get(key, "")
@@ -748,14 +841,20 @@ def load_pending_prospects() -> list[dict]:
                     "domain": row.get("domain", ""),
                     "status": "pending",
                     "generated_message": message,
+                    "run_id": (row.get("run_id") or "").strip(),
+                    "validation_status": (
+                        row.get("validation_status")
+                        or row.get("readiness_status")
+                        or ""
+                    ).strip(),
                 }
             )
         return pending
 
     if AUTO_SEND_EMAILS and not DRY_RUN:
         print(
-            "\n[fail] Live mode blocked: prospects.csv must use the Day 8 schema "
-            "and approved generated messages."
+            "\n[fail] Live mode blocked: prospects.csv must use the prospect_builder "
+            "schema (validation_status) and approved generated messages."
         )
         return []
 
@@ -1090,23 +1189,36 @@ def _resend_request(
     to_email: str,
     to_name: str,
     subject: str,
-    html_body: str,
+    body_plain: str,
     send_type: str,
     run_id: str,
+    *,
+    legacy_html: str | None = None,
 ) -> httpx.Response:
-    """Make guarded Resend API request."""
-    return send_email_safe(
-        payload={
-            "from": f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>",
-            "to": [to_email],
+    """Make guarded Resend API request (MIME assembly + footers live in send_guard)."""
+    sender = f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>"
+    if legacy_html is not None:
+        payload: dict = {
+            "from": sender,
+            "to": [normalize_email(to_email)],
             "subject": subject,
-            "html": html_body,
-        },
+            "html": legacy_html,
+        }
+    else:
+        payload = {
+            "from": sender,
+            "to": [normalize_email(to_email)],
+            "subject": subject,
+            "cold_body_text": body_plain,
+        }
+    return send_email_safe(
+        payload=payload,
         api_key=RESEND_API_KEY,
         send_type=send_type,
         run_id=run_id,
         dry_run=DRY_RUN,
         source="venture_pipeline",
+        is_suppressed=job_queue.is_suppressed,
     )
 
 
@@ -1121,12 +1233,16 @@ def send_email(
     to_email: str,
     to_name: str,
     subject: str,
-    html_body: str,
+    body_plain: str,
     prospect_id: str = "",
     campaign_key: str = "outreach_initial",
     send_type: str = "initial_prospect",
     cooldown_days: int | None = None,
     run_id: str | None = None,
+    *,
+    send_attempt_id: str = "",
+    company: str = "",
+    legacy_html: str | None = None,
 ) -> bool:
     """Send email via Resend; gating uses behavioral idempotency + universal cooldown (see job_queue.gate_outbound_send)."""
     # Policy gatekeeper first so SAFE_MODE / paused blocks without requiring Resend credentials.
@@ -1152,6 +1268,28 @@ def send_email(
         dry_run=DRY_RUN, config_path=COMPLIANCE_CONFIG_PATH
     )
     st = (send_type or "initial_prospect").strip().lower()
+    sender = f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>"
+    if legacy_html is not None:
+        material = materialize_outbound_payload(
+            {
+                "from": sender,
+                "to": [normalize_email(to_email)],
+                "subject": subject,
+                "html": legacy_html,
+            },
+            send_type=st,
+        )
+    else:
+        material = materialize_outbound_payload(
+            {
+                "from": sender,
+                "to": [normalize_email(to_email)],
+                "subject": subject,
+                "cold_body_text": body_plain,
+            },
+            send_type=st,
+        )
+    html_body = str(material.get("html") or "")
     policy_block: str | None = None
     if st == "transactional_digest":
         cd = 0
@@ -1196,20 +1334,32 @@ def send_email(
             to_email,
             to_name,
             subject,
-            html_body,
+            body_plain,
             send_type=st,
             run_id=run_id or BATCH_RUN_ID,
+            legacy_html=legacy_html,
         )
         r.raise_for_status()
+        out_status = "dry_run" if DRY_RUN else "sent"
         job_queue.record_outbound(
             prospect_id=prospect_id or to_email,
             campaign_key=campaign_key,
             recipient_email=to_email,
             subject=subject,
             html_body=html_body,
-            status="sent",
+            status=out_status,
             send_type=st,
         )
+        try:
+            _append_send_log_row(
+                email=to_email,
+                company=company,
+                subject=subject,
+                html_body=html_body,
+                send_attempt_id=send_attempt_id,
+            )
+        except OSError as exc:
+            logger.warning("send_log append failed: %s", exc)
         logger.info(f"Email sent to {_mask_email_for_log(to_email)}")
         return True
     except Exception as e:
@@ -1292,7 +1442,6 @@ def check_and_send_followups(config: dict):
     rows = job_queue.list_followup_eligible_rows(min_days)
     if not rows:
         return
-    req_unsub = load_compliance_require_unsubscribe()
     followups_sent: defaultdict[str, int] = defaultdict(int)
     for row in rows:
         email = (row.get("recipient_email") or "").strip()
@@ -1313,23 +1462,22 @@ def check_and_send_followups(config: dict):
             f"I offer: {config.get('service', '')}. Be friendly, not pushy. One soft CTA."
         )
         followup_msg = _generate_raw(prompt)
-        followup_msg = ensure_outreach_signature(followup_msg)
         ok_to_send, send_reason = is_message_sendable(followup_msg)
         if not ok_to_send:
             logger.warning(f"Follow-up blocked for {email}: {send_reason}")
             continue
-        html = "<p>" + followup_msg.replace("\n", "<br>") + "</p>"
-        html = apply_email_compliance_footer(html, req_unsub, RESEND_FROM_EMAIL or "")
-        subject = f"Re: Quick idea for {company or 'you'}"
+        subject = f"Re: outbound fit for {company or 'your venture'}"
         sent = send_email(
             email,
             name,
             subject,
-            html,
+            followup_msg.strip(),
             prospect_id=prospect_id,
             campaign_key=campaign_key,
             send_type="followup",
             run_id=BATCH_RUN_ID,
+            send_attempt_id=f"followup_{prospect_id}_{campaign_key}",
+            company=company,
         )
         if sent:
             followups_sent[prospect_id] += 1
@@ -1421,11 +1569,14 @@ def send_digest_email():
         DIGEST_TO_EMAIL,
         "Founder",
         f"Venture KPI Digest — {format_digest_date_short(now)}",
-        html,
+        "",
         prospect_id=DIGEST_TO_EMAIL,
         campaign_key=digest_campaign,
         send_type="transactional_digest",
         run_id=BATCH_RUN_ID,
+        send_attempt_id=f"digest_{digest_campaign}",
+        company="",
+        legacy_html=html,
     )
     if sent:
         print(f"  [ok] KPI digest emailed -> {DIGEST_TO_EMAIL}")
@@ -1545,15 +1696,20 @@ def retry_failed_jobs():
                     )
                     continue
                 ctx = job.context or {}
+                cold = (ctx.get("cold_body_text") or "").strip()
+                legacy = (ctx.get("html") or "").strip()
                 sent = send_email(
                     ctx.get("to_email", ""),
                     ctx.get("to_name", ""),
                     ctx.get("subject", ""),
-                    ctx.get("html", ""),
+                    cold if cold else "",
                     prospect_id=job.prospect_id or ctx.get("to_email", ""),
                     campaign_key=ctx.get("campaign_key", "outreach_initial"),
                     send_type="retry",
                     run_id=BATCH_RUN_ID,
+                    send_attempt_id=str(job.id),
+                    company=str(ctx.get("company") or ""),
+                    legacy_html=legacy if not cold and legacy else None,
                 )
                 if sent:
                     job_queue.complete_job(job.id, result="sent")
@@ -1617,6 +1773,21 @@ def main():
     config = load_config()
     prospects = load_pending_prospects()
 
+    exec_run_id = canonical_execution_run_id()
+    try:
+        elig = filter_prospects_for_outbound_send(
+            prospects,
+            prospects_path=PROSPECTS_FILE,
+            data_base=DATA_BASE,
+            current_run_id=exec_run_id,
+        )
+        prospects = elig.prospects
+        if elig.all_ineligible_after_filter:
+            emit_no_eligible_prospects_event(run_id=exec_run_id)
+    except OutboundEligibilityAuditError as exc:
+        print(f"\n[fail] Outbound eligibility blocked: {exc}")
+        raise SystemExit(9) from exc
+
     if AUTO_SEND_EMAILS and not DRY_RUN:
         try:
             batch_preflight = run_batch_preflight(
@@ -1642,11 +1813,15 @@ def main():
             raise SystemExit(7)
         print(f"[ok] Batch 1 preflight passed: {batch_preflight['log_file']}")
         try:
-            consume_batch_lock(run_id=BATCH_RUN_ID, manifest=batch_preflight["manifest"])
+            consume_batch_lock(
+                run_id=BATCH_RUN_ID, manifest=batch_preflight["manifest"]
+            )
         except (BatchGuardError, LockIntegrityError) as exc:
             print(f"\n[fail] Live mode blocked: could not consume Batch 1 lock ({exc})")
             raise SystemExit(7) from exc
-        print("[ok] Batch 1 lock consumed; this run is now bound to approved recipients.")
+        print(
+            "[ok] Batch 1 lock consumed; this run is now bound to approved recipients."
+        )
 
     # Retry failed jobs from previous runs
     retry_failed_jobs()
@@ -1680,8 +1855,13 @@ def main():
             "sent_at",
             "follow_up_sent",
             "follow_up_sent_at",
+            "message_version",
+            "generator_version",
+            "guard_version",
+            "message_hash",
+            "cohort_id",
         ]
-        req_unsub = load_compliance_require_unsubscribe()
+        cohort_message_snap_written = False
 
         for p in prospects:
             print(f"  Processing: {p['name']} @ {p['company']}")
@@ -1807,6 +1987,11 @@ def main():
                 "email_found": p.get("email", ""),
                 "generated_message": message,
                 "generated_at": datetime.now().isoformat(),
+                "message_version": "",
+                "generator_version": "",
+                "guard_version": "",
+                "message_hash": "",
+                "cohort_id": "",
             }
             if generation_failed:
                 row["email_status"] = "blocked:generation_failed"
@@ -1914,7 +2099,7 @@ def main():
                     job_queue.fail_job(airtable_job.id, error=str(e), retry=True)
 
             # Auto-send outreach email — tracked in job queue
-            if AUTO_SEND_EMAILS and p.get("email") and not DRY_RUN:
+            if (AUTO_SEND_EMAILS or DRY_RUN) and p.get("email"):
                 trust_score = job_queue.get_trust_score(str(prospect_id))
                 _opp = job_queue.get_opportunity(str(prospect_id))
                 state = str(
@@ -1955,7 +2140,8 @@ def main():
                 if qualification.qualified:
                     run_health["qualified"] += 1
                 row["generated_message"] = message
-                ok_to_send, send_reason = is_message_sendable(message)
+                lint_body = strip_outreach_signature(message).strip() or message.strip()
+                ok_to_send, send_reason = is_message_sendable(lint_body)
                 if not ok_to_send:
                     logger.error(f"Send blocked for {p.get('email','')}: {send_reason}")
                     row["email_status"] = f"blocked:{send_reason}"
@@ -2084,14 +2270,32 @@ def main():
                     p["status"] = "blocked"
                     continue
 
-                subject = "quick question"
-                html = "<p>" + message.replace("\n", "<br>") + "</p>"
-                html = apply_email_compliance_footer(
-                    html, req_unsub, RESEND_FROM_EMAIL or ""
+                subject = "outbound fit for your venture"
+                cold_body = strip_outreach_signature(message).strip()
+                mat = materialize_outbound_payload(
+                    {
+                        "from": f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>",
+                        "to": [normalize_email(p.get("email") or "")],
+                        "subject": subject,
+                        "cold_body_text": cold_body,
+                    },
+                    send_type="initial_prospect",
                 )
+                html = str(mat.get("html") or "")
                 msg_hash = job_queue.message_hash(subject, html)
+                row["message_version"] = os.environ.get(
+                    "VENTURE_MESSAGE_VERSION", ""
+                ).strip()
+                row["generator_version"] = os.environ.get(
+                    "VENTURE_GENERATOR_VERSION", ""
+                ).strip()
+                row["guard_version"] = os.environ.get(
+                    "VENTURE_GUARD_VERSION", ""
+                ).strip()
+                row["message_hash"] = msg_hash
+                row["cohort_id"] = os.environ.get("VENTURE_COHORT_ID", "").strip()
                 feat_dict = build_feature_dict(
-                    message,
+                    lint_body,
                     cta_type=cta_type,
                     trust_score=trust_score,
                     evidence_confidence=evidence_confidence,
@@ -2100,7 +2304,7 @@ def main():
                     industry=str(p.get("industry", "") or ""),
                 )
                 p_reply = predict_reply_probability(
-                    message,
+                    lint_body,
                     cta_type=cta_type,
                     trust_score=trust_score,
                     evidence_confidence=evidence_confidence,
@@ -2170,6 +2374,7 @@ def main():
                         "to_email": p["email"],
                         "to_name": p.get("name", ""),
                         "subject": subject,
+                        "cold_body_text": cold_body,
                         "html": html,
                         "campaign_key": "outreach_initial",
                         "send_type": "initial_prospect",
@@ -2212,18 +2417,26 @@ def main():
                         p["email"],
                         p.get("name", ""),
                         subject,
-                        html,
+                        cold_body,
                         prospect_id=prospect_id,
                         campaign_key="outreach_initial",
                         send_type="initial_prospect",
                         run_id=BATCH_RUN_ID,
+                        send_attempt_id=str(send_job.id),
+                        company=str(p.get("company") or ""),
                     )
                     if sent:
                         job_queue.complete_job(send_job.id, result="sent")
                         row["email_status"] = "sent"
                         row["sent_at"] = datetime.now().isoformat()
                         p["status"] = "sent"
-                        print(f"    [ok] Email sent -> {p['email']}")
+                        if not cohort_message_snap_written:
+                            _write_cohort_message_snapshot_once(subject, html)
+                            cohort_message_snap_written = True
+                        if DRY_RUN:
+                            print(f"    [dry-run] Email simulated -> {p['email']}")
+                        else:
+                            print(f"    [ok] Email sent -> {p['email']}")
                         run_health["sent"] += 1
                         if REPLY_INTENT_ENABLED:
                             job_queue.record_reply_intent_training(
@@ -2304,8 +2517,6 @@ def main():
                         sync_funnel=False,
                     )
                     p["status"] = "send_failed"
-            elif DRY_RUN and p.get("email"):
-                print(f"    [dry-run] would email: {p['email']}")
 
         for p, row in zip(prospects, output_rows):
             st = str(p.get("status", "pending")).lower()
@@ -2387,8 +2598,25 @@ def main():
         f"Failed: {summary['failed']} | Abandoned: {summary['abandoned']}"
     )
 
+    telemetry_path = os.environ.get("VENTURE_PIPELINE_TELEMETRY_JSON", "").strip()
+    if telemetry_path:
+        try:
+            tpath = pathlib.Path(telemetry_path).expanduser()
+            tpath.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "schema_version": 1,
+                "dry_run": bool(DRY_RUN),
+                "auto_send_emails": bool(AUTO_SEND_EMAILS),
+                "job_queue_summary": dict(summary),
+                "run_health": dict(run_health),
+                "funnel_counts_7d": dict(fc_7d),
+            }
+            tpath.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except OSError as exc:
+            logger.warning("VENTURE_PIPELINE_TELEMETRY_JSON write failed: %s", exc)
+
     # Auto follow-up check for stale prospects
-    if AUTO_SEND_EMAILS:
+    if AUTO_SEND_EMAILS or DRY_RUN:
         print("\n--- Follow-up Check ---")
         if ENABLE_FOLLOWUPS:
             check_and_send_followups(config)
@@ -2398,7 +2626,7 @@ def main():
     # Email KPI digest to yourself
     send_digest_email()
 
-    if AUTO_SEND_EMAILS:
+    if AUTO_SEND_EMAILS or DRY_RUN:
         print(
             "\nDone. Emails sent automatically. Check generated-outreach.csv for records.\n"
         )
@@ -2413,4 +2641,17 @@ if __name__ == "__main__":
     if "--status" in sys.argv:
         print_operator_status()
         raise SystemExit(0)
+    # Defense-in-depth: refuse execution unless canonical entry or dev override
+    if (
+        os.getenv("VENTURE_CANONICAL_ENTRY") != "1"
+        and os.getenv("VENTURE_DEV_MAIN") != "1"
+    ):
+        print(
+            "venture_pipeline.py: direct CLI is gated. Use: "
+            "python 04-coding/scripts/run_daily.py --execute-outbound [--dry-run]\n"
+            "For local debugging only, set VENTURE_DEV_MAIN=1.\n"
+            "For production, set VENTURE_CANONICAL_ENTRY=1 via run_daily.py.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
     main()

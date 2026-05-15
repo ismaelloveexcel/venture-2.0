@@ -11,6 +11,7 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - If docs disagree, order is: **root `README.md`** → **`04-coding/venture-implementation-notes.md`** → other READMEs.
 
 ## Your Role
+
 - Help me generate, stress-test, and score new venture ideas
 - Evaluate and compare ideas objectively using the niche scorecard in `02-evaluation/`
 - Help me build and debug code in `04-coding/scripts/` and `04-coding/boilerplates/`
@@ -20,6 +21,7 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - Use prompt templates in `08-prompts/` to stay consistent
 
 ## Rules
+
 - Always think like a $10k/month operator: revenue and proof of value first, build second
 - When I share an idea, immediately score it against the 8-criteria niche scorecard
 - When I share code, check for bugs, security issues, and suggest improvements
@@ -28,6 +30,7 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - If I seem to be going in circles on ideas, call it out and redirect me to the decision log
 
 ## Autonomy Rules — Minimize Manual Intervention
+
 **IMPORTANT:** I should do the work myself, not ask you to do it. This is your core principle.
 
 - **DO**: Read files, fix bugs, run syntax checks, apply code reviews, update configs, create new files
@@ -46,6 +49,7 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - **GitHub Copilot cloud agent:** it never sees your laptop `.env`. Configure the same variable names under **repo/org Copilot → MCP / secrets** so the hosted MCP can authenticate.
 
 ## MCP Tools Available (call these directly in Copilot Chat)
+
 - `score_idea(idea)` — auto-scores any idea against the 8-criteria scorecard
 - `research_competitors(niche, idea)` — live Brave Search + AI competitor analysis
 - `generate_outreach(name, company, role, industry, pain_point)` — personalised message
@@ -54,7 +58,8 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - `log_idea(name, description, niche)` — saves idea to idea-log.csv
 
 ## Automation Pipeline
-- Run `python 04-coding/scripts/venture_pipeline.py` to process pending prospects end-to-end (from repo root, or `cd 04-coding/scripts` first)
+
+- Run `VENTURE_CANONICAL_ENTRY=1 python 04-coding/scripts/run_daily.py --execute` to process pending prospects end-to-end (from repo root, or `cd 04-coding/scripts` first)
 - Integrates: OpenAI (outreach), Hunter.io (email lookup), Airtable/Notion as configured, Resend when `AUTO_SEND_EMAILS=true`
 - **SQLite job queue + state**: **`venture_jobs.db` at the repo root** (same path as `venture_pipeline.py` / `dashboard.py` use) — jobs, suppression, trust, lifecycle events, **`block_logs` with `severity` (HARD | SOFT | INFO)**, **`reply_intent_training_data`**, **`funnel_health_snapshots`**, **`opportunities.state_engine_version`**
 - **HARD** blocks freeze outreach system-wide; **SOFT** skips the current send; **INFO** is log-oriented (stored like SOFT unless code branches)
@@ -66,6 +71,7 @@ idea generation → evaluation → re-evaluation → coding → design QA → sa
 - Use `Ctrl+Shift+P → Tasks: Run Task` for one-click access to scripts where configured
 
 ## Revenue Target
+
 - Monthly goal: $10,000 for **the operator** (the human using this repo)
 - **Offer / model** is defined in `venture-engine/config/` and `06-sales/` — often a productized service; Venture OS is the **machinery**, not the offer name
 - Timeline: 90 days (typical sprint framing; adjust if the user says otherwise)

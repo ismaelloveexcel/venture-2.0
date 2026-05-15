@@ -26,7 +26,7 @@ $DailyScript = Join-Path $ScriptDir "ops_daily.ps1"
 $GuardScript = Join-Path $ScriptDir "autopilot_health_guard.ps1"
 $PolicyFile = Join-Path $RepoRoot "04-coding\venture-engine\config\policy.json"
 $VerdictScript = Join-Path $ScriptDir "operator_verdict.py"
-$PipelineScript = Join-Path $ScriptDir "venture_pipeline.py"
+$RunDailyScript = Join-Path $ScriptDir "run_daily.py"
 
 function Resolve-Python {
   $candidates = @(
@@ -143,7 +143,12 @@ if ((-not $fail) -and $autoRunPipelineOnGo) {
     }
 
     try {
-      & $Python $PipelineScript @pipelineArgs | Out-Null
+      $env:VENTURE_CANONICAL_ENTRY = "1"
+      $runDailyArgs = @($RunDailyScript, "--execute")
+      if ($pipelineArgs -contains "--dry-run") {
+        $runDailyArgs += "--dry-run"
+      }
+      & $Python $runDailyArgs | Out-Null
       $pipelineExit = $LASTEXITCODE
     }
     catch {

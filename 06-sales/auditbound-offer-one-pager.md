@@ -1,8 +1,8 @@
-# ReplyPilot AI — Offer One-Pager
+# Auditbound — Offer One-Pager
 
 ## Positioning
 
-ReplyPilot AI builds and runs AI-powered outbound systems for B2B service businesses that need more qualified sales conversations without hiring a sales team.
+Auditbound builds and runs AI-powered outbound systems for B2B service businesses that need more qualified sales conversations without hiring a sales team.
 
 ## Best-Fit Client
 

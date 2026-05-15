@@ -1,0 +1,218 @@
+{
+  "artifacts": {
+    "24 additional support files": {
+      "purpose": "Background files kept by the system; you usually do not need to open them",
+      "stage": "After run"
+    },
+    "Campaign activity summary": {
+      "purpose": "Shows how many were contacted and key outcomes",
+      "stage": "During and after run"
+    },
+    "Campaign health snapshot": {
+      "purpose": "Quick signal of how healthy this cycle is",
+      "stage": "After run"
+    },
+    "Client-ready dashboard": {
+      "purpose": "A simple page to present campaign results",
+      "stage": "After run"
+    },
+    "Next actions list": {
+      "purpose": "Shows what to do next in priority order",
+      "stage": "After run"
+    },
+    "Value summary": {
+      "purpose": "Explains results in plain language",
+      "stage": "After run"
+    },
+    "What changed since last cycle": {
+      "purpose": "Shows whether this cycle improved or declined",
+      "stage": "After run"
+    }
+  },
+  "change_impact_rules": {
+    "message_change": {
+      "risk": "can reduce fair comparison with previous message versions",
+      "updates": [
+        "comparison.json",
+        "health.json",
+        "dashboard.html",
+        "value_summary.json"
+      ]
+    },
+    "target_change": {
+      "risk": "rate comparisons may no longer be apples-to-apples",
+      "updates": [
+        "run_report.json",
+        "comparison.json",
+        "trend_projection.json"
+      ]
+    },
+    "timing_change": {
+      "risk": "timing shift can hide true message effect",
+      "updates": [
+        "run_report.json",
+        "comparison.json",
+        "trend_summary.json"
+      ]
+    }
+  },
+  "execution_edges": [
+    {
+      "from": "Create campaign report files",
+      "to": "Prepare client run folder"
+    },
+    {
+      "from": "Prepare client run folder",
+      "to": "Save run report copy"
+    },
+    {
+      "from": "Save run report copy",
+      "to": "Save projection copy"
+    },
+    {
+      "from": "Save projection copy",
+      "to": "Compare against previous run"
+    },
+    {
+      "from": "Compare against previous run",
+      "to": "Score run health"
+    },
+    {
+      "from": "Score run health",
+      "to": "Build client dashboard"
+    },
+    {
+      "from": "Build client dashboard",
+      "to": "Create value summary"
+    },
+    {
+      "from": "Create value summary",
+      "to": "Create delivery package"
+    },
+    {
+      "from": "Create delivery package",
+      "to": "Create executive outputs"
+    },
+    {
+      "from": "Create executive outputs",
+      "to": "Create trend outputs"
+    },
+    {
+      "from": "Create trend outputs",
+      "to": "Create operator action list"
+    },
+    {
+      "from": "Create operator action list",
+      "to": "Create sales outputs"
+    }
+  ],
+  "execution_order": [
+    "Create campaign report files",
+    "Prepare client run folder",
+    "Save run report copy",
+    "Save projection copy",
+    "Compare against previous run",
+    "Score run health",
+    "Build client dashboard",
+    "Create value summary",
+    "Create delivery package",
+    "Create executive outputs",
+    "Create trend outputs",
+    "Create operator action list",
+    "Create sales outputs"
+  ],
+  "files": {
+    "docs": {
+      "business_flow": "docs/solo-operator/business_flow.md",
+      "overview": "docs/solo-operator/overview.html",
+      "revision_map": "docs/solo-operator/revision_map.md",
+      "what_gets_created": "docs/solo-operator/what_gets_created.md",
+      "what_happens": "docs/solo-operator/what_happens.md",
+      "when_you_make_changes": "docs/solo-operator/when_you_make_changes.md",
+      "your_responsibilities": "docs/solo-operator/your_responsibilities.md"
+    }
+  },
+  "modules": [
+    "04-coding/venture-engine/client_runtime/__init__.py",
+    "04-coding/venture-engine/client_runtime/approval/__init__.py",
+    "04-coding/venture-engine/client_runtime/approval/approval_queue.py",
+    "04-coding/venture-engine/client_runtime/approval/approval_renderer.py",
+    "04-coding/venture-engine/client_runtime/approval/approval_state.py",
+    "04-coding/venture-engine/client_runtime/campaigns/__init__.py",
+    "04-coding/venture-engine/client_runtime/campaigns/campaign_state.py",
+    "04-coding/venture-engine/client_runtime/campaigns/state_machine.py",
+    "04-coding/venture-engine/client_runtime/campaigns/status_tracker.py",
+    "04-coding/venture-engine/client_runtime/client_router.py",
+    "04-coding/venture-engine/client_runtime/comparison_engine.py",
+    "04-coding/venture-engine/client_runtime/config_loader.py",
+    "04-coding/venture-engine/client_runtime/dashboard_renderer.py",
+    "04-coding/venture-engine/client_runtime/delivery/__init__.py",
+    "04-coding/venture-engine/client_runtime/delivery/artifact_manifest.py",
+    "04-coding/venture-engine/client_runtime/delivery/export_bundle.py",
+    "04-coding/venture-engine/client_runtime/delivery/package_builder.py",
+    "04-coding/venture-engine/client_runtime/executive/__init__.py",
+    "04-coding/venture-engine/client_runtime/executive/executive_brief.py",
+    "04-coding/venture-engine/client_runtime/executive/executive_summary.py",
+    "04-coding/venture-engine/client_runtime/executive/roi_projection.py",
+    "04-coding/venture-engine/client_runtime/executive/stakeholder_snapshot.py",
+    "04-coding/venture-engine/client_runtime/file_io.py",
+    "04-coding/venture-engine/client_runtime/health_score.py",
+    "04-coding/venture-engine/client_runtime/onboarding/__init__.py",
+    "04-coding/venture-engine/client_runtime/onboarding/intake_builder.py",
+    "04-coding/venture-engine/client_runtime/onboarding/intake_schema.py",
+    "04-coding/venture-engine/client_runtime/onboarding/intake_validator.py",
+    "04-coding/venture-engine/client_runtime/operator/__init__.py",
+    "04-coding/venture-engine/client_runtime/operator/action_queue.py",
+    "04-coding/venture-engine/client_runtime/operator/operator_tasks.py",
+    "04-coding/venture-engine/client_runtime/operator/priority_engine.py",
+    "04-coding/venture-engine/client_runtime/operator/workflow_state.py",
+    "04-coding/venture-engine/client_runtime/patterns/__init__.py",
+    "04-coding/venture-engine/client_runtime/patterns/pattern_memory.py",
+    "04-coding/venture-engine/client_runtime/patterns/pattern_ranker.py",
+    "04-coding/venture-engine/client_runtime/patterns/performance_memory.py",
+    "04-coding/venture-engine/client_runtime/queue/__init__.py",
+    "04-coding/venture-engine/client_runtime/queue/prospect_queue.py",
+    "04-coding/venture-engine/client_runtime/queue/queue_metrics.py",
+    "04-coding/venture-engine/client_runtime/queue/queue_tracker.py",
+    "04-coding/venture-engine/client_runtime/replies/__init__.py",
+    "04-coding/venture-engine/client_runtime/replies/intent_detector.py",
+    "04-coding/venture-engine/client_runtime/replies/reply_classifier.py",
+    "04-coding/venture-engine/client_runtime/replies/reply_summary.py",
+    "04-coding/venture-engine/client_runtime/run_history.py",
+    "04-coding/venture-engine/client_runtime/sales/__init__.py",
+    "04-coding/venture-engine/client_runtime/sales/case_study_builder.py",
+    "04-coding/venture-engine/client_runtime/sales/commercial_snapshot.py",
+    "04-coding/venture-engine/client_runtime/sales/pilot_summary.py",
+    "04-coding/venture-engine/client_runtime/sales/proposal_builder.py",
+    "04-coding/venture-engine/client_runtime/trends/__init__.py",
+    "04-coding/venture-engine/client_runtime/trends/performance_windows.py",
+    "04-coding/venture-engine/client_runtime/trends/timeline_builder.py",
+    "04-coding/venture-engine/client_runtime/trends/trend_engine.py",
+    "04-coding/venture-engine/client_runtime/trends/trend_projection.py",
+    "04-coding/venture-engine/client_runtime/value_layer/__init__.py",
+    "04-coding/venture-engine/client_runtime/value_layer/narrative_builder.py",
+    "04-coding/venture-engine/client_runtime/value_layer/value_summary.py"
+  ],
+  "operator": "solo",
+  "source": {
+    "entry_points": [
+      "__main__ guard",
+      "_bridge",
+      "main"
+    ],
+    "root_run_script": "04-coding/scripts/run_daily.py",
+    "watch_fingerprints": {
+      "04-coding/scripts/run_daily.py": "196c881d03ae3158ecbb43ddcb5e975aad4242acfcaa084165652e8b94d7598c",
+      "04-coding/venture-engine/client_runtime": "1431f27375cb5f4b9b5d3129333810f25b3dd10596bc42d8b7405adf3465bf41",
+      "04-coding/venture-engine/reporting": "3234894f1861aa7ec284aa72bcacc7b2e20c084c638447092511239393bef64a"
+    }
+  },
+  "system_status": {
+    "client_id": "acme-demo",
+    "health_label": "MEDIUM",
+    "health_score": 60,
+    "run_id": "9fe8c803ca0845f0",
+    "run_timestamp_utc": "2026-05-15T06:18:29Z",
+    "trend": "STABLE"
+  }
+}

@@ -20,7 +20,7 @@ from typing import Any
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 CLIENTS_ROOT = REPO_ROOT / "clients"
-PIPELINE = REPO_ROOT / "04-coding" / "scripts" / "venture_pipeline.py"
+RUN_DAILY = REPO_ROOT / "04-coding" / "scripts" / "run_daily.py"
 REPLY_TYPES = {"interested", "not_now", "not_interested", "wrong_person", "spam_block"}
 
 REPLY_TEMPLATES = {
@@ -116,7 +116,7 @@ def create_client(name: str, *, force: bool = False) -> pathlib.Path:
         "RESEND_API_KEY=\n"
         "RESEND_FROM_EMAIL=\n"
         "RESEND_FROM_NAME=Ismael Sudally\n"
-        "OUTREACH_SIGNATURE=Best,\\nIsmael Sudally\\nReplyPilot AI\\nOutbound systems for B2B service firms\n"
+        "OUTREACH_SIGNATURE=Best,\\nIsmael Sudally\\nVenture 2.0\\nRevenue growth systems for early-stage B2B ventures\n"
         "NOTION_API_KEY=\n"
         "NOTION_PROSPECTS_DB=\n"
         "NOTION_KPIS_DB=\n"
@@ -126,7 +126,7 @@ def create_client(name: str, *, force: bool = False) -> pathlib.Path:
         "OUTREACH_TEST_TO=\n"
         "INTERNAL_TEST_RECIPIENTS=\n"
         "BATCH_LOCK_SECRET=\n"
-        "ALLOWED_SENDER_DOMAINS=replypilot.ai\n"
+        "ALLOWED_SENDER_DOMAINS=abtmail.co\n"
         "RESEND_DOMAIN_VERIFIED=false\n"
         "ENABLE_FOLLOWUPS=false\n"
         "ENABLE_SEND_EMAIL_RETRIES=false\n"
@@ -228,15 +228,16 @@ def run_pipeline(name: str, *, dry_run: bool = True, status: bool = False) -> in
             f"[warn] {path / '.env'} missing; copy .env.example and add client-owned keys before live runs"
         )
 
-    command = [sys.executable, str(PIPELINE)]
+    env = _client_env(path)
+    env["VENTURE_CANONICAL_ENTRY"] = "1"
     if status:
-        command.append("--status")
-    elif dry_run:
-        command.append("--dry-run")
+        command = [sys.executable, str(RUN_DAILY), "bridge", "status"]
+    else:
+        command = [sys.executable, str(RUN_DAILY), "--execute"]
+        if dry_run:
+            command.append("--dry-run")
 
-    completed = subprocess.run(
-        command, cwd=str(REPO_ROOT), env=_client_env(path), check=False
-    )
+    completed = subprocess.run(command, cwd=str(REPO_ROOT), env=env, check=False)
     return completed.returncode
 
 
@@ -581,4 +582,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if os.getenv("VENTURE_CANONICAL_ENTRY", "0") != "1":
+        raise RuntimeError("Execution must originate from canonical orchestrator")
     raise SystemExit(main())

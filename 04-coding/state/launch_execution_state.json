@@ -1,0 +1,32 @@
+{
+  "schema_version": "1",
+  "status": "PRE_LAUNCH_ACTIVE",
+  "opened_utc": "2026-05-12T17:05:00Z",
+  "repo_git_short": "07753d5",
+  "landing_icp": "pending",
+  "last_baseline": {
+    "recorded_at_utc": "2026-05-12T17:05:00Z",
+    "pytest_tests": "62 passed",
+    "validate_repo_contract": "OK",
+    "run_daily_bridge_validate": "OK",
+    "full_stack_dry_run": "run_daily.py --generate-prospects --prospects-demo --execute-outbound --dry-run exit 0"
+  },
+  "next_milestones": [
+    {
+      "id": "launch_lock",
+      "due": "2026-05-13",
+      "pointer": "04-coding/LEAD_GEN_PRODUCT_LAUNCH_PLAN.md (Milestones — Launch lock)"
+    },
+    {
+      "id": "dry_run_rehearsal",
+      "due": "2026-05-15",
+      "pointer": "OPERATOR_RUNBOOK.md; run_daily.py --dry-run end-to-end"
+    },
+    {
+      "id": "live_send_off",
+      "due": "2026-05-18",
+      "pointer": "04-coding/LAUNCH_DAY_2026-05-18_EXECUTION_SHEET.md"
+    }
+  ],
+  "notes": "Execution window opened: baseline validation + full-stack dry-run recorded. Re-run baseline before risky merges; update this file when milestones complete. Set landing_icp to locked only with landing HTML latch (docs/SEMANTIC_CONTRACT.md §8.2)."
+}

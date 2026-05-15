@@ -45,7 +45,18 @@ BLOCK_SEVERITY_DEFAULTS: Dict[str, str] = {
     "CAPACITY_BLOCK": "HARD",
     "QUALITY_BLOCK": "SOFT",
     "GENERAL_BLOCK": "SOFT",
+    "DELIVERY_BLOCK": "HARD",
+    "DELIVERY_WARN": "SOFT",
+    "OPERATOR_PAUSE_BLOCK": "HARD",
 }
+
+SUPPRESSION_REASONS_ALLOWED: frozenset[str] = frozenset(
+    {"unsubscribe", "hard_bounce", "soft_bounce", "complaint", "manual"}
+)
+SUPPRESSION_SOURCES_ALLOWED: frozenset[str] = frozenset(
+    {"link", "stop_reply", "resend_webhook", "operator"}
+)
+OUTBOUND_EVENT_STATUSES_ALLOWED: frozenset[str] = frozenset({"sent", "dry_run"})
 
 
 def _parse_json_dict(raw: Optional[str]) -> Dict[str, Any]:
@@ -200,6 +211,30 @@ class JobQueue:
                     source TEXT NOT NULL DEFAULT 'manual',
                     created_at TEXT NOT NULL
                 )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS suppression_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT,
+                    reason TEXT,
+                    source TEXT,
+                    operator TEXT,
+                    notes TEXT,
+                    created_at TEXT
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS resend_webhook_events (
+                    event_id TEXT PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    email TEXT,
+                    payload TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_resend_webhook_events_type_time
+                ON resend_webhook_events(event_type, created_at)
             """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS funnel_events (
@@ -882,15 +917,42 @@ class JobQueue:
             ).fetchone()
         return row is not None
 
-    def suppress_email(self, email: str, reason: str, source: str = "manual") -> None:
+    def suppress_email(
+        self,
+        email: str,
+        reason: str,
+        source: str = "manual",
+        *,
+        operator: str = "",
+        notes: str = "",
+    ) -> None:
         if not email:
             return
-        with self._connect() as conn:
-            conn.execute("""
+        em = (email or "").strip().lower()
+        r = (reason or "").strip().lower() or "manual"
+        if r not in SUPPRESSION_REASONS_ALLOWED:
+            r = "manual"
+        s = (source or "").strip().lower() or "operator"
+        if s not in SUPPRESSION_SOURCES_ALLOWED:
+            s = "operator"
+        ts = datetime.now().isoformat()
+        op = (operator or "").strip()
+        note = (notes or "").strip()
+        with self.transaction() as conn:
+            conn.execute(
+                """
                 INSERT OR REPLACE INTO suppression_list (email, reason, source, created_at)
                 VALUES (?, ?, ?, ?)
-            """, [email.strip(), reason.strip() or "unspecified", source, datetime.now().isoformat()])
-            conn.commit()
+                """,
+                [em, r, s, ts],
+            )
+            conn.execute(
+                """
+                INSERT INTO suppression_history (email, reason, source, operator, notes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [em, r, s, op, note, ts],
+            )
 
     def gate_outbound_send(
         self,
@@ -971,17 +1033,27 @@ class JobQueue:
         message_hash = self.message_hash(subject, html_body)
         ts = datetime.now().isoformat()
         st = (send_type or "initial").strip().lower()
+        out_st = (status or "").strip().lower()
+        if out_st not in OUTBOUND_EVENT_STATUSES_ALLOWED:
+            raise ValueError(f"invalid outbound_events.status: {status!r}")
         with self._connect() as conn:
+            # UPSERT: one row per (prospect_id, campaign_key, send_type); dry_run can become sent.
             conn.execute("""
-                INSERT OR IGNORE INTO outbound_events
+                INSERT INTO outbound_events
                 (prospect_id, campaign_key, recipient_email, message_hash, status, provider_id, created_at, send_type)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(prospect_id, campaign_key, send_type) DO UPDATE SET
+                    recipient_email=excluded.recipient_email,
+                    message_hash=excluded.message_hash,
+                    status=excluded.status,
+                    provider_id=excluded.provider_id,
+                    created_at=excluded.created_at
             """, [
                 prospect_id,
                 campaign_key,
                 recipient_email,
                 message_hash,
-                status,
+                out_st,
                 provider_id,
                 ts,
                 st,
@@ -1002,7 +1074,7 @@ class JobQueue:
                        COALESCE(ps.name, '') AS name, COALESCE(ps.company, '') AS company
                 FROM outbound_events o
                 LEFT JOIN prospect_state ps ON ps.prospect_id = o.prospect_id
-                WHERE o.send_type = 'initial'
+                WHERE o.send_type IN ('initial', 'initial_prospect')
                   AND o.status = 'sent'
                   AND o.created_at < ?
                   AND NOT EXISTS (
@@ -1224,6 +1296,73 @@ class JobQueue:
     def count_weekly_outbound_sends(self, days: int = 7) -> int:
         cutoff = (datetime.now() - timedelta(days=days)).isoformat()
         return self.count_outbound_since(cutoff)
+
+    def try_register_resend_webhook_event(
+        self,
+        event_id: str,
+        event_type: str,
+        email: str,
+        payload: str,
+    ) -> bool:
+        """
+        Insert webhook event_id exactly once.
+        Returns True if this is the first time (caller should apply side effects),
+        False if duplicate (idempotent no-op).
+        """
+        eid = (event_id or "").strip()
+        if not eid:
+            return True
+        ts = datetime.now().isoformat()
+        with self._connect() as conn:
+            cur = conn.execute(
+                """
+                INSERT OR IGNORE INTO resend_webhook_events (event_id, event_type, email, payload, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                [eid, (event_type or "").strip().lower(), (email or "").strip().lower(), payload or "{}", ts],
+            )
+            conn.commit()
+            return bool(cur.rowcount and cur.rowcount > 0)
+
+    def get_delivery_ratio_metrics(self, days: int = 7) -> Dict[str, Any]:
+        """Rolling-window delivery health for auto-pause / send-time gates."""
+        cutoff = (datetime.now() - timedelta(days=max(1, int(days)))).isoformat()
+        with self._connect() as conn:
+            row_sent = conn.execute(
+                """
+                SELECT COUNT(*) FROM outbound_events
+                WHERE status = 'sent' AND created_at >= ?
+                """,
+                [cutoff],
+            ).fetchone()
+            sent = int(row_sent[0] if row_sent else 0)
+            row_b = conn.execute(
+                """
+                SELECT COUNT(*) FROM resend_webhook_events
+                WHERE event_type IN ('email.bounced', 'email.hard_bounced', 'email.bounce')
+                  AND created_at >= ?
+                """,
+                [cutoff],
+            ).fetchone()
+            bounced = int(row_b[0] if row_b else 0)
+            row_c = conn.execute(
+                """
+                SELECT COUNT(*) FROM resend_webhook_events
+                WHERE event_type IN ('email.complained', 'email.complaint')
+                  AND created_at >= ?
+                """,
+                [cutoff],
+            ).fetchone()
+            complained = int(row_c[0] if row_c else 0)
+        denom = max(sent, 1)
+        return {
+            "window_days": int(days),
+            "sent": sent,
+            "bounced_events": bounced,
+            "complained_events": complained,
+            "bounce_ratio": float(bounced) / float(denom),
+            "complaint_ratio": float(complained) / float(denom),
+        }
 
     def save_funnel_health_snapshot(
         self,

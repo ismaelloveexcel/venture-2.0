@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $WorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\.." )).Path
 $PythonExe = Join-Path $WorkspaceRoot ".venv\Scripts\python.exe"
 $Preflight = Join-Path $WorkspaceRoot "04-coding\scripts\pre_send_check.py"
-$Pipeline = Join-Path $WorkspaceRoot "04-coding\scripts\venture_pipeline.py"
+$RunDaily = Join-Path $WorkspaceRoot "04-coding\scripts\run_daily.py"
 
 if (-not (Test-Path $PythonExe)) {
     Write-Host "[fail] Python not found at $PythonExe"
@@ -20,8 +20,8 @@ if (-not (Test-Path $Preflight)) {
     exit 1
 }
 
-if (-not (Test-Path $Pipeline)) {
-    Write-Host "[fail] venture_pipeline.py not found at $Pipeline"
+if (-not (Test-Path $RunDaily)) {
+    Write-Host "[fail] run_daily.py not found at $RunDaily"
     exit 1
 }
 
@@ -37,21 +37,21 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "[info] Running operator status snapshot..."
-& $PythonExe $Pipeline --status
+$env:VENTURE_CANONICAL_ENTRY = "1"
+& $PythonExe $RunDaily bridge status
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[fail] Status snapshot failed. Pipeline run aborted."
     exit $LASTEXITCODE
 }
 
-Write-Host "[info] Starting pipeline mode: $Mode"
+Write-Host "[info] Starting canonical mode via run_daily: $Mode"
 $prevErrPref = $ErrorActionPreference
 $ErrorActionPreference = "SilentlyContinue"
+$args = @($RunDaily, "--execute")
 if ($Mode -eq "dry-run") {
-    cmd /c "`"$PythonExe`" `"$Pipeline`" --dry-run"
+    $args += "--dry-run"
 }
-else {
-    cmd /c "`"$PythonExe`" `"$Pipeline`""
-}
+cmd /c "`"$PythonExe`" `"$($args[0])`" $($args[1..($args.Length-1)] -join ' ')"
 $ErrorActionPreference = $prevErrPref
 
 exit $LASTEXITCODE

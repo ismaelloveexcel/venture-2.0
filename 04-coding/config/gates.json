@@ -1,0 +1,15 @@
+{
+  "schema_version": "1",
+  "gate_a": {
+    "weekly_pass_threshold_pct": 90,
+    "daily_stop_loss_threshold_pct": 80
+  },
+  "gate_b": {
+    "baseline_positive_reply_rate_pct": 1.5
+  },
+  "qualified_conversation_required_fields": [
+    "qualified_icp_fit",
+    "qualified_buyer_role",
+    "qualified_next_step"
+  ]
+}

@@ -1,49 +1,49 @@
 <!doctype html>
 <html lang="en">
+  <!-- VENTURE_SEMANTIC:LANDING_ICP=pending -->
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Precision Outreach Studio</title>
+    <meta
+      name="description"
+      content="AuditBound is the outbound governance and audit layer on top of Apollo, Smartlead, and Instantly: immutable logs, approval records, and replayable execution history."
+    />
+    <title>AuditBound | Outbound Governance Layer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --cream: #f6f1e7;
-        --ink: #121212;
-        --muted: #5d5a54;
-        --amber: #d1842e;
-        --teal: #1f7a72;
-        --card: #fffaf2;
-        --line: #dfd5c5;
-        --ok: #0f9d6e;
-        --warn: #b86b22;
+        --bg: #090d13;
+        --bg-2: #0e141d;
+        --panel: #121b26;
+        --panel-2: #172332;
+        --ink: #e7edf5;
+        --muted: #a7b5c6;
+        --line: #2b3b4d;
+        --accent: #6fb4ff;
+        --warn: #ff8a66;
+        --ok: #70cf9b;
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html,
       body {
         margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: linear-gradient(180deg, #0f1722 0%, var(--bg) 38%);
         color: var(--ink);
-        background:
-          radial-gradient(
-            circle at 10% 10%,
-            rgba(209, 132, 46, 0.16),
-            transparent 40%
-          ),
-          radial-gradient(
-            circle at 88% 22%,
-            rgba(31, 122, 114, 0.15),
-            transparent 38%
-          ),
-          linear-gradient(180deg, #fffdf8 0%, #f6f1e7 100%);
-        font-family: "Manrope", sans-serif;
-        line-height: 1.5;
+        font-family: "IBM Plex Sans", sans-serif;
+        line-height: 1.55;
       }
 
       .wrap {
@@ -51,173 +51,596 @@
         margin: 0 auto;
       }
 
-      .hero {
-        padding: 72px 0 48px;
-        display: grid;
-        grid-template-columns: 1.2fr 1fr;
-        gap: 30px;
-        align-items: center;
+      .section {
+        padding: 66px 0;
+        border-top: 1px solid var(--line);
       }
 
       .eyebrow {
         display: inline-block;
-        padding: 6px 12px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        font-size: 12px;
-        letter-spacing: 0.08em;
+        font-size: 11px;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: var(--muted);
-        background: rgba(255, 255, 255, 0.6);
+        color: #d2deea;
+        border: 1px solid #435469;
+        border-radius: 999px;
+        padding: 7px 12px;
       }
 
       h1,
       h2,
       h3 {
-        font-family: "Space Grotesk", sans-serif;
         margin: 0;
         letter-spacing: -0.02em;
       }
 
       h1 {
         margin-top: 18px;
-        font-size: clamp(34px, 6vw, 62px);
-        line-height: 1.05;
+        font-size: clamp(38px, 6.5vw, 72px);
+        line-height: 1.02;
+        max-width: 16ch;
       }
 
-      .sub {
-        margin-top: 18px;
+      h2 {
+        font-size: clamp(28px, 4.2vw, 44px);
+        line-height: 1.15;
+      }
+
+      h3 {
+        font-size: clamp(20px, 2.3vw, 26px);
+      }
+
+      p {
+        margin: 0;
         color: var(--muted);
-        font-size: 18px;
-        max-width: 56ch;
       }
 
-      .cta-row {
-        margin-top: 26px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: center;
+      .hero {
+        border-top: 0;
+        padding-top: 84px;
       }
 
-      .btn {
-        border: 0;
-        border-radius: 12px;
-        padding: 12px 18px;
-        font-weight: 700;
-        font-size: 15px;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
-      }
-
-      .btn-primary {
-        color: #fff;
-        background: linear-gradient(135deg, var(--teal), #16635d);
-        box-shadow: 0 10px 24px rgba(31, 122, 114, 0.25);
-      }
-
-      .btn-secondary {
-        color: var(--ink);
-        background: #fff;
-        border: 1px solid var(--line);
-      }
-
-      .stat-card {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
-      }
-
-      .stat-grid {
+      .hero-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        margin-top: 12px;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 24px;
+        align-items: start;
       }
 
-      .stat {
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 14px;
-        background: #fff;
-      }
-
-      .stat .k {
-        font-size: 22px;
-        font-weight: 800;
-        font-family: "Space Grotesk", sans-serif;
-      }
-
-      .section {
-        padding: 42px 0;
-      }
-
-      .panel {
-        background: rgba(255, 255, 255, 0.74);
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 24px;
-        backdrop-filter: blur(5px);
-      }
-
-      .grid-3 {
+      .hero-copy {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
         gap: 14px;
       }
 
-      .step {
+      .hero-copy p {
+        font-size: clamp(17px, 1.9vw, 20px);
+        max-width: 58ch;
+      }
+
+      .system-sentence {
+        font-size: 16px;
+        line-height: 1.45;
+        color: #d7e4f2;
+        border-left: 3px solid #54789d;
+        padding-left: 12px;
+      }
+
+      .position-line {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        color: #bdd2e8;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 10px;
+      }
+
+      .cta-finance {
+        margin-top: 12px;
+        border: 1px solid #3d5368;
+        border-radius: 10px;
+        background: #101925;
+        padding: 10px;
+      }
+
+      .cta-finance .head {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #cadced;
+      }
+
+      .cta-finance p {
+        margin-top: 6px;
+        font-size: 13px;
+        color: #d2e1ef;
+      }
+
+      .cta-finance .math {
+        margin-top: 8px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #c1d6ea;
+      }
+
+      .btn {
+        display: inline-block;
+        text-decoration: none;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-weight: 600;
+        font-size: 15px;
+        transition: transform 120ms ease;
+      }
+
+      .btn-primary {
+        color: #0f1620;
+        background: linear-gradient(180deg, #dbe7f3 0%, #bdd1e6 100%);
+      }
+
+      .btn-secondary {
+        border: 1px solid #4f647a;
+        color: #d4e1ef;
+      }
+
+      .btn-secondary:hover,
+      .btn-primary:hover {
+        transform: translateY(-1px);
+      }
+
+      .incident-card {
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, #142032 0%, #111925 100%);
+        border-radius: 14px;
+        padding: 18px;
+      }
+
+      .hero-panel {
+        border: 1px solid #364b61;
+        background: linear-gradient(180deg, #132235 0%, #101a27 100%);
+        border-radius: 14px;
+        padding: 16px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .panel-head {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: #c6d7ea;
+      }
+
+      .hero-flow {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #0f1824;
+        padding: 12px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .hero-node {
+        border: 1px solid #3d5166;
+        border-radius: 8px;
+        background: #162231;
+        padding: 9px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #d8e5f2;
+      }
+
+      .hero-node.govern {
+        border-color: #5a8fbe;
+        background: #193550;
+      }
+
+      .hero-arrow {
+        text-align: center;
+        color: #8ca8c7;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+      }
+
+      .proof-table {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .proof-table table {
+        font-size: 11px;
+      }
+
+      .proof-table th,
+      .proof-table td {
+        padding: 8px;
+      }
+
+      .proof-table td {
+        font-family: "IBM Plex Mono", monospace;
+      }
+
+      .what-not {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .what-not div {
+        border: 1px solid #3d5368;
+        border-radius: 8px;
+        background: #101925;
+        padding: 8px;
+        text-align: center;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        color: #d1dfed;
+      }
+
+      .money-strip {
+        margin-top: 14px;
+        border: 1px solid #3a5066;
+        border-radius: 10px;
+        background: #111b27;
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .money-strip .label {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #c9dbee;
+      }
+
+      .money-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .money-item {
+        border: 1px solid #33485d;
+        background: #0f1823;
+        border-radius: 8px;
+        padding: 8px;
+      }
+
+      .money-item strong {
+        display: block;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #d9e8f6;
+      }
+
+      .money-item span {
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+        color: #b7c9dc;
+      }
+
+      .log-title {
+        font-size: 12px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #c2d4e7;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .log-list {
+        margin: 14px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 10px;
+      }
+
+      .log-list li {
+        border: 1px solid #314253;
+        background: #131c27;
+        border-left: 3px solid var(--warn);
+        border-radius: 8px;
+        padding: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #d6e2ef;
+      }
+
+      .small {
+        font-size: 13px;
+        color: #c0d2e6;
+      }
+
+      .diagram-shell {
+        margin-top: 22px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 18px;
+      }
+
+      .architecture {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .stack {
         border: 1px solid var(--line);
         border-radius: 14px;
-        background: #fff;
         padding: 16px;
+        background: var(--bg-2);
       }
 
-      .step .n {
-        font-family: "Space Grotesk", sans-serif;
-        font-weight: 800;
-        color: var(--teal);
-        margin-bottom: 8px;
+      .flow {
+        display: grid;
+        gap: 8px;
       }
 
-      .op-list {
-        margin: 14px 0 0;
-        padding-left: 18px;
-        color: var(--muted);
+      .box {
+        border: 1px solid #3a4c60;
+        border-radius: 9px;
+        padding: 10px;
+        background: var(--panel-2);
+        font-weight: 600;
       }
 
-      .op-list li {
-        margin: 7px 0;
+      .arrow {
+        text-align: center;
+        font-family: "IBM Plex Mono", monospace;
+        color: #89a8c8;
       }
 
-      .quality {
-        margin-top: 16px;
+      .governance-layer {
+        border-color: #4d86b8;
+        background: #17314a;
+      }
+
+      .lane-label {
+        margin-top: 4px;
+        margin-bottom: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        letter-spacing: 0.05em;
+        color: #bcd2e8;
+        text-transform: uppercase;
+      }
+
+      .compare {
+        margin-top: 24px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+        background: var(--panel);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        background: #121b26;
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #cad9e8;
+      }
+
+      td {
+        color: #d5e0eb;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .risk-grid {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .risk {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        background: #121b25;
+      }
+
+      .risk .id {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 11px;
+        color: #8fa7bf;
+      }
+
+      .risk p {
+        margin-top: 8px;
+        color: #d7e3ef;
+        font-size: 15px;
+      }
+
+      .system-grid {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .proof {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        background: #101924;
+      }
+
+      .proof strong {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        color: #d0e1f3;
+      }
+
+      .proof p {
+        margin-top: 8px;
+      }
+
+      .who-grid {
+        margin-top: 20px;
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
       }
 
-      .quality .bad,
-      .quality .good {
+      .who-card {
         border: 1px solid var(--line);
-        border-radius: 14px;
-        background: #fff;
+        border-radius: 12px;
         padding: 14px;
-        font-size: 14px;
+        background: #101924;
       }
 
-      .quality .bad {
-        border-left: 4px solid var(--warn);
+      .who-card h3 {
+        font-size: 21px;
       }
-      .quality .good {
-        border-left: 4px solid var(--ok);
+
+      .who-card ul {
+        margin: 12px 0 0;
+        padding-left: 18px;
+      }
+
+      .who-card li {
+        margin: 8px 0;
+        color: #d3e0ec;
+      }
+
+      .for {
+        border-left: 3px solid var(--ok);
+      }
+
+      .not-for {
+        border-left: 3px solid var(--warn);
+      }
+
+      .before-after {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .state-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        background: #101823;
+      }
+
+      .state-card ul {
+        margin: 12px 0 0;
+        padding-left: 16px;
+      }
+
+      .state-card li {
+        margin: 8px 0;
+        color: #d0deeb;
+      }
+
+      .trace-line {
+        margin-top: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #c2d6ea;
+        font-size: 12px;
+      }
+
+      .guarantee-grid {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .guarantee {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        background: #101924;
+      }
+
+      .guarantee strong {
+        display: block;
+        font-size: 14px;
+        color: #d8e5f2;
+        font-family: "IBM Plex Mono", monospace;
+      }
+
+      .guarantee p {
+        margin-top: 8px;
+      }
+
+      .finance-grid {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .finance-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        background: #101924;
+      }
+
+      .finance-card h3 {
+        font-size: 18px;
+      }
+
+      .finance-card p {
+        margin-top: 8px;
+      }
+
+      .roi-equation {
+        margin-top: 14px;
+        border: 1px dashed #4b6177;
+        border-radius: 10px;
+        padding: 10px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 12px;
+        color: #cfe0f1;
+        background: #0f1822;
+      }
+
+      .cta-panel {
+        border: 1px solid #3f5770;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #111a25 0%, #0e151f 100%);
+        padding: 22px;
+      }
+
+      .cta-panel p {
+        margin-top: 12px;
+        max-width: 72ch;
       }
 
       .contact {
-        margin-top: 16px;
+        margin-top: 18px;
         display: grid;
         gap: 10px;
       }
@@ -225,189 +648,601 @@
       .contact input,
       .contact textarea {
         width: 100%;
-        border-radius: 10px;
-        border: 1px solid var(--line);
-        background: #fff;
-        padding: 10px 12px;
+        border: 1px solid #364a5f;
+        border-radius: 9px;
+        padding: 11px 12px;
         font: inherit;
+        color: var(--ink);
+        background: #0f1722;
+      }
+
+      .contact textarea {
+        min-height: 92px;
+        resize: vertical;
       }
 
       .status {
         margin-top: 8px;
         font-size: 13px;
-        color: var(--muted);
       }
 
       footer {
-        padding: 30px 0 52px;
-        color: var(--muted);
+        padding: 28px 0 52px;
+        color: #92a8be;
         font-size: 13px;
-        text-align: center;
+        border-top: 1px solid var(--line);
       }
 
-      @media (max-width: 900px) {
-        .hero {
+      @media (max-width: 940px) {
+        .hero-grid,
+        .who-grid,
+        .before-after,
+        .architecture {
           grid-template-columns: 1fr;
         }
-        .grid-3 {
+
+        .what-not {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .risk-grid,
+        .system-grid,
+        .guarantee-grid,
+        .finance-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .money-grid {
           grid-template-columns: 1fr;
         }
-        .quality {
+      }
+
+      @media (max-width: 700px) {
+        .section {
+          padding: 52px 0;
+        }
+
+        .what-not {
           grid-template-columns: 1fr;
+        }
+
+        .risk-grid,
+        .system-grid,
+        .guarantee-grid,
+        .finance-grid {
+          grid-template-columns: 1fr;
+        }
+
+        th,
+        td {
+          padding: 10px;
+          font-size: 14px;
+        }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .hero-reveal {
+          opacity: 0;
+          transform: translateY(10px);
+          animation: rise 0.56s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .hero-reveal:nth-child(1) {
+          animation-delay: 0.05s;
+        }
+        .hero-reveal:nth-child(2) {
+          animation-delay: 0.1s;
+        }
+        .hero-reveal:nth-child(3) {
+          animation-delay: 0.16s;
+        }
+        .hero-reveal:nth-child(4) {
+          animation-delay: 0.22s;
+        }
+        .hero-reveal:nth-child(5) {
+          animation-delay: 0.28s;
+        }
+      }
+
+      @keyframes rise {
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
       }
     </style>
   </head>
   <body>
     <main class="wrap">
-      <section class="hero">
-        <div>
-          <span class="eyebrow">Built for solo operators</span>
-          <h1>
-            Run premium outreach like a sharp founder, not a busy assistant.
-          </h1>
-          <p class="sub">
-            Precision Outreach Studio helps a non-technical solo operator move
-            from lead to premium message to daily execution decisions with
-            minimal manual effort.
-          </p>
-          <div class="cta-row">
-            <a class="btn btn-primary" href="#contact"
-              >Request Setup Walkthrough</a
+      <section class="section hero" id="top">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <span class="eyebrow hero-reveal"
+              >Outbound Execution Governance</span
             >
-            <a class="btn btn-secondary" href="#operator">See Operator Flow</a>
+            <h1 class="hero-reveal">
+              When outbound execution is questioned, can your team prove what
+              happened before it costs you a client?
+            </h1>
+            <p class="hero-reveal">
+              Sits on top of Apollo, Smartlead, and Instantly.
+            </p>
+            <p class="hero-reveal">
+              Creates immutable audit trails for outbound execution with
+              approval visibility and replayable decision history.
+            </p>
+            <p class="system-sentence hero-reveal">
+              AuditBound is the control layer between send execution and
+              accountability evidence.
+            </p>
+            <p class="position-line hero-reveal">
+              Not a sequencer. Not a CRM. Not a lead generation tool.
+            </p>
+            <div
+              class="what-not hero-reveal"
+              aria-label="What AuditBound is not"
+            >
+              <div>NOT A SEQUENCER</div>
+              <div>NOT A CRM</div>
+              <div>NOT LEAD GEN</div>
+              <div>NOT AN AI SDR</div>
+            </div>
+            <div
+              class="money-strip hero-reveal"
+              aria-label="Financial impact summary"
+            >
+              <div class="label">Why this matters financially</div>
+              <div class="money-grid">
+                <div class="money-item">
+                  <strong>Client Revenue Risk</strong>
+                  <span
+                    >Prevent avoidable churn from unexplainable send
+                    incidents.</span
+                  >
+                </div>
+                <div class="money-item">
+                  <strong>Incident Cost</strong>
+                  <span
+                    >Reduce rework, credits, and fire-drill time after
+                    escalations.</span
+                  >
+                </div>
+                <div class="money-item">
+                  <strong>Margin Protection</strong>
+                  <span
+                    >Keep operators in production, not manual incident
+                    reconstruction.</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="cta-row hero-reveal">
+              <a class="btn btn-primary" href="#cta"
+                >Schedule Accountability Audit</a
+              >
+              <a class="btn btn-secondary" href="#architecture"
+                >See Governance Layer</a
+              >
+            </div>
+            <div class="cta-finance hero-reveal" aria-label="Economic test">
+              <div class="head">Economic test</div>
+              <p>
+                If one preventable incident can trigger client credits,
+                emergency labor, or account churn, this layer is protecting
+                revenue, not adding overhead.
+              </p>
+              <div class="math">
+                Protectable value = churn risk avoided + incident labor avoided
+                + sender reputation preserved
+              </div>
+            </div>
           </div>
-        </div>
 
-        <aside class="stat-card" aria-label="Operator snapshot">
-          <h3>Operator Snapshot</h3>
-          <p class="status">One dashboard. One verdict. One next action.</p>
-          <div class="stat-grid">
-            <div class="stat">
-              <div class="k">GO or HOLD</div>
-              <div>Daily autonomous verdict</div>
+          <aside class="hero-panel" aria-label="Control plane placement">
+            <div class="panel-head">
+              Control Plane Placement (Above The Fold)
             </div>
-            <div class="stat">
-              <div class="k">Policy</div>
-              <div>Safe mode and pace controls</div>
+            <div class="hero-flow" aria-label="Hero stack diagram">
+              <div class="hero-node">Apollo (data)</div>
+              <div class="hero-arrow">|</div>
+              <div class="hero-node">Smartlead / Instantly (sending)</div>
+              <div class="hero-arrow">|</div>
+              <div class="hero-node govern">AuditBound governance layer</div>
+              <div class="hero-arrow">|</div>
+              <div class="hero-node">
+                Immutable logs + approvals + replayable trace
+              </div>
             </div>
-            <div class="stat">
-              <div class="k">Premium</div>
-              <div>Personalized message quality checks</div>
+            <div class="panel-head">Execution Proof Preview</div>
+            <div class="proof-table" aria-label="Run trace preview">
+              <table>
+                <thead>
+                  <tr>
+                    <th>RUN ID</th>
+                    <th>APPROVED BY</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>RUN-2291</td>
+                    <td>ops.lead</td>
+                    <td>sent</td>
+                  </tr>
+                  <tr>
+                    <td>RUN-2318</td>
+                    <td>missing</td>
+                    <td>blocked</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div class="stat">
-              <div class="k">Logs</div>
-              <div>Deterministic daily audit trail</div>
-            </div>
-          </div>
+            <p class="small">
+              Category anchor: governance and evidence for outbound execution,
+              not campaign software.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="incidents">
+        <h2>Incident pressure this layer resolves</h2>
+        <p style="margin-top: 12px">
+          The failures below are operational liability, not performance
+          problems.
+        </p>
+        <aside
+          class="incident-card"
+          aria-label="Operational incidents"
+          style="margin-top: 20px"
+        >
+          <div class="log-title">Outbound incidents teams escalate</div>
+          <ul class="log-list">
+            <li>RUN-2291 | wrong-domain sends after stale suppression state</li>
+            <li>
+              RUN-2318 | client asks who approved cohort, no definitive record
+            </li>
+            <li>
+              RUN-2357 | filters changed mid-run, history cannot be
+              reconstructed
+            </li>
+            <li>
+              RUN-2392 | blacklisted domain incident with no replayable trail
+            </li>
+          </ul>
         </aside>
       </section>
 
-      <section id="operator" class="section">
-        <div class="panel">
-          <h2>Simple Daily Operator Flow</h2>
-          <div class="grid-3" style="margin-top: 14px">
-            <article class="step">
-              <div class="n">01</div>
-              <h3>Autopilot health run</h3>
-              <p>
-                System checks compliance, DLQ, policy mode, and writes a clear
-                verdict.
-              </p>
-            </article>
-            <article class="step">
-              <div class="n">02</div>
-              <h3>Pipeline execution</h3>
-              <p>
-                If safe, pipeline runs and sends only quality-checked,
-                policy-compliant outreach.
-              </p>
-            </article>
-            <article class="step">
-              <div class="n">03</div>
-              <h3>Operator review</h3>
-              <p>
-                Read one summary line. If HOLD, fix the reason. If GO, keep
-                momentum.
-              </p>
-            </article>
-          </div>
-          <ul class="op-list">
-            <li>Non-technical first: no scripts to remember.</li>
-            <li>
-              Fail-closed safety: policy blocks unsafe sends before provider
-              calls.
-            </li>
-            <li>
-              Designed for 10k per month execution cadence, not hobby
-              automation.
-            </li>
-          </ul>
+      <section class="section" id="financial-impact">
+        <h2>How this helps financially</h2>
+        <p style="margin-top: 12px">
+          AuditBound is bought to protect margin and client revenue, not to
+          optimize replies.
+        </p>
+        <div class="finance-grid">
+          <article class="finance-card">
+            <h3>1. Fewer client-loss events</h3>
+            <p>
+              When teams can prove who approved a send and why it ran,
+              escalation calls are shorter and retention risk drops.
+            </p>
+          </article>
+          <article class="finance-card">
+            <h3>2. Lower incident labor cost</h3>
+            <p>
+              Replayable run history removes hours of manual forensics across
+              Apollo, Smartlead, and HubSpot.
+            </p>
+          </article>
+          <article class="finance-card">
+            <h3>3. Protected delivery infrastructure</h3>
+            <p>
+              Governance checks catch bad sends before they damage sender
+              reputation and future account revenue.
+            </p>
+          </article>
+        </div>
+        <div class="roi-equation">
+          ROI logic: (incident cost avoided + client revenue retained + rework
+          hours avoided) - AuditBound cost.
         </div>
       </section>
 
-      <section class="section">
-        <div class="panel">
-          <h2>Premium Outreach Standard</h2>
-          <p class="status">
-            Messages are rewritten against a quality rubric: personalization
-            anchor, concise value, no cliche opener, soft CTA.
-          </p>
-          <div class="quality">
-            <div class="bad">
-              <h3 style="color: var(--warn)">Generic (bad)</h3>
-              <p>
-                "Hope you're well. I wanted to reach out because we help
-                companies like yours with automation. Let me know if
-                interested."
-              </p>
-            </div>
-            <div class="good">
-              <h3 style="color: var(--ok)">Premium (good)</h3>
-              <p>
-                "You are likely juggling rebooking gaps at Bright Smiles while
-                trying to keep chair-time full. We built a follow-up system that
-                nudges no-shows before they vanish from the pipeline. Worth a
-                quick 15-minute teardown of your current flow?"
-              </p>
-            </div>
+      <section class="section" id="architecture">
+        <h2>Stack positioning diagram</h2>
+        <p style="margin-top: 12px">
+          Category definition: governance layer for outbound execution systems.
+        </p>
+        <div class="diagram-shell">
+          <div class="architecture">
+            <article class="stack">
+              <div class="lane-label">Required stack flow</div>
+              <div class="flow" aria-label="Governance stack diagram">
+                <div class="box">Apollo (data)</div>
+                <div class="arrow">|</div>
+                <div class="box">Smartlead / Instantly (sending)</div>
+                <div class="arrow">|</div>
+                <div class="box governance-layer">
+                  AuditBound (governance layer)
+                </div>
+                <div class="arrow">|</div>
+                <div class="box">
+                  Immutable execution log + approvals + traceability
+                </div>
+              </div>
+            </article>
+            <article class="stack">
+              <div class="lane-label">How this works operationally</div>
+              <div class="flow" aria-label="Operational stack interpretation">
+                <div class="box">Apollo builds input cohorts</div>
+                <div class="arrow">|</div>
+                <div class="box">Smartlead or Instantly executes sends</div>
+                <div class="arrow">|</div>
+                <div class="box governance-layer">
+                  AuditBound validates, logs, and links approvals
+                </div>
+                <div class="arrow">|</div>
+                <div class="box">
+                  Run IDs, decision timeline, replayable send history
+                </div>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section id="contact" class="section">
-        <div class="panel">
-          <h2>Get Your Operator Setup</h2>
-          <p class="status">
-            For solo founders who want premium outreach quality and low-touch
-            operation.
+      <section class="section" id="why-not-enough">
+        <h2>Why Apollo, Smartlead, and Instantly are not enough</h2>
+        <p style="margin-top: 12px">
+          They execute outbound. They do not provide end-to-end governance and
+          auditability.
+        </p>
+        <div class="compare" role="region" aria-label="Tool roles comparison">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">System</th>
+                <th scope="col">Primary role</th>
+                <th scope="col">Risk that remains without AuditBound</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Apollo</td>
+                <td>Data and cohort creation</td>
+                <td>
+                  No immutable record explaining why a cohort was approved
+                </td>
+              </tr>
+              <tr>
+                <td>Smartlead / Instantly</td>
+                <td>Sending and sequence execution</td>
+                <td>
+                  No replayable cross-tool trail when an incident is
+                  investigated
+                </td>
+              </tr>
+              <tr>
+                <td>HubSpot</td>
+                <td>CRM and account lifecycle</td>
+                <td>
+                  No pre-send governance checks tied to execution run history
+                </td>
+              </tr>
+              <tr>
+                <td>AuditBound</td>
+                <td>Governance and audit layer</td>
+                <td>
+                  Logs approvals, validates decisions, and reconstructs
+                  execution history
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="failure-scenarios">
+        <h2>Real outbound incidents this prevents</h2>
+        <p style="margin-top: 12px">
+          Execution risk control, not campaign optimization.
+        </p>
+        <div class="risk-grid">
+          <article class="risk">
+            <div class="id">INC-104</div>
+            <p>
+              Wrong-domain sends after suppression data drifts before execution.
+            </p>
+          </article>
+          <article class="risk">
+            <div class="id">INC-117</div>
+            <p>
+              Client asks who approved a cohort and no one can produce evidence.
+            </p>
+          </article>
+          <article class="risk">
+            <div class="id">INC-131</div>
+            <p>
+              Campaign history cannot be reconstructed after mid-run filter
+              edits.
+            </p>
+          </article>
+          <article class="risk">
+            <div class="id">INC-146</div>
+            <p>
+              Suppression-list failure leads to blacklist incident without
+              explanation trail.
+            </p>
+          </article>
+          <article class="risk">
+            <div class="id">INC-153</div>
+            <p>
+              Slack approval exists but no immutable record of what was
+              approved.
+            </p>
+          </article>
+          <article class="risk">
+            <div class="id">INC-167</div>
+            <p>
+              Duplicate sends occur and no run-level trace links the decision
+              chain.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="system-view">
+        <h2>What AuditBound actually does</h2>
+        <p style="margin-top: 12px">System layers, not feature marketing.</p>
+        <div class="system-grid">
+          <article class="proof">
+            <strong>A. ELIGIBILITY GATES</strong>
+            <p>Defines who can be contacted at run time.</p>
+            <p>
+              Applies suppression rules and pre-send validation before
+              execution.
+            </p>
+          </article>
+          <article class="proof">
+            <strong>B. APPROVAL LAYER</strong>
+            <p>Captures who approved what and exactly when.</p>
+            <p>Maintains a timestamped immutable decision record per cohort.</p>
+          </article>
+          <article class="proof">
+            <strong>C. AUDIT TRAIL ENGINE</strong>
+            <p>Writes append-only logs tied to run IDs.</p>
+            <p>
+              Enables cohort reconstruction and full send-history traceability.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="fit">
+        <h2>Who this is for and not for</h2>
+        <div class="who-grid">
+          <article class="who-card for">
+            <h3>For</h3>
+            <ul>
+              <li>Outbound agencies managing 2 to 10 clients</li>
+              <li>Ops leads running multiple campaigns and cohorts</li>
+              <li>
+                Teams accountable for client reporting and incident response
+              </li>
+            </ul>
+          </article>
+          <article class="who-card not-for">
+            <h3>Not for</h3>
+            <ul>
+              <li>Solo founders doing lightweight cold email</li>
+              <li>
+                Volume-first senders prioritizing throughput over controls
+              </li>
+              <li>People optimizing reply rates and growth hacks</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="before-after">
+        <h2>Before vs after governance layer</h2>
+        <p style="margin-top: 12px">System upgrade, not feature upgrade.</p>
+        <div class="before-after">
+          <article class="state-card">
+            <h3>Without AuditBound</h3>
+            <div class="trace-line">Apollo -> Smartlead -> sends happen</div>
+            <ul>
+              <li>Approvals handled in Slack threads</li>
+              <li>No immutable run-level audit trail</li>
+              <li>Cannot reconstruct decision history during escalation</li>
+              <li>No reliable replay path across tools</li>
+            </ul>
+          </article>
+          <article class="state-card">
+            <h3>With AuditBound</h3>
+            <div class="trace-line">Apollo -> AuditBound -> Smartlead</div>
+            <ul>
+              <li>Every send validated against governance checks</li>
+              <li>Every approval logged with operator and timestamp</li>
+              <li>Full traceability from cohort decision to send event</li>
+              <li>Replayable history for client and compliance review</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="trust">
+        <h2>Infrastructure-grade trust statements</h2>
+        <p style="margin-top: 12px">
+          No testimonials and no vanity metrics. Only operational guarantees.
+        </p>
+        <div class="guarantee-grid">
+          <article class="guarantee">
+            <strong>APPEND-ONLY DECISION RECORDS</strong>
+            <p>
+              Approval and execution history is preserved for incident replay.
+            </p>
+          </article>
+          <article class="guarantee">
+            <strong>RUN-LEVEL TRACEABILITY</strong>
+            <p>
+              Run IDs link eligibility, approval, and send outcomes into one
+              chain.
+            </p>
+          </article>
+          <article class="guarantee">
+            <strong>CROSS-TOOL GOVERNANCE COVERAGE</strong>
+            <p>
+              Works with Apollo, Smartlead, Instantly, and HubSpot without
+              replacing them.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="cta">
+        <div class="cta-panel">
+          <h2>Review your outbound system before the next escalation.</h2>
+          <p>
+            We assess eligibility gates, approval-flow integrity, suppression
+            logic, and traceability gaps. You receive a concrete map of what can
+            and cannot be defended today, plus where preventable incidents are
+            costing margin.
           </p>
-          <form class="contact" onsubmit="submitForm(event)">
+          <div class="cta-row" style="margin-top: 16px">
+            <a class="btn btn-primary" href="#contact-form"
+              >Review Your Outbound System</a
+            >
+            <a class="btn btn-secondary" href="#architecture"
+              >See Governance Layer</a
+            >
+          </div>
+          <form id="contact-form" class="contact" onsubmit="submitForm(event)">
             <input type="text" placeholder="Your name" required />
-            <input type="email" placeholder="Your email" required />
+            <input type="email" placeholder="Work email" required />
             <input
               type="text"
-              placeholder="Your niche (for personalization setup)"
+              placeholder="Current stack (Apollo, Smartlead, Instantly, HubSpot)"
             />
             <textarea
-              rows="4"
-              placeholder="What is the #1 outreach bottleneck right now?"
+              placeholder="Recent incident: what happened, who approved, and what evidence was missing?"
             ></textarea>
             <button class="btn btn-primary" type="submit">
-              Send Setup Request
+              Schedule Accountability Audit
             </button>
           </form>
           <p id="ok" class="status" hidden>
-            Thanks. Setup request captured. You can now map this form to your
-            API endpoint.
+            Request received. Next step: governance review of approvals,
+            suppression, and replayability.
           </p>
         </div>
       </section>
     </main>
 
     <footer>
-      Precision Outreach Studio - Solo operator workflow, premium message
-      quality, deterministic daily control.
+      AuditBound is an outbound governance and audit layer that works with
+      Apollo, Smartlead, Instantly, and HubSpot. It is infrastructure for proof
+      and control, not an outbound sending platform.
     </footer>
 
     <script>

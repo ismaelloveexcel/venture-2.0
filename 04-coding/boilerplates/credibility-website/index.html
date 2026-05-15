@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auditbound — Outbound Accountability for Agencies</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-glow bg-glow-top"></div>
+    <div class="bg-glow bg-glow-bottom"></div>
+
+    <header class="hero reveal">
+      <p class="eyebrow">Auditbound</p>
+      <h1>
+        We build your outbound accountability system so campaigns produce
+        qualified replies, not confusion.
+      </h1>
+      <p class="lede">
+        For agencies and B2B service teams. In 14 days, we set up your outbound
+        operating layer: deliverability guards, send gates, and weekly
+        optimization with proof on every campaign.
+      </p>
+      <div class="hero-cta-row">
+        <a
+          class="btn primary"
+          href="https://cal.com/ismael-sudally/auditbound-campaign-audit-call"
+          rel="noopener noreferrer"
+          target="_blank"
+          >Book a 20-min campaign audit</a
+        >
+        <a class="btn ghost" href="#offer">See exact deliverables</a>
+      </div>
+      <p class="proof">
+        Primary offer: outbound system setup + weekly optimization for agency
+        outbound teams.
+      </p>
+    </header>
+
+    <main>
+      <section id="offer" class="reveal">
+        <h2>What We Sell</h2>
+        <div class="cards cards-3">
+          <article>
+            <h3>1) Outbound System Setup</h3>
+            <p>
+              We implement campaign QA, suppression checks, and send controls so
+              your team stops sending risky, low-trust outbound.
+            </p>
+          </article>
+          <article>
+            <h3>2) Weekly Campaign Optimization</h3>
+            <p>
+              Every week we review your funnel metrics, diagnose bottlenecks,
+              and ship targeted fixes to improve reply quality and conversion.
+            </p>
+          </article>
+          <article>
+            <h3>3) Audit Trail Reporting</h3>
+            <p>
+              You get campaign evidence logs and clear weekly summaries so
+              performance decisions are based on facts, not guesses.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="outcome" class="reveal">
+        <h2>Who It Is For</h2>
+        <ul>
+          <li>Agency founders running outbound with a small sales team</li>
+          <li>B2B service operators who need predictable reply flow</li>
+          <li>
+            Teams that want deliverability-safe execution and measurable weekly
+            improvements
+          </li>
+        </ul>
+      </section>
+
+      <section id="signals" class="reveal">
+        <h2>What Changes After Setup</h2>
+        <div class="cards">
+          <article>
+            <h3>Before</h3>
+            <p>
+              Inconsistent outbound, unclear quality control, and no reliable
+              way to understand why campaigns miss targets.
+            </p>
+          </article>
+          <article>
+            <h3>After</h3>
+            <p>
+              A governed outbound workflow with explicit send gates, better
+              reply quality, and a weekly improvement loop you can trust.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="faq" class="reveal">
+        <h2>FAQ</h2>
+        <details>
+          <summary>Is this software, a service, or both?</summary>
+          <p>
+            It is a productized service powered by our outbound operating
+            system. You buy outcomes and weekly execution, not just a dashboard.
+          </p>
+        </details>
+        <details>
+          <summary>What do we do in the first 14 days?</summary>
+          <p>
+            We audit your current outbound flow, implement guardrails and
+            tracking, and deliver a prioritized optimization plan with first
+            fixes shipped.
+          </p>
+        </details>
+      </section>
+
+      <section id="cta" class="cta reveal">
+        <h2>If this sounds like what you need, book the audit call.</h2>
+        <p>
+          We will review your current outbound system and show exactly where
+          reply quality and conversion are leaking.
+        </p>
+        <a
+          class="btn primary"
+          href="https://cal.com/ismael-sudally/auditbound-campaign-audit-call"
+          rel="noopener noreferrer"
+          target="_blank"
+          >Book a 20-min campaign audit</a
+        >
+      </section>
+    </main>
+
+    <footer>
+      <p>Auditbound | Outbound accountability for agencies</p>
+    </footer>
+
+    <script>
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("in");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12 },
+      );
+
+      document
+        .querySelectorAll(".reveal")
+        .forEach((el) => observer.observe(el));
+    </script>
+  </body>
+</html>

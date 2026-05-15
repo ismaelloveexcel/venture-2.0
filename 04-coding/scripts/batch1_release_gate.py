@@ -21,7 +21,6 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from batch_guard import (  # noqa: E402
     CANONICAL_SUBJECT,
     CTA_STRING,
-    DEFAULT_SIGNATURE,
     BatchGuardError,
     consume_batch_lock,
     hash_payload,
@@ -42,7 +41,7 @@ class GateCheck:
 
 
 def _canonical_payload(to_email: str = "operator@example.com") -> dict[str, object]:
-    body = "\n".join(
+    cold = "\n".join(
         [
             "Hi Alex,",
             "",
@@ -53,15 +52,13 @@ def _canonical_payload(to_email: str = "operator@example.com") -> dict[str, obje
             "I build client-owned outbound systems focused on one market with structured targeting, message review, sending controls, and reply tracking.",
             "",
             CTA_STRING,
-            "",
-            DEFAULT_SIGNATURE,
         ]
     )
     return {
-        "from": "Ismael Sudally <sender@replypilot.ai>",
+        "from": "Ismael Sudally <outreach@abtmail.co>",
         "to": [to_email],
         "subject": CANONICAL_SUBJECT,
-        "html": "<p>" + body.replace("\n", "<br>") + "</p>",
+        "cold_body_text": cold,
     }
 
 
@@ -228,7 +225,7 @@ def lock_lifecycle_gate() -> list[GateCheck]:
             approved = mark_test_approved(
                 path=lock_path,
                 manifest=manifest,
-                sender_email_value="sender@replypilot.ai",
+                sender_email_value="outreach@abtmail.co",
             )
             checks.append(_pass("lock:test_approval_status", str(approved.get("status"))))
             confirmed = mark_execution_confirmed(path=lock_path)

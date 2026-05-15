@@ -2,7 +2,7 @@
 Venture OS — MCP Server
 Exposes 5 AI-powered tools Copilot Chat can call directly:
   1. score_idea           — 8-criteria niche scorecard via OpenAI
-  2. research_competitors — web search via Brave API
+    2. research_competitors — web search via Apollo API
   3. generate_outreach    — personalised message for a prospect
   4. weekly_kpi_review    — reads CSV → AI analysis + top 3 priorities
   5. pivot_or_persist     — decides pivot / persist / kill from metrics
@@ -28,17 +28,18 @@ from mcp.server.fastmcp import FastMCP
 # os.environ and would block load_dotenv() defaults. override=True makes repo .env authoritative.
 load_dotenv(pathlib.Path(__file__).parent.parent / ".env", override=True)
 
-OPENAI_API_KEY  = os.environ.get("OPENAI_API_KEY", "")
-BRAVE_API_KEY   = os.environ.get("BRAVE_SEARCH_API_KEY", "")
-NOTION_API_KEY  = os.environ.get("NOTION_API_KEY", "")
-NOTION_IDEAS_DB      = os.environ.get("NOTION_IDEAS_DB", "")
-NOTION_PROSPECTS_DB  = os.environ.get("NOTION_PROSPECTS_DB", "")
-NOTION_KPIS_DB       = os.environ.get("NOTION_KPIS_DB", "")
-NOTION_DECISIONS_DB  = os.environ.get("NOTION_DECISIONS_DB", "")
-KPI_CSV  = pathlib.Path(__file__).parent.parent / "07-kpis" / "weekly-kpi-data.csv"
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+APOLLO_API_KEY = os.environ.get("APOLLO_API_KEY", "")
+NOTION_API_KEY = os.environ.get("NOTION_API_KEY", "")
+NOTION_IDEAS_DB = os.environ.get("NOTION_IDEAS_DB", "")
+NOTION_PROSPECTS_DB = os.environ.get("NOTION_PROSPECTS_DB", "")
+NOTION_KPIS_DB = os.environ.get("NOTION_KPIS_DB", "")
+NOTION_DECISIONS_DB = os.environ.get("NOTION_DECISIONS_DB", "")
+KPI_CSV = pathlib.Path(__file__).parent.parent / "07-kpis" / "weekly-kpi-data.csv"
 IDEA_CSV = pathlib.Path(__file__).parent.parent / "01-ideas" / "idea-log.csv"
 
 import sys as _sys
+
 _sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from notion_helper import (
     sync_idea as _notion_sync_idea,
@@ -134,37 +135,21 @@ NEXT ACTION (one specific task to do today):
 def research_competitors(niche: str, idea: str) -> str:
     """
     Search the web for competitors in a niche, then summarise gaps and differentiation.
-    Uses Brave Search API for live results, then OpenAI to analyse them.
+    Uses Apollo API for live results, then OpenAI to analyse them.
 
     Args:
         niche: The specific niche (e.g. "solo immigration lawyers US")
         idea: Brief description of your venture idea
     """
-    search_results = ""
 
-    if BRAVE_API_KEY:
-        query = f"{niche} {idea} software service tool competitors pricing"
-        try:
-            r = httpx.get(
-                "https://api.search.brave.com/res/v1/web/search",
-                params={"q": query, "count": 8, "text_decorations": False},
-                headers={
-                    "Accept": "application/json",
-                    "Accept-Encoding": "gzip",
-                    "X-Subscription-Token": BRAVE_API_KEY,
-                },
-                timeout=15,
-            )
-            r.raise_for_status()
-            results = r.json().get("web", {}).get("results", [])
-            lines = []
-            for res in results[:6]:
-                lines.append(f"- {res.get('title', '')} | {res.get('url', '')} | {res.get('description', '')}")
-            search_results = "\n".join(lines)
-        except Exception as e:
-            search_results = f"[Brave search error: {e}]"
+    search_results = ""
+    if APOLLO_API_KEY:
+        # TODO: Implement Apollo API call here
+        search_results = "[Apollo API integration pending]"
     else:
-        search_results = "[BRAVE_SEARCH_API_KEY not set — analysis will be based on training data only]"
+        search_results = (
+            "[APOLLO_API_KEY not set — analysis will be based on training data only]"
+        )
 
     prompt = f"""Analyse competitors for this venture idea.
 
@@ -208,8 +193,12 @@ def generate_outreach(
         max_words: Maximum word count for the message
     """
     service = os.environ.get("YOUR_SERVICE", "AI-powered automation service")
-    unique_value = os.environ.get("YOUR_UNIQUE_VALUE", "saves time and increases revenue")
-    social_proof = os.environ.get("YOUR_SOCIAL_PROOF", "helped similar businesses get results")
+    unique_value = os.environ.get(
+        "YOUR_UNIQUE_VALUE", "saves time and increases revenue"
+    )
+    social_proof = os.environ.get(
+        "YOUR_SOCIAL_PROOF", "helped similar businesses get results"
+    )
     your_name = os.environ.get("YOUR_NAME", "[Your Name]")
 
     prompt = f"""Write a short, personalised {format} for this prospect.
@@ -359,8 +348,20 @@ def log_idea(name: str, description: str, niche: str, notes: str = "") -> str:
         notes: Any extra notes (optional)
     """
     IDEA_CSV.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = ["id", "date", "name", "description", "niche", "pain_score", "wtp_score",
-                  "speed_score", "ai_leverage_score", "total_score", "status", "notes"]
+    fieldnames = [
+        "id",
+        "date",
+        "name",
+        "description",
+        "niche",
+        "pain_score",
+        "wtp_score",
+        "speed_score",
+        "ai_leverage_score",
+        "total_score",
+        "status",
+        "notes",
+    ]
 
     existing = []
     if IDEA_CSV.exists():
@@ -369,11 +370,20 @@ def log_idea(name: str, description: str, niche: str, notes: str = "") -> str:
 
     new_id = len(existing) + 1
     from datetime import date
+
     new_row = {
-        "id": new_id, "date": str(date.today()), "name": name,
-        "description": description, "niche": niche,
-        "pain_score": "", "wtp_score": "", "speed_score": "", "ai_leverage_score": "",
-        "total_score": "", "status": "Raw", "notes": notes
+        "id": new_id,
+        "date": str(date.today()),
+        "name": name,
+        "description": description,
+        "niche": niche,
+        "pain_score": "",
+        "wtp_score": "",
+        "speed_score": "",
+        "ai_leverage_score": "",
+        "total_score": "",
+        "status": "Raw",
+        "notes": notes,
     }
     existing.append(new_row)
 
@@ -436,26 +446,48 @@ def notion_sync(
 
     if rt == "idea":
         return _notion_sync_idea(
-            NOTION_API_KEY, NOTION_IDEAS_DB,
-            name=name, niche=niche, description=description,
-            score=score, status=status or "Raw", notes=notes,
+            NOTION_API_KEY,
+            NOTION_IDEAS_DB,
+            name=name,
+            niche=niche,
+            description=description,
+            score=score,
+            status=status or "Raw",
+            notes=notes,
         )
     elif rt == "prospect":
         return _notion_sync_prospect(
-            NOTION_API_KEY, NOTION_PROSPECTS_DB,
-            name=name, company=company, role=role, industry=industry,
-            pain_point=pain_point, email=email, message=message,
+            NOTION_API_KEY,
+            NOTION_PROSPECTS_DB,
+            name=name,
+            company=company,
+            role=role,
+            industry=industry,
+            pain_point=pain_point,
+            email=email,
+            message=message,
         )
     elif rt == "kpi":
         return _notion_sync_kpi(
-            NOTION_API_KEY, NOTION_KPIS_DB,
-            week_ending=name, outreach=outreach, replies=replies,
-            calls=calls, closed=closed, revenue=revenue, churn=churn, notes=notes,
+            NOTION_API_KEY,
+            NOTION_KPIS_DB,
+            week_ending=name,
+            outreach=outreach,
+            replies=replies,
+            calls=calls,
+            closed=closed,
+            revenue=revenue,
+            churn=churn,
+            notes=notes,
         )
     elif rt == "decision":
         return _notion_sync_decision(
-            NOTION_API_KEY, NOTION_DECISIONS_DB,
-            topic=name, decision=decision, reason=reason, next_action=next_action,
+            NOTION_API_KEY,
+            NOTION_DECISIONS_DB,
+            topic=name,
+            decision=decision,
+            reason=reason,
+            next_action=next_action,
         )
     else:
         return f"Unknown record_type '{record_type}'. Use: idea, prospect, kpi, or decision."
@@ -476,10 +508,10 @@ def notion_read(database: str, limit: int = 10) -> str:
         return "⚠️  NOTION_API_KEY not set in .env."
 
     db_map = {
-        "ideas":      NOTION_IDEAS_DB,
-        "prospects":  NOTION_PROSPECTS_DB,
-        "kpis":       NOTION_KPIS_DB,
-        "decisions":  NOTION_DECISIONS_DB,
+        "ideas": NOTION_IDEAS_DB,
+        "prospects": NOTION_PROSPECTS_DB,
+        "kpis": NOTION_KPIS_DB,
+        "decisions": NOTION_DECISIONS_DB,
     }
     db_id = db_map.get(database.lower().strip(), "")
     if not db_id:

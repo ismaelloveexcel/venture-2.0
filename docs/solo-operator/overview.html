@@ -1,0 +1,1384 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Campaign Dashboard</title>
+  <style>
+    :root {
+      --bg: #f8fbff;
+      --card: #ffffff;
+      --text: #13253a;
+      --muted: #3f5672;
+      --line: #d6e2f1;
+      --accent: #0b7285;
+    }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #edf4ff 0%, var(--bg) 52%, #f3fff8 100%);
+      color: var(--text);
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 { margin: 0 0 6px; }
+    .sub { color: var(--muted); margin: 0 0 12px; font-size: 1rem; }
+    
+    /* Toggle Button Styling */
+    .view-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 12px;
+    }
+    .toggle-btn {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .toggle-btn:hover {
+      color: var(--text);
+    }
+    .toggle-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 10px 0 0;
+      flex-wrap: wrap;
+    }
+    .mini-note {
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin: 0;
+    }
+    .mini-note strong {
+      color: var(--text);
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 6px 20px rgba(13, 23, 37, 0.04);
+    }
+    .card h2 { margin-top: 0; font-size: 1.1rem; }
+    .card h3 { margin: 10px 0 8px; font-size: 1rem; }
+    p, li { line-height: 1.45; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #f0f7ff; }
+    
+    .diagram {
+      margin: 0;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfdff;
+      color: #254056;
+    }
+    
+    /* System Actions (both views) */
+    .system-actions { margin-top: 10px; }
+    .action-step { margin: 8px 0; padding: 8px 10px; background: #fcfeff; border-left: 3px solid #0b7285; font-size: 0.92rem; line-height: 1.5; }
+    .action-step strong { display: block; margin-bottom: 3px; }
+    .action-step em { color: var(--muted); font-style: italic; display: block; margin-top: 4px; font-size: 0.88rem; }
+    
+    /* Operator-specific detailed steps */
+    .tech-step { margin: 10px 0; padding: 10px; background: #fcfeff; border-left: 3px solid #0b7285; border-radius: 4px; }
+    .tech-step-title { font-weight: 600; margin-bottom: 6px; }
+    .tech-detail { margin: 4px 0; font-size: 0.9rem; }
+    .tech-label { color: var(--muted); font-weight: 500; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.02em; display: inline-block; margin-right: 6px; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.85rem; font-weight: 500; }
+    .status-active { background: #e6f9e6; color: #1a5a1a; }
+    .status-pending { background: #fff4e6; color: #664d00; }
+    .status-failed { background: #ffe6e6; color: #7a0000; }
+    
+    /* Client-focused steps */
+    .outcome-step { margin: 10px 0; padding: 10px; background: #f0faf8; border-left: 3px solid #0b7285; border-radius: 4px; }
+    .outcome-step-title { font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .outcome-detail { margin: 4px 0; font-size: 0.9rem; }
+    .outcome-label { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+    
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-bottom: 10px; }
+    .status-pill { border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: #fafdff; }
+    .status-pill .k { display: block; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .status-pill .v { display: block; font-weight: 600; margin-top: 2px; }
+
+    .obs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+      margin: 10px 0 0;
+    }
+    .score-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fafdff;
+    }
+    .score-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--muted);
+      margin: 0 0 6px;
+    }
+    .score-value {
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 0 0 8px;
+    }
+    .score-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 99px;
+      background: #ddebf8;
+      overflow: hidden;
+    }
+    .score-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0b7285 0%, #2f9e44 100%);
+      border-radius: 99px;
+      transition: width 0.2s ease;
+    }
+    .issues-list {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+    .issues-list li {
+      margin: 5px 0;
+    }
+    .mono {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.88rem;
+    }
+    .tag {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+    .tag-ok { background: #eaf8ea; color: #205f20; }
+    .tag-warn { background: #fff5e6; color: #7a5200; }
+    .tag-bad { background: #ffe9e9; color: #7a1010; }
+
+    .component-table-wrap {
+      overflow-x: auto;
+      margin-top: 8px;
+    }
+    .component-table {
+      min-width: 760px;
+      font-size: 0.88rem;
+    }
+    .trend-list {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+    
+    .flow-strip { display: grid; gap: 8px; margin: 10px 0 12px; }
+    .flow-step { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: #f9fcff; display: flex; align-items: center; gap: 8px; font-size: 0.94rem; }
+    .step-num { width: 22px; height: 22px; border-radius: 50%; background: #0b7285; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; }
+    
+    .stages { margin-top: 12px; display: grid; gap: 10px; }
+    .stage { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fcfeff; }
+    .stage h3 { margin: 0 0 8px; font-size: 1rem; }
+    .stage p { margin: 6px 0; }
+    
+    .foot { margin-top: 16px; color: var(--muted); font-size: 0.9rem; }
+    
+    /* Hide/show classes */
+    .operator-view { display: block; }
+    .client-view { display: none; }
+    .shared-view { display: block; }
+    
+    .operator-view.hidden, .client-view.hidden { display: none !important; }
+    .operator-view.visible, .client-view.visible { display: block !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Campaign Dashboard</h1>
+    <p class="sub" id="subtitle-operator">This system finds companies, sends personalized messages on your behalf, tracks responses, and improves results automatically over time.</p>
+    <p class="sub" id="subtitle-client" style="display:none;">Track your outreach campaign results and outcomes at a glance.</p>
+    
+    <!-- View Toggle -->
+    <div class="view-selector">
+      <button class="toggle-btn active" id="btn-operator">Operator View</button>
+      <button class="toggle-btn" id="btn-client">Client View</button>
+    </div>
+
+    <div class="grid">
+      <!-- SHARED: Current Revision Status -->
+      <section class="card shared-view">
+        <h2>Campaign Status</h2>
+        <div class="status-grid">
+          <div class="status-pill"><span class="k">Client</span><span class="v" id="pill-client">loading...</span></div>
+          <div class="status-pill"><span class="k">Run</span><span class="v mono" id="pill-run">loading...</span></div>
+          <div class="status-pill"><span class="k">Trend</span><span class="v" id="pill-trend">loading...</span></div>
+          <div class="status-pill"><span class="k">Health</span><span class="v" id="pill-health">loading...</span></div>
+        </div>
+        <div class="toolbar-row">
+          <p class="mini-note" id="data-note">Waiting for latest run report... <strong>(auto-refresh enabled)</strong></p>
+        </div>
+        <div id="status-operator" class="operator-view">
+          <p><strong>What to focus on now:</strong> test message wording only, keep audience and timing fixed.</p>
+          <p><strong>Decision today:</strong> choose one improvement for the next cycle.</p>
+        </div>
+        <div id="status-client" class="client-view" style="display:none;">
+          <p><strong>Campaign Performance:</strong> Your outreach is stable with medium engagement. Continue with current approach or optimize one element.</p>
+        </div>
+      </section>
+
+      <!-- OPERATOR VIEW: What the System Is Actually Doing (Technical) -->
+      <section class="card operator-view">
+        <h2>System Execution Details</h2>
+        <h3>How the System Works: Technology & Methods</h3>
+        <p>Each stage uses specific tools, data sources, and processing methods. Here's exactly what happens:</p>
+        
+        <div class="system-actions">
+          <div class="tech-step">
+            <div class="tech-step-title">1. Finding Potential Companies</div>
+            <div class="tech-detail"><span class="tech-label">Methods:</span> Web search API, Company database integration (Apollo.io, Hunter.io), LinkedIn scraping</div>
+            <div class="tech-detail"><span class="tech-label">Data sources:</span> Public company directories, industry databases, news feeds</div>
+            <div class="tech-detail"><span class="tech-label">Status:</span> <span class="status-badge status-active">🟢 Active</span></div>
+          </div>
+          
+          <div class="tech-step">
+            <div class="tech-step-title">2. Enriching Company Intelligence</div>
+            <div class="tech-detail"><span class="tech-label">Methods:</span> Website content scraping, Company data API enrichment, Public records lookup</div>
+            <div class="tech-detail"><span class="tech-label">Processing:</span> Extract industry, size, growth signals, decision-maker identification</div>
+            <div class="tech-detail"><span class="tech-label">Status:</span> <span class="status-badge status-active">🟢 Active</span></div>
+          </div>
+          
+          <div class="tech-step">
+            <div class="tech-step-title">3. Filtering & Scoring Leads</div>
+            <div class="tech-detail"><span class="tech-label">Method:</span> Internal scoring logic based on fit criteria</div>
+            <div class="tech-detail"><span class="tech-label">Rules applied:</span> ICP matching, intent signals, company maturity filters</div>
+            <div class="tech-detail"><span class="tech-label">Status:</span> <span class="status-badge status-active">🟢 Active</span></div>
+          </div>
+          
+          <div class="tech-step">
+            <div class="tech-step-title">4. Generating Personalized Messages</div>
+            <div class="tech-detail"><span class="tech-label">Method:</span> AI-powered message generation with template personalization</div>
+            <div class="tech-detail"><span class="tech-label">Input factors:</span> Company context, decision-maker role, industry, growth signals, offer parameters</div>
+            <div class="tech-detail"><span class="tech-label">Status:</span> <span class="status-badge status-active">🟢 Active</span></div>
+          </div>
+          
+          <div class="tech-step">
+            <div class="tech-step-title">5. Sending Messages</div>
+            <div class="tech-detail"><span class="tech-label">Method:</span> Email delivery service (Resend.com), SMTP gateway, rate limiting</div>
+            <div class="tech-detail"><span class="tech-label">Delivery control:</span> Throttled sends to avoid spam filters, authentication (SPF/DKIM)</div>
+            <div class="tech-detail"><span class="tech-label">Status:</span> <span class="status-badge status-active">🟢 Active</span></div>
+          </div>
+          
+          <div class="tech-step">
+            <div class="tech-step-title">6. Tracking Engagement</div>
+            <div class="tech-detail"><span class="tech-label">Methods:</span> Email open tracking, click monitoring, reply detection via webhook</div>
+            <div class="tech-detail"><span class="tech-label">Data captured:</span> Open time, engagement patterns, manual reply sync</div>
+            <div class="tech-detail"><span class="tech-label">Status:</span> <span class="status-badge status-active">🟢 Active</span></div>
+          </div>
+          
+          <div class="tech-step">
+            <div class="tech-step-title">7. Improving Future Campaigns</div>
+            <div class="tech-detail"><span class="tech-label">Methods:</span> Reply intent analysis, A/B performance metrics, Success rate tracking</div>
+            <div class="tech-detail"><span class="tech-label">Learning:</span> Previous cycle results inform wording, audience, and timing decisions</div>
+            <div class="tech-detail"><span class="tech-label">Status:</span> <span class="status-badge status-pending">🟡 Pending optimization</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card operator-view">
+        <h2>System Observability</h2>
+        <p>Live scorecards and execution status from the latest <span class="mono">run_report.json</span>.</p>
+
+        <div class="obs-grid">
+          <div class="score-card">
+            <p class="score-label">System Score</p>
+            <p class="score-value" id="score-system">--/100</p>
+            <div class="score-track"><div class="score-fill" id="fill-system" style="width:0%"></div></div>
+          </div>
+          <div class="score-card">
+            <p class="score-label">Execution Health</p>
+            <p class="score-value" id="score-execution">--/25</p>
+            <div class="score-track"><div class="score-fill" id="fill-execution" style="width:0%"></div></div>
+          </div>
+          <div class="score-card">
+            <p class="score-label">Data Quality</p>
+            <p class="score-value" id="score-data-quality">--/25</p>
+            <div class="score-track"><div class="score-fill" id="fill-data-quality" style="width:0%"></div></div>
+          </div>
+          <div class="score-card">
+            <p class="score-label">Messaging Health</p>
+            <p class="score-value" id="score-messaging">--/25</p>
+            <div class="score-track"><div class="score-fill" id="fill-messaging" style="width:0%"></div></div>
+          </div>
+          <div class="score-card">
+            <p class="score-label">Infrastructure Health</p>
+            <p class="score-value" id="score-infrastructure">--/25</p>
+            <div class="score-track"><div class="score-fill" id="fill-infrastructure" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <h3>Top Issues</h3>
+        <ol class="issues-list" id="issues-list">
+          <li>No current issues detected.</li>
+        </ol>
+
+        <h3>Component Status</h3>
+        <div class="component-table-wrap">
+          <table class="component-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Status</th>
+                <th>Error rate</th>
+                <th>Latency (ms)</th>
+                <th>Dependencies</th>
+                <th>Output summary</th>
+              </tr>
+            </thead>
+            <tbody id="component-table-body">
+              <tr><td colspan="6">Waiting for run data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Recent Trend (last 10 runs)</h3>
+        <ul class="trend-list" id="trend-list">
+          <li>No run history available yet.</li>
+        </ul>
+      </section>
+
+      <section class="card operator-view">
+        <h2>Runtime Governance Control Surface</h2>
+        <p>Backend-authoritative causal governance state. No browser-side truth mutation.</p>
+
+        <h3>System Trust Center</h3>
+        <div class="status-grid">
+          <div class="status-pill"><span class="k">System Trust</span><span class="v" id="gov-system-trust">--</span></div>
+          <div class="status-pill"><span class="k">Confidence</span><span class="v" id="gov-confidence">--</span></div>
+          <div class="status-pill"><span class="k">Instability</span><span class="v" id="gov-instability">--</span></div>
+          <div class="status-pill"><span class="k">Blast Radius</span><span class="v" id="gov-blast-radius">--</span></div>
+          <div class="status-pill"><span class="k">Active Regressions</span><span class="v" id="gov-regression-count">--</span></div>
+          <div class="status-pill"><span class="k">Misleading Modules</span><span class="v" id="gov-misleading-count">--</span></div>
+        </div>
+
+        <h3>Decision Safety</h3>
+        <ul class="issues-list" id="decision-safety-list">
+          <li>No decision safety data available yet.</li>
+        </ul>
+
+        <h3>Root Cause Intelligence</h3>
+        <ul class="issues-list" id="root-cause-list">
+          <li>No root-cause event detected yet.</li>
+        </ul>
+
+        <h3>Causal Impact Graph</h3>
+        <ul class="issues-list" id="causal-impact-list">
+          <li>No causal impact paths available yet.</li>
+        </ul>
+
+        <h3>Regression Timeline</h3>
+        <ul class="trend-list" id="regression-timeline-list">
+          <li>No regression events recorded.</li>
+        </ul>
+
+        <h3>Module Governance Grid</h3>
+        <div class="component-table-wrap">
+          <table class="component-table">
+            <thead>
+              <tr>
+                <th>Module</th>
+                <th>State</th>
+                <th>Usefulness</th>
+                <th>Trust</th>
+                <th>Stability</th>
+                <th>Blast Radius</th>
+                <th>Root Cause</th>
+                <th>Downstream Risk</th>
+              </tr>
+            </thead>
+            <tbody id="governance-grid-body">
+              <tr><td colspan="8">Waiting for governance data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- CLIENT VIEW: What We're Delivering (Outcome-Focused) -->
+      <section class="card client-view" style="display:none;">
+        <h2>What You're Getting</h2>
+        <h3>Campaign Results & Outcomes</h3>
+        <p>Here's what happens at each stage of your campaign:</p>
+        
+        <div class="system-actions">
+          <div class="outcome-step">
+            <div class="outcome-step-title">1. Finding Companies for You</div>
+            <div class="outcome-detail"><span class="outcome-label">What happens:</span> We identify and compile companies that match your ideal customer profile.</div>
+            <div class="outcome-detail"><span class="outcome-label">What you receive:</span> A list of pre-screened prospects ready for outreach.</div>
+            <div class="outcome-detail"><span class="outcome-label">Your benefit:</span> No manual list-building—focus on strategy instead.</div>
+          </div>
+          
+          <div class="outcome-step">
+            <div class="outcome-step-title">2. Understanding Each Company</div>
+            <div class="outcome-detail"><span class="outcome-label">What happens:</span> We research each company's background, industry, size, and current situation.</div>
+            <div class="outcome-detail"><span class="outcome-label">What you receive:</span> Company profiles with key context for each prospect.</div>
+            <div class="outcome-detail"><span class="outcome-label">Your benefit:</span> Your outreach can reference specific details—higher relevance, higher response rates.</div>
+          </div>
+          
+          <div class="outcome-step">
+            <div class="outcome-step-title">3. Filtering for Best Fit</div>
+            <div class="outcome-detail"><span class="outcome-label">What happens:</span> We remove unlikely matches so effort focuses on high-potential companies.</div>
+            <div class="outcome-detail"><span class="outcome-label">What you receive:</span> A shorter, higher-quality shortlist of opportunities.</div>
+            <div class="outcome-detail"><span class="outcome-label">Your benefit:</span> Better ROI on every message sent.</div>
+          </div>
+          
+          <div class="outcome-step">
+            <div class="outcome-step-title">4. Creating Custom Messages</div>
+            <div class="outcome-detail"><span class="outcome-label">What happens:</span> We write a unique message for each company addressing their specific situation.</div>
+            <div class="outcome-detail"><span class="outcome-label">What you receive:</span> Ready-to-send, personalized outreach messages.</div>
+            <div class="outcome-detail"><span class="outcome-label">Your benefit:</span> Personalized messaging without the time investment.</div>
+          </div>
+          
+          <div class="outcome-step">
+            <div class="outcome-step-title">5. Delivering Your Messages</div>
+            <div class="outcome-detail"><span class="outcome-label">What happens:</span> Messages are sent in a controlled, professional manner.</div>
+            <div class="outcome-detail"><span class="outcome-label">What you receive:</span> Confirmation of delivery and engagement tracking.</div>
+            <div class="outcome-detail"><span class="outcome-label">Your benefit:</span> Consistent delivery without manual sending overhead.</div>
+          </div>
+          
+          <div class="outcome-step">
+            <div class="outcome-step-title">6. Monitoring Responses</div>
+            <div class="outcome-detail"><span class="outcome-label">What happens:</span> We track who opened your messages and who replied.</div>
+            <div class="outcome-detail"><span class="outcome-label">What you receive:</span> Complete response summary and engagement report.</div>
+            <div class="outcome-detail"><span class="outcome-label">Your benefit:</span> Clear visibility into campaign performance and hot leads.</div>
+          </div>
+          
+          <div class="outcome-step">
+            <div class="outcome-step-title">7. Improving Next Campaign</div>
+            <div class="outcome-detail"><span class="outcome-label">What happens:</span> Results from this cycle inform improvements for the next one.</div>
+            <div class="outcome-detail"><span class="outcome-label">What you receive:</span> Data-backed recommendations for the next campaign.</div>
+            <div class="outcome-detail"><span class="outcome-label">Your benefit:</span> Each campaign gets better based on what actually works.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- OPERATOR VIEW: Detailed Execution Flow & Stages -->
+      <section class="card operator-view">
+        <h2>Execution Flow & Decision Points</h2>
+        <p>This shows the complete cycle with what the system does at each stage and what decisions you make.</p>
+        
+        <div class="flow-strip">
+          <div class="flow-step"><span class="step-num">1</span><span>Finding potential clients</span></div>
+          <div class="flow-step"><span class="step-num">2</span><span>Understanding each company</span></div>
+          <div class="flow-step"><span class="step-num">3</span><span>Selecting the best opportunities</span></div>
+          <div class="flow-step"><span class="step-num">4</span><span>Preparing personalized messages</span></div>
+          <div class="flow-step"><span class="step-num">5</span><span>Sending the messages</span></div>
+          <div class="flow-step"><span class="step-num">6</span><span>Watching for replies</span></div>
+          <div class="flow-step"><span class="step-num">7</span><span>Improving the next round</span></div>
+        </div>
+        
+        <div class="mermaid diagram">flowchart LR
+    A[Find potential companies] --> B[Understand each company]
+    B --> C[Select best opportunities]
+    C --> D[Prepare messages]
+    D --> E[Send messages]
+    E --> F[Track responses]
+    F --> G[Improve next cycle]
+    G --> A</div>
+        
+        <div class="stages">
+          <article class="stage">
+            <h3>1. Finding potential clients</h3>
+            <p><strong>System action:</strong> The system queries company databases and searches for matching prospects using configured filters.</p>
+            <p><strong>Output:</strong> A candidate list of companies to review.</p>
+            <p><strong>Your decision:</strong> Remove obvious bad-fit companies before proceeding.</p>
+          </article>
+          
+          <article class="stage">
+            <h3>2. Understanding each company</h3>
+            <p><strong>System action:</strong> The system enriches each prospect with company data, industry classification, and growth signals.</p>
+            <p><strong>Output:</strong> A profile for each company with key context.</p>
+            <p><strong>Your decision:</strong> Spot-check profiles to confirm relevance to your offer.</p>
+          </article>
+          
+          <article class="stage">
+            <h3>3. Selecting the best opportunities</h3>
+            <p><strong>System action:</strong> The system applies scoring logic to rank companies by fit and removes weak matches.</p>
+            <p><strong>Output:</strong> A shortlist of highest-potential prospects.</p>
+            <p><strong>Your decision:</strong> Confirm this shortlist still matches your current ideal customer.</p>
+          </article>
+          
+          <article class="stage">
+            <h3>4. Preparing personalized messages</h3>
+            <p><strong>System action:</strong> The system generates customized messages for each prospect using AI and company context.</p>
+            <p><strong>Output:</strong> Ready-to-send personalized messages.</p>
+            <p><strong>Your decision:</strong> Review sample messages; request revisions if needed.</p>
+          </article>
+          
+          <article class="stage">
+            <h3>5. Sending the messages</h3>
+            <p><strong>System action:</strong> The system sends messages through email delivery service at a controlled rate.</p>
+            <p><strong>Output:</strong> Delivery confirmation and send log.</p>
+            <p><strong>Your decision:</strong> Let the full cycle complete before evaluating results.</p>
+          </article>
+          
+          <article class="stage">
+            <h3>6. Watching for replies</h3>
+            <p><strong>System action:</strong> The system monitors opens, clicks, and replies automatically.</p>
+            <p><strong>Output:</strong> Complete engagement report and response summary.</p>
+            <p><strong>Your decision:</strong> Identify which prospects to follow up with based on engagement.</p>
+          </article>
+          
+          <article class="stage">
+            <h3>7. Improving the next round</h3>
+            <p><strong>System action:</strong> The system analyzes results and generates improvement recommendations.</p>
+            <p><strong>Output:</strong> Data-backed suggestions for the next campaign.</p>
+            <p><strong>Your decision:</strong> Choose one element to improve and repeat.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- CLIENT VIEW: Campaign Journey (Simplified) -->
+      <section class="card client-view" style="display:none;">
+        <h2>Your Campaign Journey</h2>
+        <p>Here's how your outreach campaign unfolds:</p>
+        
+        <div class="flow-strip">
+          <div class="flow-step"><span class="step-num">1</span><span>Find</span></div>
+          <div class="flow-step"><span class="step-num">2</span><span>Research</span></div>
+          <div class="flow-step"><span class="step-num">3</span><span>Filter</span></div>
+          <div class="flow-step"><span class="step-num">4</span><span>Create</span></div>
+          <div class="flow-step"><span class="step-num">5</span><span>Send</span></div>
+          <div class="flow-step"><span class="step-num">6</span><span>Track</span></div>
+          <div class="flow-step"><span class="step-num">7</span><span>Improve</span></div>
+        </div>
+        
+        <div class="mermaid diagram">flowchart LR
+    A[We find companies] --> B[We research them]
+    B --> C[We filter for fit]
+    C --> D[We write messages]
+    D --> E[We send them]
+    E --> F[We track responses]
+    F --> G[We improve next time]
+    G --> A</div>
+      </section>
+
+      <!-- OPERATOR VIEW: Your Responsibilities -->
+      <section class="card operator-view">
+        <h2>Your Responsibilities</h2>
+        <ul>
+          <li><strong>You choose:</strong> The audience (company list), the message (offer and tone), and the timing (campaign schedule).</li>
+          <li><strong>You review:</strong> Campaign results, engagement metrics, and system recommendations.</li>
+          <li><strong>You decide:</strong> One improvement to test in the next cycle (change wording, refine audience, or adjust timing).</li>
+          <li><strong>The system handles:</strong> All repetitive execution work—research, personalization, delivery, and tracking.</li>
+        </ul>
+      </section>
+
+      <!-- OPERATOR VIEW: What Gets Created (Full) -->
+      <section class="card operator-view">
+        <h2>Artifacts & Outputs</h2>
+        <p><strong>Decision-ready files you receive after each run:</strong></p>
+        <table>
+          <thead>
+            <tr>
+              <th>Artifact</th>
+              <th>When</th>
+              <th>Purpose</th>
+              <th>What to do</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Campaign activity summary</td>
+              <td>During & after run</td>
+              <td>Shows count of prospects, sends, opens, replies</td>
+              <td>Use as baseline before making changes</td>
+            </tr>
+            <tr>
+              <td>Cycle-over-cycle comparison</td>
+              <td>After run</td>
+              <td>Shows trend (improved, declined, stable)</td>
+              <td>Decide: keep approach or revise one element</td>
+            </tr>
+            <tr>
+              <td>Campaign health snapshot</td>
+              <td>After run</td>
+              <td>Quick signal of health (score out of 100)</td>
+              <td>Prioritize fixes if health is weak</td>
+            </tr>
+            <tr>
+              <td>Value summary</td>
+              <td>After run</td>
+              <td>Plain-language explanation of results</td>
+              <td>Share with stakeholders or clients</td>
+            </tr>
+            <tr>
+              <td>Next actions checklist</td>
+              <td>After run</td>
+              <td>Prioritized list of suggested improvements</td>
+              <td>Work top-down; close highest-impact action first</td>
+            </tr>
+            <tr>
+              <td>Client-ready dashboard</td>
+              <td>After run</td>
+              <td>Single-page HTML for client presentations</td>
+              <td>Share directly in client check-ins</td>
+            </tr>
+            <tr>
+              <td>20+ support files</td>
+              <td>After run</td>
+              <td>Detailed logs, metadata, analysis artifacts</td>
+              <td>Usually not needed; available for troubleshooting</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- CLIENT VIEW: Results Summary (Simplified) -->
+      <section class="card client-view" style="display:none;">
+        <h2>What You Receive</h2>
+        <p><strong>After each campaign:</strong></p>
+        <table>
+          <thead>
+            <tr>
+              <th>Deliverable</th>
+              <th>When</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Campaign results summary</td>
+              <td>After campaign completes</td>
+              <td>Number of contacts, engagement, and responses</td>
+            </tr>
+            <tr>
+              <td>Performance report</td>
+              <td>After campaign completes</td>
+              <td>How this campaign performed vs. previous ones</td>
+            </tr>
+            <tr>
+              <td>Response list</td>
+              <td>After campaign completes</td>
+              <td>Prospects who engaged and replied</td>
+            </tr>
+            <tr>
+              <td>Recommendations</td>
+              <td>After campaign completes</td>
+              <td>What to try differently in the next campaign</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- OPERATOR VIEW: When You Make Changes -->
+      <section class="card operator-view">
+        <h2>When You Make Changes</h2>
+        <p>One thing at a time. Here's what each change affects:</p>
+        <ul>
+          <li><strong>Message change:</strong> Updates personalization quality and expected response rates; requires regenerating all messages and resending.</li>
+          <li><strong>Audience change:</strong> Updates prospect count, reach, and trend direction; changes the shortlist and all downstream data.</li>
+          <li><strong>Timing change:</strong> Updates delivery schedule and response curve; may affect engagement metrics based on when prospects see messages.</li>
+          <li><strong>Best practice:</strong> Change one variable per cycle so you can measure what actually worked.</li>
+        </ul>
+      </section>
+
+      <!-- OPERATOR VIEW: Revision & Decision Map -->
+      <section class="card operator-view">
+        <h2>Revision Decision Map</h2>
+        <p>This shows where you make decisions and what each choice triggers in the system:</p>
+        <div class="mermaid diagram">flowchart TD
+    A["Review Results<br/>(End of Cycle)"] --> B{"Revision<br/>Decision"}
+    B -->|No changes| C["Run Next Cycle<br/>(Same settings)"]
+    B -->|Message| D["Update Message<br/>Regenerate All Messages"]
+    B -->|Audience| E["Update Shortlist<br/>Refresh Totals & Trends"]
+    B -->|Timing| F["Adjust Schedule<br/>Refresh Response Timing"]
+    D --> G["New Cycle Begins"]
+    E --> G
+    F --> G</div>
+      </section>
+
+      <!-- SHARED: Business Flow Summary -->
+      <section class="card shared-view">
+        <h2>Campaign Rhythm</h2>
+        <ol>
+          <li><strong>Find and shortlist</strong> companies that match your ideal customer.</li>
+          <li><strong>Personalize messages</strong> based on research and context.</li>
+          <li><strong>Track engagement</strong> and responses automatically.</li>
+          <li><strong>Apply one improvement</strong> based on results.</li>
+          <li><strong>Repeat</strong> with better targeting or messaging.</li>
+        </ol>
+      </section>
+    </div>
+
+    <p class="foot">This page is auto-updated from your latest campaign run.</p>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+      if (window.mermaid) {
+        window.mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+      }
+    </script>
+    <script>
+      const COMPONENT_REGISTRY = {
+        stage_1_prospecting: {
+          name: "Finding Companies",
+          scoring_category: "data_quality",
+          requires_review: false,
+          retry_policy: "auto",
+          input_source: "web_search + apollo + hunter",
+          processing_method: "entity_discovery",
+          failure_severity: "high",
+          hard_dependencies: [],
+          soft_dependencies: []
+        },
+        stage_2_enrichment: {
+          name: "Company Intelligence Enrichment",
+          scoring_category: "data_quality",
+          requires_review: false,
+          retry_policy: "auto",
+          input_source: "stage_1_prospecting",
+          processing_method: "enrichment",
+          failure_severity: "high",
+          hard_dependencies: ["stage_1_prospecting"],
+          soft_dependencies: []
+        },
+        stage_3_scoring: {
+          name: "Filtering & Scoring Leads",
+          scoring_category: "execution_health",
+          requires_review: false,
+          retry_policy: "auto",
+          input_source: "stage_2_enrichment",
+          processing_method: "fit_scoring",
+          failure_severity: "medium",
+          hard_dependencies: ["stage_2_enrichment"],
+          soft_dependencies: []
+        },
+        stage_4_message_generation: {
+          name: "Generating Personalized Messages",
+          scoring_category: "messaging_health",
+          requires_review: true,
+          retry_policy: "manual",
+          input_source: "stage_3_scoring",
+          processing_method: "llm_personalization",
+          failure_severity: "high",
+          hard_dependencies: ["stage_3_scoring"],
+          soft_dependencies: []
+        },
+        stage_5_delivery: {
+          name: "Sending Messages",
+          scoring_category: "infrastructure_health",
+          requires_review: false,
+          retry_policy: "auto",
+          input_source: "stage_4_message_generation",
+          processing_method: "email_delivery",
+          failure_severity: "high",
+          hard_dependencies: ["stage_4_message_generation"],
+          soft_dependencies: []
+        },
+        stage_6_tracking: {
+          name: "Tracking Engagement",
+          scoring_category: "execution_health",
+          requires_review: false,
+          retry_policy: "auto",
+          input_source: "stage_5_delivery",
+          processing_method: "engagement_tracking",
+          failure_severity: "medium",
+          hard_dependencies: ["stage_5_delivery"],
+          soft_dependencies: ["stage_2_enrichment"]
+        },
+        stage_7_optimization: {
+          name: "Improving Future Campaigns",
+          scoring_category: "execution_health",
+          requires_review: true,
+          retry_policy: "manual",
+          input_source: "stage_6_tracking",
+          processing_method: "optimization_analysis",
+          failure_severity: "medium",
+          hard_dependencies: ["stage_6_tracking"],
+          soft_dependencies: ["stage_3_scoring"]
+        }
+      };
+
+      let isLoadingReport = false;
+      let lastGoodReport = null;
+
+      function getByPath(obj, path, fallback) {
+        const value = path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj);
+        return value === undefined || value === null ? fallback : value;
+      }
+
+      function clampScore(value, maxValue) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return 0;
+        return Math.max(0, Math.min(maxValue, n));
+      }
+
+      function normalizeNullableScore(value, maxValue) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return null;
+        return Math.max(0, Math.min(maxValue, n));
+      }
+
+      function parseTimestampToMs(value) {
+        if (!value) return null;
+        const ms = Date.parse(String(value));
+        return Number.isFinite(ms) ? ms : null;
+      }
+
+      function healthLabel(score) {
+        if (!Number.isFinite(score)) return "UNAVAILABLE";
+        if (score >= 80) return "STRONG";
+        if (score >= 60) return "MEDIUM";
+        if (score >= 40) return "WATCH";
+        return "WEAK";
+      }
+
+      function statusTagClass(status) {
+        if (["COMPLETED", "ACTIVE", "OK", "HEALTHY"].includes(status)) return "tag tag-ok";
+        if (["DEGRADED", "PENDING", "RUNNING", "UNKNOWN", "BLOCKED", "STALE", "NEEDS_REVIEW", "DISABLED", "UNSTABLE", "LOW_CONFIDENCE", "MISLEADING"].includes(status)) return "tag tag-warn";
+        return "tag tag-bad";
+      }
+
+      function applyStaleness(component, snapshotTimestampMs) {
+        if (component && component.authoritative) {
+          return component;
+        }
+        const status = String(component.status || "UNKNOWN").toUpperCase();
+        if (["FAILED", "BLOCKED", "NEEDS_REVIEW"].includes(status)) {
+          return component;
+        }
+
+        let mins = Number(component.stalenessMinutes);
+        if (!Number.isFinite(mins) && snapshotTimestampMs && component.lastUpdatedMs) {
+          mins = Math.max(0, Math.floor((snapshotTimestampMs - component.lastUpdatedMs) / 60000));
+        }
+
+        if (!Number.isFinite(mins)) {
+          return component;
+        }
+
+        component.stalenessMinutes = mins;
+        if (mins > 1440) {
+          component.status = "DISABLED";
+        } else if (mins > 360) {
+          component.status = "UNKNOWN";
+        } else if (mins > 30) {
+          component.status = "STALE";
+        }
+        return component;
+      }
+
+      function resolveDependencyStates(components) {
+        const byId = Object.fromEntries(components.map((c) => [c.id, c]));
+        const hardBlockStatuses = ["FAILED", "BLOCKED", "UNKNOWN", "DISABLED"];
+        const softDegradeStatuses = ["FAILED", "UNKNOWN", "DISABLED", "STALE"];
+
+        components.forEach((component) => {
+          if (component && component.authoritative) {
+            return;
+          }
+          const registry = COMPONENT_REGISTRY[component.id];
+          if (!registry) return;
+
+          const hardFailed = registry.hard_dependencies.some((dep) => {
+            const depStatus = String(byId[dep]?.status || "UNKNOWN").toUpperCase();
+            return hardBlockStatuses.includes(depStatus);
+          });
+
+          const softFailed = registry.soft_dependencies.some((dep) => {
+            const depStatus = String(byId[dep]?.status || "UNKNOWN").toUpperCase();
+            return softDegradeStatuses.includes(depStatus);
+          });
+
+          if (hardFailed) {
+            component.status = "BLOCKED";
+            return;
+          }
+
+          if (
+            softFailed &&
+            ["COMPLETED", "ACTIVE", "OK"].includes(String(component.status).toUpperCase())
+          ) {
+            component.status = "DEGRADED";
+          }
+        });
+
+        return components;
+      }
+
+      function normalizeComponents(rawComponents) {
+        const byId = {};
+        if (Array.isArray(rawComponents)) {
+          rawComponents.forEach((comp) => {
+            if (comp && comp.id) byId[comp.id] = comp;
+          });
+        } else if (rawComponents && typeof rawComponents === 'object') {
+          Object.keys(rawComponents).forEach((id) => {
+            byId[id] = rawComponents[id];
+          });
+        }
+
+        return Object.keys(COMPONENT_REGISTRY).map((id) => {
+          const registry = COMPONENT_REGISTRY[id];
+          const live = byId[id] || {};
+          const metrics = live.metrics || {};
+          const outputSummary = live.output_summary || metrics.output_summary || "No output summary available yet.";
+          const lastUpdatedRaw = live.last_updated || live.last_updated_utc || metrics.last_updated || metrics.last_updated_utc;
+          const lastUpdatedMs = parseTimestampToMs(lastUpdatedRaw);
+          return {
+            id,
+            name: live.name || registry.name,
+            status: String(live.status || "UNKNOWN").toUpperCase(),
+            errorRate: Number(metrics.error_rate || live.error_rate || 0),
+            latencyMs: Number(metrics.latency_ms || live.latency_ms || 0),
+            outputSummary,
+            dependencies: [...registry.hard_dependencies, ...registry.soft_dependencies],
+            stalenessMinutes: Number(live.staleness_minutes ?? live.stalenessMinutes ?? metrics.staleness_minutes),
+            lastUpdatedMs,
+            scoringCategory: registry.scoring_category,
+            requiresReview: Boolean(registry.requires_review),
+            authoritative: false
+          };
+        });
+      }
+
+      function normalizeGovernanceComponents(governance, snapshotTimestampMs) {
+        const rows = Array.isArray(governance?.module_governance_grid)
+          ? governance.module_governance_grid
+          : [];
+        if (!rows.length) {
+          return null;
+        }
+
+        return Object.keys(COMPONENT_REGISTRY).map((id) => {
+          const registry = COMPONENT_REGISTRY[id];
+          const live = rows.find((row) => row && row.id === id) || {};
+          const lastUpdatedRaw = governance.generated_at_utc;
+          const lastUpdatedMs = parseTimestampToMs(lastUpdatedRaw) || snapshotTimestampMs;
+          const status = String(
+            live.runtime_state || live.resolved_state || live.runtime_status || live.status || "UNKNOWN"
+          ).toUpperCase();
+          return {
+            id,
+            name: live.name || registry.name,
+            status,
+            errorRate: 0,
+            latencyMs: 0,
+            outputSummary:
+              live.root_cause
+                ? `Root cause: ${live.root_cause}`
+                : (live.evidence_quality || "No backend narrative available."),
+            dependencies: [
+              ...((live.dependencies && live.dependencies.hard) || registry.hard_dependencies || []),
+              ...((live.dependencies && live.dependencies.soft) || registry.soft_dependencies || [])
+            ],
+            stalenessMinutes: Number.isFinite(Number(governance?.telemetry_integrity?.age_minutes))
+              ? Number(governance.telemetry_integrity.age_minutes)
+              : null,
+            lastUpdatedMs,
+            scoringCategory: live.scoring_category || registry.scoring_category,
+            requiresReview: Boolean(registry.requires_review),
+            authoritative: true,
+            usefulnessScore: normalizeNullableScore(live.usefulness_score, 100),
+            confidenceScore: normalizeNullableScore(live.confidence_score ?? live.confidence, 100),
+            blastRadius: normalizeNullableScore(live.blast_radius, 100),
+            degradedBy: Array.isArray(live.degraded_by) ? live.degraded_by : [],
+            regressionEvents: Array.isArray(live.regression_events) ? live.regression_events : [],
+            trustScore: normalizeNullableScore(live.trust_score, 100),
+            stabilityScore: normalizeNullableScore(live.stability_score, 100),
+            rootCause: live.root_cause || "",
+            downstreamRisk: normalizeNullableScore(live.downstream_impact_score, 100)
+          };
+        });
+      }
+
+      function normalizeReport(raw) {
+        const scores = getByPath(raw, "outbound.system_observability.scores", {}) || getByPath(raw, "system_observability.scores", {});
+        const governance = getByPath(raw, "outbound.runtime_governance", null) || getByPath(raw, "runtime_governance", null);
+        const componentsRaw = getByPath(raw, "outbound.system_observability.components", null) || getByPath(raw, "system_observability.components", null);
+        const issuesRaw = getByPath(raw, "outbound.system_observability.top_issues", null) || getByPath(raw, "system_observability.top_issues", null);
+        const historyRaw = getByPath(raw, "outbound.system_observability.run_history", null) || getByPath(raw, "run_history", []);
+
+        const systemScore = normalizeNullableScore(
+          getByPath(governance, "executive_health.trust_score", null) ?? scores.system_score ?? getByPath(raw, "system_score", null),
+          100
+        );
+        const executionHealth = normalizeNullableScore(scores.execution_health, 25);
+        const dataQuality = normalizeNullableScore(scores.data_quality, 25);
+        const messagingHealth = normalizeNullableScore(scores.messaging_health, 25);
+        const infrastructureHealth = normalizeNullableScore(scores.infrastructure_health, 25);
+
+        const governanceIssues = Array.isArray(getByPath(governance, "regression_center.top_regressions", null))
+          ? getByPath(governance, "regression_center.top_regressions", []).map((row, index) => ({
+              title: `${row.module_id || `module_${index + 1}`}: ${row.state || 'UNKNOWN'}`,
+              impact_score: Number(row.blast_radius || 0)
+            }))
+          : [];
+
+        const issues = governanceIssues.length
+          ? governanceIssues
+          : (Array.isArray(issuesRaw)
+          ? issuesRaw
+          : (Array.isArray(raw.errors) ? raw.errors.map((err, index) => ({
+              title: typeof err === 'string' ? err : (err && err.message) || `Issue ${index + 1}`,
+              impact_score: 10 - index
+            })) : []));
+
+        const snapshotTimestampMs = parseTimestampToMs(raw.timestamp_utc || raw.timestamp || null) || Date.now();
+        const governanceComponents = normalizeGovernanceComponents(governance, snapshotTimestampMs);
+        const components = resolveDependencyStates(
+          (governanceComponents || normalizeComponents(componentsRaw)).map((component) => applyStaleness(component, snapshotTimestampMs))
+        );
+        const governanceHistory = Array.isArray(getByPath(governance, "change_impact_timeline.points", null))
+          ? getByPath(governance, "change_impact_timeline.points", [])
+          : null;
+        const runHistory = governanceHistory
+          ? governanceHistory.slice(-10).map((row) => ({
+              timestamp: row.timestamp_utc,
+              system_score: Number(row.trust_score || 0)
+            }))
+          : (Array.isArray(historyRaw) ? historyRaw.slice(-10) : []);
+
+        const clientId = String(getByPath(raw, "outbound.cohort_metadata.cohort_id", "acme-demo"));
+        const runId = String(raw.run_id || getByPath(raw, "outbound.cohort_metadata.run_id", "unknown"));
+        const trend = String(
+          getByPath(governance, "executive_health.system_trend", null) ||
+          getByPath(raw, "outbound.system_observability.trend", getByPath(raw, "outbound.policy_snapshot.mode", "STABLE"))
+        ).toUpperCase();
+        const timestamp = String(raw.timestamp_utc || "unknown");
+
+        return {
+          clientId,
+          runId,
+          trend,
+          timestamp,
+          systemScore,
+          executionHealth,
+          dataQuality,
+          messagingHealth,
+          infrastructureHealth,
+          issues,
+          components,
+          runHistory,
+          governance
+        };
+      }
+
+      function setScore(idSuffix, score, maxScore) {
+        const scoreEl = document.getElementById(`score-${idSuffix}`);
+        const fillEl = document.getElementById(`fill-${idSuffix}`);
+        if (!scoreEl || !fillEl) return;
+        if (!Number.isFinite(score)) {
+          scoreEl.textContent = `--/${maxScore}`;
+          fillEl.style.width = "0%";
+          return;
+        }
+        scoreEl.textContent = `${score}/${maxScore}`;
+        fillEl.style.width = `${Math.round((score / maxScore) * 100)}%`;
+      }
+
+      function renderIssues(issues) {
+        const list = document.getElementById('issues-list');
+        if (!list) return;
+        if (!issues.length) {
+          list.innerHTML = '<li>No critical issues detected in the latest snapshot.</li>';
+          return;
+        }
+        const topThree = issues
+          .slice()
+          .sort((a, b) => Number(b.impact_score || 0) - Number(a.impact_score || 0))
+          .slice(0, 3);
+        list.innerHTML = topThree
+          .map((issue) => {
+            const title = issue.title || issue.issue || issue.error_message || 'Unspecified issue';
+            const impact = Number(issue.impact_score || 0);
+            return `<li>${title}<span class="tag ${impact >= 8 ? 'tag-bad' : 'tag-warn'}">impact ${impact}</span></li>`;
+          })
+          .join('');
+      }
+
+      function renderComponents(components) {
+        const body = document.getElementById('component-table-body');
+        if (!body) return;
+        body.innerHTML = components
+          .map((component) => {
+            const deps = component.dependencies.length ? component.dependencies.join(', ') : 'none';
+            const errorPct = `${Math.round((component.errorRate || 0) * 100)}%`;
+            const stalenessText = Number.isFinite(component.stalenessMinutes)
+              ? ` · stale ${component.stalenessMinutes}m`
+              : '';
+            return (
+              '<tr>' +
+              `<td><strong>${component.name}</strong><br/><span class="mono">${component.id}</span></td>` +
+              `<td><span class="${statusTagClass(component.status)}">${component.status}</span></td>` +
+              `<td>${errorPct}</td>` +
+              `<td>${Math.round(component.latencyMs || 0)}</td>` +
+              `<td class="mono">${deps}</td>` +
+              `<td>${component.outputSummary}${stalenessText}</td>` +
+              '</tr>'
+            );
+          })
+          .join('');
+      }
+
+      function renderHistory(runHistory) {
+        const list = document.getElementById('trend-list');
+        if (!list) return;
+        if (!runHistory.length) {
+          list.innerHTML = '<li>No run history available yet.</li>';
+          return;
+        }
+        const rows = runHistory
+          .slice()
+          .reverse()
+          .map((row) => {
+            const score = Number(row.system_score || row.score || 0);
+            const stamp = String(row.timestamp || row.timestamp_utc || row.run_id || 'unknown-run');
+            return `<li><span class="mono">${stamp}</span> - score ${score}</li>`;
+          });
+        list.innerHTML = rows.join('');
+      }
+
+      function renderGovernance(governance) {
+        const trustCenter = governance && governance.system_trust_center ? governance.system_trust_center : null;
+        const decisionSafety = governance && governance.decision_safety ? governance.decision_safety : null;
+        const rootCause = governance && governance.root_cause_intelligence ? governance.root_cause_intelligence : null;
+        const causal = governance && governance.causal_impact_map ? governance.causal_impact_map : null;
+        const timeline = governance && governance.regression_timeline ? governance.regression_timeline : null;
+        const grid = governance && Array.isArray(governance.module_governance_grid) ? governance.module_governance_grid : [];
+
+        const setText = (id, value) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.textContent = value;
+        };
+
+        setText('gov-system-trust', Number.isFinite(Number(trustCenter?.system_trust_score)) ? `${Number(trustCenter.system_trust_score)}/100` : '--');
+        setText('gov-confidence', Number.isFinite(Number(trustCenter?.confidence_score)) ? `${Number(trustCenter.confidence_score)}/100` : '--');
+        setText('gov-instability', Number.isFinite(Number(trustCenter?.instability_level)) ? `${Number(trustCenter.instability_level)}/100` : '--');
+        setText('gov-blast-radius', Number.isFinite(Number(trustCenter?.blast_radius)) ? `${Number(trustCenter.blast_radius)}%` : '--');
+        setText('gov-regression-count', Number.isFinite(Number(trustCenter?.active_regressions)) ? String(Number(trustCenter.active_regressions)) : '--');
+        setText('gov-misleading-count', Array.isArray(trustCenter?.misleading_modules) ? String(trustCenter.misleading_modules.length) : '--');
+
+        const safetyList = document.getElementById('decision-safety-list');
+        if (safetyList) {
+          if (!decisionSafety) {
+            safetyList.innerHTML = '<li>No decision safety data available yet.</li>';
+          } else {
+            const unsafeReasons = Array.isArray(decisionSafety.unsafe_reasons)
+              ? decisionSafety.unsafe_reasons.filter((r) => String(r || '').trim().length > 0)
+              : [];
+            safetyList.innerHTML = [
+              `<li>Safe to scale: <span class="${statusTagClass(decisionSafety.safe_to_scale ? 'HEALTHY' : 'DEGRADED')}">${decisionSafety.safe_to_scale ? 'YES' : 'NO'}</span></li>`,
+              `<li>Safe to change messaging: <span class="${statusTagClass(decisionSafety.safe_to_change_messaging ? 'HEALTHY' : 'DEGRADED')}">${decisionSafety.safe_to_change_messaging ? 'YES' : 'NO'}</span></li>`,
+              `<li>Safe to change audience: <span class="${statusTagClass(decisionSafety.safe_to_change_audience ? 'HEALTHY' : 'DEGRADED')}">${decisionSafety.safe_to_change_audience ? 'YES' : 'NO'}</span></li>`,
+              `<li>Safe to run A/B test: <span class="${statusTagClass(decisionSafety.safe_to_run_ab_test ? 'HEALTHY' : 'DEGRADED')}">${decisionSafety.safe_to_run_ab_test ? 'YES' : 'NO'}</span></li>`,
+              `<li>Recommendation confidence: ${Number.isFinite(Number(decisionSafety.confidence_in_recommendation)) ? `${Number(decisionSafety.confidence_in_recommendation)}/100` : '--'}</li>`,
+              `<li>Recommended next move: ${decisionSafety.recommended_next_move || 'n/a'}</li>`,
+              `<li>Unsafe reasons: ${unsafeReasons.length ? unsafeReasons.join(', ') : 'none reported'}</li>`
+            ].join('');
+          }
+        }
+
+        const rootCauseList = document.getElementById('root-cause-list');
+        if (rootCauseList) {
+          const core = rootCause && rootCause.root_cause ? rootCause.root_cause : null;
+          if (!core || !core.origin) {
+            rootCauseList.innerHTML = '<li>No root-cause event detected yet.</li>';
+          } else {
+            const affected = Array.isArray(core.downstream_affected) ? core.downstream_affected : [];
+            rootCauseList.innerHTML = [
+              `<li>Origin module: <span class="mono">${core.origin}</span></li>`,
+              `<li>Diagnosis confidence: ${Number.isFinite(Number(core.confidence)) ? `${Number(core.confidence)}%` : '--'}</li>`,
+              `<li>Downstream affected: ${affected.length ? affected.join(', ') : 'none'}</li>`
+            ].join('');
+          }
+        }
+
+        const causalList = document.getElementById('causal-impact-list');
+        if (causalList) {
+          const paths = causal && Array.isArray(causal.degradation_paths) ? causal.degradation_paths : [];
+          if (!paths.length) {
+            causalList.innerHTML = '<li>No causal impact paths available yet.</li>';
+          } else {
+            causalList.innerHTML = paths.slice(0, 10).map((p) => {
+              const affected = Array.isArray(p.downstream_modules_affected) ? p.downstream_modules_affected : [];
+              return `<li><span class="mono">${p.origin}</span> (${p.state || 'UNKNOWN'}) -> ${affected.length ? affected.join(', ') : 'no downstream impact recorded'}</li>`;
+            }).join('');
+          }
+        }
+
+        const timelineList = document.getElementById('regression-timeline-list');
+        if (timelineList) {
+          const events = timeline && Array.isArray(timeline.events) ? timeline.events : [];
+          if (!events.length) {
+            timelineList.innerHTML = '<li>No regression events recorded.</li>';
+          } else {
+            timelineList.innerHTML = events.slice(0, 12).map((evt) => {
+              const stamp = evt.timestamp_utc || 'unknown';
+              const moduleId = evt.module || evt.origin || 'unknown_module';
+              const severity = String(evt.severity || 'unknown').toUpperCase();
+              const blast = Number.isFinite(Number(evt.blast_radius)) ? `${Number(evt.blast_radius)}%` : '--';
+              return `<li><span class="mono">${stamp}</span> - ${moduleId} - ${severity} - blast ${blast}</li>`;
+            }).join('');
+          }
+        }
+
+        const gridBody = document.getElementById('governance-grid-body');
+        if (gridBody) {
+          if (!grid.length) {
+            gridBody.innerHTML = '<tr><td colspan="8">Waiting for governance data...</td></tr>';
+          } else {
+            gridBody.innerHTML = grid.map((row) => {
+              const state = String(row.runtime_state || row.resolved_state || 'UNKNOWN').toUpperCase();
+              const usefulness = Number.isFinite(Number(row.usefulness_score)) ? `${Number(row.usefulness_score)}/100` : 'INSUFFICIENT_CONFIDENCE';
+              const trust = Number.isFinite(Number(row.trust_score)) ? `${Number(row.trust_score)}/100` : 'INSUFFICIENT_CONFIDENCE';
+              const stability = Number.isFinite(Number(row.stability_score)) ? `${Number(row.stability_score)}/100` : 'INSUFFICIENT_CONFIDENCE';
+              const blast = Number.isFinite(Number(row.blast_radius)) ? `${Number(row.blast_radius)}%` : '--';
+              const cause = row.root_cause || 'n/a';
+              const risk = Number.isFinite(Number(row.downstream_impact_score)) ? `${Number(row.downstream_impact_score)}/100` : '--';
+              return (
+                '<tr>' +
+                `<td><strong>${row.name || row.id}</strong><br/><span class="mono">${row.id || ''}</span></td>` +
+                `<td><span class="${statusTagClass(state)}">${state}</span></td>` +
+                `<td>${usefulness}</td>` +
+                `<td>${trust}</td>` +
+                `<td>${stability}</td>` +
+                `<td>${blast}</td>` +
+                `<td class="mono">${cause}</td>` +
+                `<td>${risk}</td>` +
+                '</tr>'
+              );
+            }).join('');
+          }
+        }
+      }
+
+      async function loadRunReport() {
+        const note = document.getElementById('data-note');
+        if (isLoadingReport) {
+          return;
+        }
+        isLoadingReport = true;
+        try {
+          if (note && !lastGoodReport) note.textContent = 'Loading latest run report...';
+          const candidatePaths = [
+            './run_report.json',
+            '../run_report.json',
+            '../../run_report.json'
+          ];
+
+          let response = null;
+          let selectedPath = '';
+          for (const path of candidatePaths) {
+            const current = await fetch(path, { cache: 'no-store' });
+            if (current.ok) {
+              response = current;
+              selectedPath = path;
+              break;
+            }
+          }
+
+          if (!response) {
+            throw new Error('run_report.json not found in expected relative paths');
+          }
+
+          const raw = await response.json();
+          const report = normalizeReport(raw);
+          lastGoodReport = report;
+
+          document.getElementById('pill-client').textContent = report.clientId;
+          document.getElementById('pill-run').textContent = report.runId;
+          document.getElementById('pill-trend').textContent = report.trend;
+          document.getElementById('pill-health').textContent = `${healthLabel(report.systemScore)} (${report.systemScore})`;
+
+          setScore('system', report.systemScore, 100);
+          setScore('execution', report.executionHealth, 25);
+          setScore('data-quality', report.dataQuality, 25);
+          setScore('messaging', report.messagingHealth, 25);
+          setScore('infrastructure', report.infrastructureHealth, 25);
+
+          renderIssues(report.issues);
+          renderComponents(report.components);
+          renderHistory(report.runHistory);
+          renderGovernance(report.governance);
+
+          if (note) note.textContent = `Data source: ${selectedPath} · Last timestamp: ${report.timestamp} · auto-refresh active`;
+        } catch (error) {
+          if (note) note.textContent = `Could not load run report: ${error.message}${lastGoodReport ? ' · showing last good snapshot' : ''}`;
+        } finally {
+          isLoadingReport = false;
+        }
+      }
+
+      // View toggle functionality
+      const btnOperator = document.getElementById('btn-operator');
+      const btnClient = document.getElementById('btn-client');
+      const operatorViews = document.querySelectorAll('.operator-view');
+      const clientViews = document.querySelectorAll('.client-view');
+      const subtitleOp = document.getElementById('subtitle-operator');
+      const subtitleCl = document.getElementById('subtitle-client');
+      const statusOp = document.getElementById('status-operator');
+      const statusCl = document.getElementById('status-client');
+
+      function showOperatorView() {
+        btnOperator.classList.add('active');
+        btnClient.classList.remove('active');
+        operatorViews.forEach(el => el.style.display = 'block');
+        clientViews.forEach(el => el.style.display = 'none');
+        subtitleOp.style.display = 'block';
+        subtitleCl.style.display = 'none';
+        statusOp.style.display = 'block';
+        statusCl.style.display = 'none';
+      }
+
+      function showClientView() {
+        btnClient.classList.add('active');
+        btnOperator.classList.remove('active');
+        operatorViews.forEach(el => el.style.display = 'none');
+        clientViews.forEach(el => el.style.display = 'block');
+        subtitleOp.style.display = 'none';
+        subtitleCl.style.display = 'block';
+        statusOp.style.display = 'none';
+        statusCl.style.display = 'block';
+      }
+
+      btnOperator.addEventListener('click', showOperatorView);
+      btnClient.addEventListener('click', showClientView);
+
+      // Initialize: show operator view by default
+      showOperatorView();
+      loadRunReport();
+      window.setInterval(() => {
+        loadRunReport();
+      }, 15000);
+    </script>
+  </body>
+</html>

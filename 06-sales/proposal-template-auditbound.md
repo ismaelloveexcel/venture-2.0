@@ -1,4 +1,4 @@
-# ReplyPilot AI Proposal Template
+# Auditbound Proposal Template
 
 ## 1. Client Snapshot
 

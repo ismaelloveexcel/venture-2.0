@@ -14,6 +14,44 @@ Supporting pieces: JSON **contracts** (`04-coding/venture-engine/config/`), a sm
 
 If anything in the repo conflicts with this page, **trust this README first**, then `04-coding/venture-implementation-notes.md`.
 
+**Canonical daily orchestrator (vFINAL.1):** `04-coding/scripts/run_daily.py` → atomic `run_report.json`. One-shot dry-run (prospects → local messages → pipeline dry-run → report): `python 04-coding/scripts/run_daily.py --generate-prospects --prospects-demo --execute-outbound --dry-run`. Operator steps: **`OPERATOR_RUNBOOK.md`**. Agent/CI contract: **`AGENTS.md`**, **`04-coding/VENTURE_OS_VFINAL_1_EXECUTION_PLAN.md`**, one-page model **`04-coding/VENTURE_OS_SYSTEM_ONE_PAGE.md`**.
+
+## Independent Agent Review (No Assumptions)
+
+For external/independent review, follow **`docs/INDEPENDENT_AGENT_REVIEW.md`** exactly.
+
+It defines:
+
+- strict source-of-truth hierarchy,
+- mandatory validation command sequence,
+- required evidence capture,
+- forbidden assumptions,
+- required review output format.
+
+## Current build target (state as of May 2026)
+
+The current productization focus is **not** new execution logic. The focus is a deterministic **interpretation layer** over existing execution truth:
+
+- Keep `run_daily.py` as the only orchestration entrypoint.
+- Keep `venture_pipeline.py` as the only governed execution path.
+- Keep `run_report_schema.py` as the run-level data contract.
+- Build client-facing artifacts from those existing outputs.
+
+Implemented output layer:
+
+- `04-coding/venture-engine/reporting/report_renderer.py` renders campaign intelligence artifacts.
+- `04-coding/venture-engine/reporting/templates/weekly_report.html` is display-only (no scoring logic in template).
+- Artifacts are generated in `04-coding/reports/campaign-intelligence/`:
+	- `campaign-report-<run_id>.html`
+	- `campaign-report-<run_id>.json` (artifact manifest)
+	- `campaign-report-<run_id>.projection.json` (projection memory for cross-run comparison)
+
+Insight calibration status:
+
+- Deterministic trend + delta interpretation across runs.
+- Deterministic severity/confidence scoring and ranked signals (Primary vs Secondary).
+- Projection metadata includes `insight_metadata` with calibration/scoring model identifiers for replayability.
+
 ---
 
 Structured workspace for idea → evaluation → build → design QA → sales → KPIs, with an automated **outreach pipeline** and **replayable lifecycle state**.
@@ -24,6 +62,7 @@ Structured workspace for idea → evaluation → build → design QA → sales �
 |------|------|
 | Pipeline & scripts | `04-coding/scripts/` — see [scripts README](04-coding/scripts/README.md) |
 | Engine contracts (JSON) | `04-coding/venture-engine/` — see [venture-engine README](04-coding/venture-engine/README.md) |
+| Reporting & insight projection | `04-coding/venture-engine/reporting/` |
 | Job queue, lifecycle, blocks | `venture-mcp-server/` — see [MCP server README](venture-mcp-server/README.md) |
 | Copilot / agent defaults | `.github/copilot-instructions.md`, `.github/agents/` |
 | Implementation notes (runtime) | `04-coding/venture-implementation-notes.md` |

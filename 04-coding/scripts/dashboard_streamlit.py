@@ -209,8 +209,8 @@ def get_next_action():
         "Ready to Send (Day 9)",
         [
             f"✅ You have {approved_count} approved messages",
-            "Tomorrow morning run: python venture_pipeline.py --dry-run",
-            "Then: python venture_pipeline.py (to actually send)",
+            "Tomorrow morning run: set VENTURE_CANONICAL_ENTRY=1 && python 04-coding/scripts/run_daily.py --execute --dry-run",
+            "Then: set VENTURE_CANONICAL_ENTRY=1 && python 04-coding/scripts/run_daily.py --execute",
         ],
     )
 

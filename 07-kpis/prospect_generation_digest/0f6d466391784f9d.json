@@ -1,0 +1,9 @@
+{
+  "cohort1_csv_path": "",
+  "csv_round_trip_ok": true,
+  "gate_eligible_audit_parity_ok": true,
+  "output_path": "C:\\Users\\isuda\\Dev\\VENTURE 2.0\\06-sales\\prospects.csv",
+  "rows_written": 48,
+  "run_id": "0f6d466391784f9d",
+  "timestamp_utc": "2026-05-14T04:55:57.452595Z"
+}

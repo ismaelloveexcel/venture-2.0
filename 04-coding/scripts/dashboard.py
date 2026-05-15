@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Venture OS — Local Web Dashboard
-A zero-dependency control panel for non-technical users.
+Venture OS — Local run console (operator-facing)
 
 Run:  python 04-coding/scripts/dashboard.py
 Open: http://localhost:5000   (opens automatically)
@@ -21,20 +20,27 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 from dotenv import load_dotenv
-from runtime_config import RuntimeConfig, build_config_status
+from runtime_config import RuntimeConfig, build_config_status, resolve_data_base
+from operator_ux import operator_status_payload
 
 # Job queue support
-sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "venture-mcp-server"))
+sys.path.insert(
+    0, str(pathlib.Path(__file__).parent.parent.parent / "venture-mcp-server")
+)
 from job_queue import JobQueue, get_queue
-from lifecycle_engine import LifecycleEventType
+from resend_webhook_handler import process_resend_event, verify_resend_webhook
 from lifecycle_validation import LifecycleEventValidationError
 
-BASE           = pathlib.Path(__file__).parent.parent.parent
+BASE = pathlib.Path(__file__).parent.parent.parent
 load_dotenv(BASE / ".env")
 
 
 def _insecure_webhooks_allowed() -> bool:
-    return os.environ.get("VENTURE_ALLOW_INSECURE_WEBHOOKS", "").lower() in ("1", "true", "yes")
+    return os.environ.get("VENTURE_ALLOW_INSECURE_WEBHOOKS", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 def _dashboard_bind_host_and_port() -> tuple[str, int]:
@@ -61,19 +67,28 @@ def _dashboard_bind_host_and_port() -> tuple[str, int]:
 
 
 DASHBOARD_BIND, PORT = _dashboard_bind_host_and_port()
-PYTHON          = sys.executable
-PIPELINE        = str(BASE / "04-coding" / "scripts" / "venture_pipeline.py")
-PROSPECTS_FILE  = BASE / "06-sales" / "prospects.csv"
-KPI_FILE        = BASE / "07-kpis" / "weekly-kpi-data.csv"
-JOB_QUEUE_DB    = BASE / "venture_jobs.db"
-HTML_FILE       = pathlib.Path(__file__).parent / "dashboard.html"
-OPENAI_API_KEY  = os.environ.get("OPENAI_API_KEY", "")
-REVENUE_TARGET  = int(os.environ.get("REVENUE_TARGET", 10000))
-PROSPECT_FIELDS = ["name", "company", "role", "industry",
-                   "pain_point", "linkedin_url", "email", "status"]
+PYTHON = sys.executable
+RUN_DAILY = str(BASE / "04-coding" / "scripts" / "run_daily.py")
+PROSPECTS_FILE = BASE / "06-sales" / "prospects.csv"
+KPI_FILE = BASE / "07-kpis" / "weekly-kpi-data.csv"
+JOB_QUEUE_DB = BASE / "venture_jobs.db"
+HTML_FILE = pathlib.Path(__file__).parent / "dashboard.html"
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+REVENUE_TARGET = int(os.environ.get("REVENUE_TARGET", 10000))
+PROSPECT_FIELDS = [
+    "name",
+    "company",
+    "role",
+    "industry",
+    "pain_point",
+    "linkedin_url",
+    "email",
+    "status",
+]
 
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
+
 
 def get_kpi_data() -> dict:
     revenue = reply_rate = 0
@@ -97,8 +112,9 @@ def get_kpi_data() -> dict:
     pending = 0
     if PROSPECTS_FILE.exists():
         with open(PROSPECTS_FILE, newline="", encoding="utf-8") as f:
-            pending = sum(1 for r in csv.DictReader(f)
-                         if r.get("status", "").lower() == "pending")
+            pending = sum(
+                1 for r in csv.DictReader(f) if r.get("status", "").lower() == "pending"
+            )
 
     return {
         "revenue": revenue,
@@ -133,10 +149,14 @@ def get_job_queue_status() -> dict:
     """Get job queue statistics from SQLite database."""
     if not JOB_QUEUE_DB.exists():
         return {
-            "pending": 0, "in_progress": 0, "completed": 0,
-            "failed": 0, "abandoned": 0, "total": 0
+            "pending": 0,
+            "in_progress": 0,
+            "completed": 0,
+            "failed": 0,
+            "abandoned": 0,
+            "total": 0,
         }
-    
+
     try:
         queue = get_queue(db_path=str(JOB_QUEUE_DB))
         summary = queue.get_summary()
@@ -151,8 +171,13 @@ def get_job_queue_status() -> dict:
         }
     except Exception as e:
         return {
-            "pending": 0, "in_progress": 0, "completed": 0,
-            "failed": 0, "abandoned": 0, "total": 0, "error": str(e)
+            "pending": 0,
+            "in_progress": 0,
+            "completed": 0,
+            "failed": 0,
+            "abandoned": 0,
+            "total": 0,
+            "error": str(e),
         }
 
 
@@ -170,144 +195,6 @@ def get_blocked_status() -> list:
         return queue.get_blocked_prospects(limit=25)
     except Exception:
         return []
-
-
-def verify_resend_webhook(headers, body: bytes) -> tuple[bool, dict, str]:
-    """
-    Resend delivers Svix-signed webhooks. Require RESEND_WEBHOOK_SIGNING_SECRET unless
-    VENTURE_ALLOW_INSECURE_WEBHOOKS=true (local dev only).
-    """
-    if not body:
-        return False, {}, "empty body"
-    insecure = os.environ.get("VENTURE_ALLOW_INSECURE_WEBHOOKS", "").lower() in ("1", "true", "yes")
-    if insecure:
-        try:
-            return True, json.loads(body.decode("utf-8")), ""
-        except json.JSONDecodeError as exc:
-            return False, {}, f"invalid json: {exc}"
-    secret = (
-        os.environ.get("RESEND_WEBHOOK_SIGNING_SECRET", "").strip()
-        or os.environ.get("RESEND_WEBHOOK_SECRET", "").strip()
-    )
-    if not secret:
-        return False, {}, (
-            "Missing RESEND_WEBHOOK_SIGNING_SECRET (from Resend → Webhooks). "
-            "For local testing only, set VENTURE_ALLOW_INSECURE_WEBHOOKS=true in .env."
-        )
-    try:
-        from svix.webhooks import Webhook
-
-        hdrs = {k: v for k, v in headers.items()}
-        payload = Webhook(secret).verify(body.decode("utf-8"), hdrs)
-        if isinstance(payload, str):
-            payload = json.loads(payload)
-        if not isinstance(payload, dict):
-            return False, {}, "unexpected webhook payload shape"
-        return True, payload, ""
-    except Exception as exc:
-        return False, {}, str(exc)
-
-
-def _extract_email_from_event(payload: dict) -> str:
-    data = payload.get("data", {}) if isinstance(payload, dict) else {}
-    to_field = data.get("to") or payload.get("to")
-    if isinstance(to_field, list) and to_field:
-        return str(to_field[0]).strip().lower()
-    if isinstance(to_field, str):
-        return to_field.strip().lower()
-    return ""
-
-
-def process_resend_event(payload: dict, *, db_path: str | None = None) -> dict:
-    """
-    Apply a Resend-style webhook payload to trust + lifecycle + funnel.
-    Uses an explicit JobQueue(db_path) so replay CLIs are not coupled to get_queue() singleton order.
-    """
-    event_type = str(payload.get("type", "")).lower()
-    email = _extract_email_from_event(payload)
-    if not event_type:
-        return {"ok": False, "error": "missing event type"}
-    if not email:
-        return {"ok": False, "error": "missing recipient email"}
-
-    queue = JobQueue(str(db_path or JOB_QUEUE_DB))
-    bid = queue.resolve_lifecycle_business_id(email)
-    suppressed_types = {
-        "email.bounced": "bounce",
-        "email.complained": "complaint",
-        "audience.unsubscribed": "unsubscribe",
-    }
-    if event_type in suppressed_types:
-        reason = suppressed_types[event_type]
-        queue.suppress_email(email=email, reason=reason, source="resend_webhook")
-
-    stage_map = {
-        "email.delivered": "delivered",
-        "email.opened": "opened",
-        "email.clicked": "clicked",
-        "email.replied": "replied",
-        "email.bounced": "bounced",
-        "email.complained": "complained",
-        "audience.unsubscribed": "unsubscribed",
-    }
-    stage = stage_map.get(event_type, "event_received")
-    trust_delta_map = {
-        "delivered": 0.05,
-        "opened": 0.1,
-        "clicked": 0.15,
-        "replied": 0.4,
-        "bounced": -0.5,
-        "complained": -0.7,
-        "unsubscribed": -0.6,
-    }
-    trust_score = queue.record_trust_event(
-        business_id=bid,
-        event_type=stage,
-        trust_delta=trust_delta_map.get(stage, 0.0),
-        metadata={"type": event_type, "email": email},
-    )
-    queue.log_decision(
-        "outreach_event",
-        bid,
-        "event_processed",
-        [f"event_type:{event_type}", f"stage:{stage}", f"trust_score:{trust_score:.2f}"],
-    )
-
-    lifecycle_map = {
-        "delivered": LifecycleEventType.DELIVERED,
-        "opened": LifecycleEventType.OPENED,
-        "clicked": LifecycleEventType.CLICKED,
-        "replied": LifecycleEventType.REPLIED,
-        "bounced": LifecycleEventType.BOUNCED,
-        "complained": LifecycleEventType.COMPLAINED,
-        "unsubscribed": LifecycleEventType.UNSUBSCRIBED,
-    }
-    if stage in lifecycle_map:
-        suppressed = stage in {"bounced", "complained", "unsubscribed"}
-        try:
-            queue.record_lifecycle_event(
-                bid,
-                lifecycle_map[stage],
-                {"resend_type": event_type, "email": email},
-                source="resend_webhook",
-                email=email,
-                pipeline_stage="blocked_suppressed" if suppressed else "",
-                status_reason=f"suppressed:{stage}" if suppressed else "",
-                sync_funnel=True,
-                validation_mode="webhook",
-            )
-        except LifecycleEventValidationError as err:
-            return {
-                "ok": False,
-                "error": "lifecycle_validation_failed",
-                "reasons": err.reasons,
-                "event_type": event_type,
-                "email": email,
-            }
-    else:
-        queue.record_funnel_event(prospect_id=bid, stage=stage, metadata={"type": event_type, "email": email})
-
-    return {"ok": True, "event_type": event_type, "email": email, "stage": stage, "business_id": bid}
 
 
 def score_idea_openai(idea: str) -> str:
@@ -330,11 +217,16 @@ def score_idea_openai(idea: str) -> str:
     try:
         r = httpx.post(
             "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_API_KEY}",
-                     "Content-Type": "application/json"},
-            json={"model": "gpt-4o-mini",
-                  "messages": [{"role": "user", "content": prompt}],
-                  "max_tokens": 400, "temperature": 0.4},
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 400,
+                "temperature": 0.4,
+            },
             timeout=30,
         )
         r.raise_for_status()
@@ -344,16 +236,19 @@ def score_idea_openai(idea: str) -> str:
 
 
 def add_prospect_to_csv(data: dict) -> None:
-    PROSPECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    file_exists = PROSPECTS_FILE.exists()
-    with open(PROSPECTS_FILE, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=PROSPECT_FIELDS, extrasaction="ignore")
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow({**data, "status": "pending"})
+    """
+    Side-channel writes to prospects.csv are disabled: the governed path is
+    prospect_builder + prospect_gate (audit + ELIGIBLE projection). Use run_daily
+    --generate-prospects or prospect_builder.py from the repo root.
+    """
+    raise RuntimeError(
+        "add_prospect_to_csv is disabled: use prospect_builder / run_daily "
+        "to write DATA_BASE/06-sales/prospects.csv under gate + audit."
+    )
 
 
 # ── HTTP Request Handler ──────────────────────────────────────────────────────
+
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
@@ -392,6 +287,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(get_funnel_status())
         elif path == "/api/blocked":
             self._send_json(get_blocked_status())
+        elif path == "/api/operator-status":
+            self._send_json(
+                operator_status_payload(
+                    repo_root=BASE,
+                    data_base=resolve_data_base(BASE),
+                )
+            )
         elif path.startswith("/api/opportunity"):
             q = parse_qs(urlparse(self.path).query)
             bid = (q.get("business_id") or q.get("id") or [""])[0]
@@ -408,10 +310,15 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/run-pipeline":
             try:
+                env = os.environ.copy()
+                env["VENTURE_CANONICAL_ENTRY"] = "1"
                 result = subprocess.run(
-                    [PYTHON, PIPELINE],
-                    capture_output=True, text=True,
-                    timeout=300, cwd=str(BASE),
+                    [PYTHON, RUN_DAILY, "--execute"],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                    cwd=str(BASE),
+                    env=env,
                 )
                 out = result.stdout
                 if result.returncode != 0 and result.stderr:
@@ -447,10 +354,12 @@ class Handler(BaseHTTPRequestHandler):
                         raw.decode("utf-8", errors="replace")[:50000],
                         (err or "verify_failed")[:2000],
                     )
-                    self._send_json({"ok": False, "error": err, "dlq": True}, status=202)
+                    self._send_json(
+                        {"ok": False, "error": err, "dlq": True}, status=202
+                    )
                     return
                 try:
-                    result = process_resend_event(data)
+                    result = process_resend_event(data, db_path=str(JOB_QUEUE_DB))
                     if isinstance(result, dict) and result.get("ok") is False:
                         qn.record_webhook_dlq(
                             "resend_webhook_process",
@@ -466,14 +375,23 @@ class Handler(BaseHTTPRequestHandler):
                         json.dumps(data)[:50000],
                         str(err)[:2000],
                     )
-                    self._send_json({"ok": False, "error": "lifecycle_validation_failed", "dlq": True}, status=202)
+                    self._send_json(
+                        {
+                            "ok": False,
+                            "error": "lifecycle_validation_failed",
+                            "dlq": True,
+                        },
+                        status=202,
+                    )
                 except Exception as e:
                     qn.record_webhook_dlq(
                         "resend_webhook_process",
                         json.dumps(data)[:50000],
                         str(e)[:2000],
                     )
-                    self._send_json({"ok": False, "error": str(e), "dlq": True}, status=202)
+                    self._send_json(
+                        {"ok": False, "error": str(e), "dlq": True}, status=202
+                    )
             except Exception as e:
                 self._send_json({"ok": False, "error": str(e)}, status=500)
         else:
@@ -482,6 +400,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
+
 
 def main():
     server = HTTPServer((DASHBOARD_BIND, PORT), Handler)
@@ -499,4 +418,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if os.getenv("VENTURE_CANONICAL_ENTRY", "0") != "1":
+        raise RuntimeError("Execution must originate from canonical orchestrator")
     main()

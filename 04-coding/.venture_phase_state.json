@@ -1,0 +1,7 @@
+{
+  "schema_version": "1",
+  "current_phase": "DONE",
+  "completed": ["P1", "P2", "P3", "P4", "P5", "P6"],
+  "last_review_commit": "",
+  "last_run_id": ""
+}

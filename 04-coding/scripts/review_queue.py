@@ -102,8 +102,12 @@ def run_review() -> int:
         print(f"\n[ok] {len(approved)} messages marked as approved")
         print(f"[ok] Updated {GENERATED_FILE} with approval status\n")
         print("Next: Send approved messages via:\n")
-        print("  python venture_pipeline.py --dry-run  (preview)")
-        print("  python venture_pipeline.py             (execute)\n")
+        print(
+            "  set VENTURE_CANONICAL_ENTRY=1 && python 04-coding/scripts/run_daily.py --execute --dry-run  (preview)"
+        )
+        print(
+            "  set VENTURE_CANONICAL_ENTRY=1 && python 04-coding/scripts/run_daily.py --execute            (execute)\n"
+        )
     else:
         print("\n[info] No messages approved")
 
@@ -169,8 +173,12 @@ def run_send_batch() -> int:
 
     print(f"\n[ok] {len(messages)} messages ready to send")
     print("[info] Execute send via:\n")
-    print("  python venture_pipeline.py --dry-run  (preview)")
-    print("  python venture_pipeline.py             (execute)\n")
+    print(
+        "  set VENTURE_CANONICAL_ENTRY=1 && python 04-coding/scripts/run_daily.py --execute --dry-run  (preview)"
+    )
+    print(
+        "  set VENTURE_CANONICAL_ENTRY=1 && python 04-coding/scripts/run_daily.py --execute            (execute)\n"
+    )
 
     return 0
 

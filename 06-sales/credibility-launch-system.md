@@ -186,7 +186,7 @@ Want me to send the 3 things I'd change for {{company}}?
 
 Best,
 Ismael Sudally
-ReplyPilot AI
+Auditbound
 ```
 
 Use one version only until 50 sends are complete.

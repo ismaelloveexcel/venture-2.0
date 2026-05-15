@@ -18,7 +18,7 @@ $ScriptDir = $PSScriptRoot
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "..\..")).Path
 $LogDir = Join-Path $RepoRoot "logs"
 $LogFile = Join-Path $LogDir "ops-daily.log"
-$Pipeline = Join-Path $RepoRoot "04-coding\scripts\venture_pipeline.py"
+$RunDaily = Join-Path $RepoRoot "04-coding\scripts\run_daily.py"
 
 function Resolve-Python {
     $candidates = @(
@@ -40,7 +40,8 @@ if ($env:VENTURE_OPS_DLQ_THRESHOLD -match '^\d+$') {
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
 
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-$output = & $Python $Pipeline --status 2>&1 | Out-String
+$env:VENTURE_CANONICAL_ENTRY = "1"
+$output = & $Python $RunDaily bridge status 2>&1 | Out-String
 
 $blocked = $output -match "cooldown:\s+BLOCKED"
 $dlqCount = 0
