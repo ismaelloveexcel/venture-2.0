@@ -2,8 +2,8 @@
   "cohort1_csv_path": "",
   "csv_round_trip_ok": true,
   "gate_eligible_audit_parity_ok": true,
-  "output_path": "C:\\Users\\isuda\\Dev\\VENTURE 2.0\\06-sales\\prospects.csv",
-  "rows_written": 23,
+  "output_path": "/home/runner/work/venture-2.0/venture-2.0/06-sales/prospects.csv",
+  "rows_written": 25,
   "run_id": "pytest_e2e_run_daily",
-  "timestamp_utc": "2026-05-15T06:16:47.439852Z"
+  "timestamp_utc": "2026-05-15T18:35:22.949733Z"
 }
