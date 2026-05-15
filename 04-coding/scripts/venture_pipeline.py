@@ -1889,7 +1889,6 @@ def main():
     phase1_pipeline_started_at = datetime.now(timezone.utc).isoformat().replace(
         "+00:00", "Z"
     )
-    phase1_snapshot_before = _capture_phase1_snapshot()
 
     # Retry failed jobs from previous runs
     retry_failed_jobs()
@@ -1898,6 +1897,8 @@ def main():
     deleted = job_queue.cleanup_old_jobs(days=30)
     if deleted > 0:
         logger.info(f"Cleaned up {deleted} old job records")
+
+    phase1_snapshot_before = _capture_phase1_snapshot()
 
     run_health = {
         "generated": 0,
@@ -2666,6 +2667,17 @@ def main():
         f"Failed: {summary['failed']} | Abandoned: {summary['abandoned']}"
     )
 
+    # Auto follow-up check for stale prospects
+    if AUTO_SEND_EMAILS or DRY_RUN:
+        print("\n--- Follow-up Check ---")
+        if ENABLE_FOLLOWUPS:
+            check_and_send_followups(config)
+        else:
+            print("  Skipped: ENABLE_FOLLOWUPS is not true.")
+
+    # Email KPI digest to yourself
+    send_digest_email()
+
     phase1_snapshot_after = _capture_phase1_snapshot()
     summary_before = phase1_snapshot_before.get("job_summary", {})
     summary_after = phase1_snapshot_after.get("job_summary", {})
@@ -2745,17 +2757,6 @@ def main():
             tpath.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         except OSError as exc:
             logger.warning("VENTURE_PIPELINE_TELEMETRY_JSON write failed: %s", exc)
-
-    # Auto follow-up check for stale prospects
-    if AUTO_SEND_EMAILS or DRY_RUN:
-        print("\n--- Follow-up Check ---")
-        if ENABLE_FOLLOWUPS:
-            check_and_send_followups(config)
-        else:
-            print("  Skipped: ENABLE_FOLLOWUPS is not true.")
-
-    # Email KPI digest to yourself
-    send_digest_email()
 
     if AUTO_SEND_EMAILS or DRY_RUN:
         print(
