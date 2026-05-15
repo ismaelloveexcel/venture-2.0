@@ -51,11 +51,11 @@
       "message_gen_ran": false,
       "outbound_skipped": false,
       "prospect_generation_digest": {},
-      "ready": 23,
+      "ready": 24,
       "reasons": [],
       "reject": 0,
       "review": 0,
-      "rows_validated": 23
+      "rows_validated": 24
     },
     "runtime_governance": {
       "causal_impact_map": {
@@ -107,12 +107,12 @@
         "points": [
           {
             "regression_count": 7,
-            "timestamp_utc": "2026-05-15T17:11:25Z",
+            "timestamp_utc": "2026-05-15T17:13:09Z",
             "trust_score": 32
           },
           {
             "regression_count": 7,
-            "timestamp_utc": "2026-05-15T17:11:32Z",
+            "timestamp_utc": "2026-05-15T17:13:16Z",
             "trust_score": 32
           }
         ]
@@ -143,7 +143,7 @@
         "system_trend": "plateaued",
         "trust_score": 32
       },
-      "generated_at_utc": "2026-05-15T17:11:32.963542+00:00",
+      "generated_at_utc": "2026-05-15T17:13:16.856011+00:00",
       "historical_intelligence": {
         "degradation_acceleration": 0,
         "last_stable_configuration": {
@@ -248,54 +248,54 @@
                 "module": "stage_1_prospecting",
                 "origin": "internal_regression",
                 "severity": "high",
-                "timestamp_utc": "2026-05-15T17:11:25Z"
+                "timestamp_utc": "2026-05-15T17:13:09Z"
               },
               {
                 "blast_radius": 83,
                 "module": "stage_2_enrichment",
                 "origin": "stage_1_prospecting",
                 "severity": "high",
-                "timestamp_utc": "2026-05-15T17:11:25Z"
+                "timestamp_utc": "2026-05-15T17:13:09Z"
               },
               {
                 "blast_radius": 67,
                 "module": "stage_3_scoring",
                 "origin": "stage_2_enrichment",
                 "severity": "high",
-                "timestamp_utc": "2026-05-15T17:11:25Z"
+                "timestamp_utc": "2026-05-15T17:13:09Z"
               },
               {
                 "blast_radius": 50,
                 "module": "stage_4_message_generation",
                 "origin": "stage_3_scoring",
                 "severity": "high",
-                "timestamp_utc": "2026-05-15T17:11:25Z"
+                "timestamp_utc": "2026-05-15T17:13:09Z"
               },
               {
                 "blast_radius": 33,
                 "module": "stage_5_delivery",
                 "origin": "stage_4_message_generation",
                 "severity": "high",
-                "timestamp_utc": "2026-05-15T17:11:25Z"
+                "timestamp_utc": "2026-05-15T17:13:09Z"
               },
               {
                 "blast_radius": 17,
                 "module": "stage_6_tracking",
                 "origin": "stage_2_enrichment",
                 "severity": "high",
-                "timestamp_utc": "2026-05-15T17:11:25Z"
+                "timestamp_utc": "2026-05-15T17:13:09Z"
               },
               {
                 "blast_radius": 0,
                 "module": "stage_7_optimization",
                 "origin": "stage_3_scoring",
                 "severity": "high",
-                "timestamp_utc": "2026-05-15T17:11:25Z"
+                "timestamp_utc": "2026-05-15T17:13:09Z"
               }
             ],
-            "run_id": "51f39948092e416c",
+            "run_id": "337baf1cd4c34c01",
             "system_trust_score": 32,
-            "timestamp": "2026-05-15T17:11:25Z"
+            "timestamp": "2026-05-15T17:13:09Z"
           }
         ]
       },
@@ -347,7 +347,7 @@
               "module": "stage_1_prospecting",
               "previous_usefulness": null,
               "severity": "medium",
-              "timestamp_utc": "2026-05-15T17:11:32Z"
+              "timestamp_utc": "2026-05-15T17:13:16Z"
             }
           ],
           "resolved_state": "LOW_CONFIDENCE",
@@ -413,7 +413,7 @@
               "module": "stage_2_enrichment",
               "previous_usefulness": null,
               "severity": "medium",
-              "timestamp_utc": "2026-05-15T17:11:32Z"
+              "timestamp_utc": "2026-05-15T17:13:16Z"
             }
           ],
           "resolved_state": "LOW_CONFIDENCE",
@@ -479,7 +479,7 @@
               "module": "stage_3_scoring",
               "previous_usefulness": null,
               "severity": "medium",
-              "timestamp_utc": "2026-05-15T17:11:32Z"
+              "timestamp_utc": "2026-05-15T17:13:16Z"
             }
           ],
           "resolved_state": "LOW_CONFIDENCE",
@@ -543,7 +543,7 @@
               "module": "stage_4_message_generation",
               "previous_usefulness": null,
               "severity": "medium",
-              "timestamp_utc": "2026-05-15T17:11:32Z"
+              "timestamp_utc": "2026-05-15T17:13:16Z"
             }
           ],
           "resolved_state": "LOW_CONFIDENCE",
@@ -605,7 +605,7 @@
               "module": "stage_5_delivery",
               "previous_usefulness": null,
               "severity": "medium",
-              "timestamp_utc": "2026-05-15T17:11:32Z"
+              "timestamp_utc": "2026-05-15T17:13:16Z"
             }
           ],
           "resolved_state": "LOW_CONFIDENCE",
@@ -668,7 +668,7 @@
               "module": "stage_6_tracking",
               "previous_usefulness": null,
               "severity": "medium",
-              "timestamp_utc": "2026-05-15T17:11:32Z"
+              "timestamp_utc": "2026-05-15T17:13:16Z"
             }
           ],
           "resolved_state": "LOW_CONFIDENCE",
@@ -730,7 +730,7 @@
               "module": "stage_7_optimization",
               "previous_usefulness": null,
               "severity": "medium",
-              "timestamp_utc": "2026-05-15T17:11:32Z"
+              "timestamp_utc": "2026-05-15T17:13:16Z"
             }
           ],
           "resolved_state": "LOW_CONFIDENCE",
@@ -815,7 +815,7 @@
             "module": "stage_1_prospecting",
             "previous_usefulness": null,
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 83,
@@ -824,7 +824,7 @@
             "module": "stage_2_enrichment",
             "previous_usefulness": null,
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 67,
@@ -833,7 +833,7 @@
             "module": "stage_3_scoring",
             "previous_usefulness": null,
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 50,
@@ -842,7 +842,7 @@
             "module": "stage_4_message_generation",
             "previous_usefulness": null,
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 33,
@@ -851,7 +851,7 @@
             "module": "stage_5_delivery",
             "previous_usefulness": null,
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 17,
@@ -860,7 +860,7 @@
             "module": "stage_6_tracking",
             "previous_usefulness": null,
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 0,
@@ -869,10 +869,10 @@
             "module": "stage_7_optimization",
             "previous_usefulness": null,
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           }
         ],
-        "first_regression_timestamp": "2026-05-15T17:11:32Z"
+        "first_regression_timestamp": "2026-05-15T17:13:16Z"
       },
       "root_cause_intelligence": {
         "events": [
@@ -881,49 +881,49 @@
             "module": "stage_1_prospecting",
             "origin": "internal_regression",
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 83,
             "module": "stage_2_enrichment",
             "origin": "stage_1_prospecting",
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 67,
             "module": "stage_3_scoring",
             "origin": "stage_2_enrichment",
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 50,
             "module": "stage_4_message_generation",
             "origin": "stage_3_scoring",
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 33,
             "module": "stage_5_delivery",
             "origin": "stage_4_message_generation",
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 17,
             "module": "stage_6_tracking",
             "origin": "stage_2_enrichment",
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           },
           {
             "blast_radius": 0,
             "module": "stage_7_optimization",
             "origin": "stage_3_scoring",
             "severity": "medium",
-            "timestamp_utc": "2026-05-15T17:11:32Z"
+            "timestamp_utc": "2026-05-15T17:13:16Z"
           }
         ],
         "root_cause": {
@@ -972,7 +972,7 @@
     "status": "NOT_EXECUTED",
     "subprocess_return_code": null
   },
-  "run_id": "a0fae5a55ede455d",
+  "run_id": "3d6e8473ddad4ddb",
   "schema_version": "1.0",
   "system": {
     "cost_estimates": {},
@@ -980,5 +980,5 @@
     "random_seed": 42,
     "record_count": 0
   },
-  "timestamp_utc": "2026-05-15T17:11:32Z"
+  "timestamp_utc": "2026-05-15T17:13:16Z"
 }

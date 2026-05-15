@@ -1,24 +1,25 @@
 company_name,domain,name,email,role,industry,pain_signal,linkedin_url,validation_status,validation_reason,source,run_id
-Digital Growth Agency,digitalgrowth.io,Sarah Chen,sarah@digitalgrowth.io,Founder,agency,hiring_for_sales,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Business Coaching Hub,businesscoach.pro,Kevin Lee,kevin@businesscoach.pro,Owner,coaching,client_retention,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Executive Branding,exbrand.io,Diane Moore,diane@exbrand.io,Founder,coaching,linkedin_profile_optimization,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Market Research Consulting,mktresearch.pro,Brian Taylor,brian@mktresearch.pro,Research Director,consulting,insights_actionability,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Law Office Management,lawmgmt.com,Jennifer Martinez,j.martinez@lawmgmt.com,Managing Partner,services,client_communication,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Growth Hacking Academy,growthhack.academy,Chris Johnson,chris@growthhack.academy,Head of Operations,coaching,course_completion_low,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Business Strategy Inc,bizcstrategy.com,Christopher Davis,chris@bizcstrategy.com,Principal Consultant,consulting,strategy_execution,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Organizational Development,orgdev.net,Donald Miller,donald@orgdev.net,Chief Consultant,consulting,change_management_adoption,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Employment Law Services,emplaw.io,Heather Garcia,heather@emplaw.io,Partner,services,litigation_volume,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Performance Marketing,perfmkt.io,James Mitchell,james@perfmkt.io,Chief Growth Officer,agency,attribution_tracking,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-HR Consulting Plus,hrconsult.io,Victoria Harris,victoria@hrconsult.io,Founder,services,employee_retention,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Executive Coaching Pro,excoach.io,Marcus Brown,marcus@excoach.io,Founder,coaching,market_awareness,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Consulting Partners LLC,consulting-partners.com,Michelle Torres,michelle@consulting-partners.com,Director,consulting,pipeline_visibility,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Operations Consulting,opsconsult.net,Raymond Taylor,raymond@opsconsult.net,Senior Partner,consulting,process_improvement,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Brand Strategy Labs,brandstrategy.co,Amanda Foster,amanda@brandstrategy.co,Principal,agency,client_acquisition,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Executive Search Firm,execsearch.io,Thomas Anderson,thomas@execsearch.io,CEO,services,candidate_shortage,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Management Consulting,mgmtconsult.com,Daniel Chen,daniel@mgmtconsult.com,Managing Partner,consulting,proposal_quality,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Social Media Agency,socialmedia-pro.com,Brandon Lee,brandon@socialmedia-pro.com,Founder,agency,content_performance,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Enterprise Solutions,enterprise-sol.com,George White,george@enterprise-sol.com,CEO,consulting,market_differentiation,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Business Mindset Coach,mindsetcoach.pro,Karen Thompson,karen@mindsetcoach.pro,Head Coach,coaching,student_results_proof,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Tax Advisory Group,taxadvisory.io,Lauren Wright,lauren@taxadvisory.io,Partner,services,client_planning_engagement,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Sales Acceleration Corp,salesacc.io,David Park,david@salesacc.io,CEO,consulting,competitor_pressure,,READY,complete_profile,demo_template,pytest_e2e_run_daily
 Software Consultancy,softconsult.net,Amanda Patel,amanda@softconsult.net,Managing Director,consulting,project_delivery,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Management Consulting,mgmtconsult.com,Daniel Chen,daniel@mgmtconsult.com,Managing Partner,consulting,proposal_quality,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Sales Training Academy,salestraining.pro,Linda Evans,linda@salestraining.pro,CEO,coaching,rep_performance_tracking,,READY,complete_profile,demo_template,pytest_e2e_run_daily
 Financial Advisory Group,financialadv.com,Paul Henricks,paul@financialadv.com,Partner,services,client_lifetime_value,,READY,complete_profile,demo_template,pytest_e2e_run_daily
-Strategic IT Consulting,stratit.io,Matthew Garcia,matthew@stratit.io,CTO/Founder,consulting,technology_adoption,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Brand Design Studio,branddesign.pro,Michael Jordan,m.jordan@branddesign.pro,Founder,agency,project_scope_creep,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Business Mindset Coach,mindsetcoach.pro,Karen Thompson,karen@mindsetcoach.pro,Head Coach,coaching,student_results_proof,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Digital Marketing Studios,digmarketstudio.com,Rachel Green,rachel@digmarketstudio.com,CEO,agency,scaling_team,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Health Coaching Academy,healthcoach.academy,Sharon White,sharon@healthcoach.academy,Program Director,coaching,certification_value,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Social Media Agency,socialmedia-pro.com,Brandon Lee,brandon@socialmedia-pro.com,Founder,agency,content_performance,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Performance Marketing Group,perfmktgroup.com,Joshua Wilson,joshua@perfmktgroup.com,VP Growth,agency,cpa_optimization,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Operations Consulting,opsconsult.net,Raymond Taylor,raymond@opsconsult.net,Senior Partner,consulting,process_improvement,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Strategy & Design,stratanddesign.com,Eric Anderson,eric@stratanddesign.com,Managing Director,consulting,stakeholder_alignment,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Experiential Marketing,expmarkt.io,Anthony Brown,anthony@expmarkt.io,Chief Creative Officer,agency,event_attendance,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Digital Growth Agency,digitalgrowth.io,Sarah Chen,sarah@digitalgrowth.io,Founder,agency,hiring_for_sales,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Commercial Real Estate,cre-advisors.com,Nancy Anderson,nancy@cre-advisors.com,VP,services,transaction_velocity,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Growth Hacking Academy,growthhack.academy,Chris Johnson,chris@growthhack.academy,Head of Operations,coaching,course_completion_low,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Business Coaching Hub,businesscoach.pro,Kevin Lee,kevin@businesscoach.pro,Owner,coaching,client_retention,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Enterprise Solutions,enterprise-sol.com,George White,george@enterprise-sol.com,CEO,consulting,market_differentiation,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Employment Law Services,emplaw.io,Heather Garcia,heather@emplaw.io,Partner,services,litigation_volume,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Consulting Partners LLC,consulting-partners.com,Michelle Torres,michelle@consulting-partners.com,Director,consulting,pipeline_visibility,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Wealth Management Advisors,wealthmgmt.pro,Susan Lee,susan@wealthmgmt.pro,Managing Principal,services,hnw_client_acquisition,,READY,complete_profile,demo_template,pytest_e2e_run_daily
+Market Research Consulting,mktresearch.pro,Brian Taylor,brian@mktresearch.pro,Research Director,consulting,insights_actionability,,READY,complete_profile,demo_template,pytest_e2e_run_daily

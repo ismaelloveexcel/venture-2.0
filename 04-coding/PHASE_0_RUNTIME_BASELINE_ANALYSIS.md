@@ -11,17 +11,17 @@ This document is a Phase 0 baseline artifact for runtime understanding and conso
 
 ## Source-of-truth set used for this baseline
 
-- `/home/runner/work/venture-2.0/venture-2.0/README.md`
-- `/home/runner/work/venture-2.0/venture-2.0/04-coding/venture-implementation-notes.md`
-- `/home/runner/work/venture-2.0/venture-2.0/AGENTS.md`
-- `/home/runner/work/venture-2.0/venture-2.0/docs/SEMANTIC_CONTRACT.md`
-- `/home/runner/work/venture-2.0/venture-2.0/04-coding/VENTURE_OS_VFINAL_1_EXECUTION_PLAN.md`
-- `/home/runner/work/venture-2.0/venture-2.0/04-coding/scripts/run_daily.py`
-- `/home/runner/work/venture-2.0/venture-2.0/04-coding/scripts/run_report_schema.py`
-- `/home/runner/work/venture-2.0/venture-2.0/04-coding/scripts/runtime_governance.py`
-- `/home/runner/work/venture-2.0/venture-2.0/04-coding/scripts/system_integrity_monitor.py`
-- `/home/runner/work/venture-2.0/venture-2.0/04-coding/scripts/replay_audit.py`
-- `/home/runner/work/venture-2.0/venture-2.0/venture-mcp-server/job_queue.py`
+- `README.md`
+- `04-coding/venture-implementation-notes.md`
+- `AGENTS.md`
+- `docs/SEMANTIC_CONTRACT.md`
+- `04-coding/VENTURE_OS_VFINAL_1_EXECUTION_PLAN.md`
+- `04-coding/scripts/run_daily.py`
+- `04-coding/scripts/run_report_schema.py`
+- `04-coding/scripts/runtime_governance.py`
+- `04-coding/scripts/system_integrity_monitor.py`
+- `04-coding/scripts/replay_audit.py`
+- `venture-mcp-server/job_queue.py`
 
 ---
 
@@ -142,7 +142,7 @@ This confirms Venture OS is an operating runtime, not a greenfield architecture 
 
 Target location:
 
-- `/home/runner/work/venture-2.0/venture-2.0/04-coding/contracts/`
+- `04-coding/contracts/`
 
 Proposed modules:
 
