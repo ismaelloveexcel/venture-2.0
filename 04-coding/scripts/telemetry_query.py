@@ -13,7 +13,9 @@ Design constraints:
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Iterable, Literal
 
 from telemetry_normalizer import NormalizedEvent
@@ -151,6 +153,56 @@ def _as_int(value: Any) -> int:
     return 0
 
 
+def _as_mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _copy_event(event: NormalizedEvent) -> NormalizedEvent:
+    return NormalizedEvent(
+        event_id=event.event_id,
+        timestamp=event.timestamp,
+        category=event.category,
+        subtype=event.subtype,
+        severity=event.severity,
+        source=event.source,
+        payload=copy.deepcopy(event.payload),
+    )
+
+
+def _copy_timeline_entry(entry: TimelineEntry) -> TimelineEntry:
+    return TimelineEntry(
+        position=entry.position,
+        event_id=entry.event_id,
+        timestamp=entry.timestamp,
+        category=entry.category,
+        subtype=entry.subtype,
+        severity=entry.severity,
+        summary=entry.summary,
+    )
+
+
+def _copy_span(span: ReconstructedSpan) -> ReconstructedSpan:
+    return ReconstructedSpan(
+        span_id=span.span_id,
+        start_timestamp=span.start_timestamp,
+        end_timestamp=span.end_timestamp,
+        event_ids=list(span.event_ids),
+        category_set=list(span.category_set),
+    )
+
+
+def _is_canonical_utc_iso_timestamp(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        return False
+    return parsed.strftime("%Y-%m-%dT%H:%M:%SZ") == value
+
+
 def _coerce_list(values: Iterable[Any] | Any | None) -> list[Any]:
     if values is None or isinstance(values, (str, bytes)):
         return []
@@ -186,6 +238,8 @@ def _normalize_selector(values: str | Iterable[str] | None) -> set[str] | None |
 
 
 def _timestamp_in_range(timestamp: str, start_timestamp: str | None, end_timestamp: str | None) -> bool:
+    if (start_timestamp is not None or end_timestamp is not None) and not _is_canonical_utc_iso_timestamp(timestamp):
+        return False
     if start_timestamp is not None and timestamp < start_timestamp:
         return False
     if end_timestamp is not None and timestamp > end_timestamp:
@@ -197,6 +251,10 @@ def _is_valid_timestamp_range(start_timestamp: str | None, end_timestamp: str | 
     if start_timestamp is not None and not isinstance(start_timestamp, str):
         return False
     if end_timestamp is not None and not isinstance(end_timestamp, str):
+        return False
+    if start_timestamp is not None and not _is_canonical_utc_iso_timestamp(start_timestamp):
+        return False
+    if end_timestamp is not None and not _is_canonical_utc_iso_timestamp(end_timestamp):
         return False
     if start_timestamp is not None and end_timestamp is not None and start_timestamp > end_timestamp:
         return False
@@ -232,8 +290,9 @@ def _empty_aggregate() -> AggregateSummary:
 def _count_values(values: list[str]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for value in values:
-        counts[value] = counts.get(value, 0) + 1
-    return counts
+        key = value if isinstance(value, str) else ""
+        counts[key] = counts.get(key, 0) + 1
+    return {key: counts[key] for key in sorted(counts)}
 
 
 def filter_events(
@@ -265,7 +324,7 @@ def filter_events(
             continue
         if not _timestamp_in_range(event.timestamp, start_timestamp, end_timestamp):
             continue
-        result.append(event)
+        result.append(_copy_event(event))
     return result
 
 
@@ -282,11 +341,12 @@ def group_events(
 
     result: dict[str, list[NormalizedEvent]] = {}
     for event in _coerce_events(events):
-        key = getattr(event, by)
+        key_raw = getattr(event, by)
+        key = key_raw if isinstance(key_raw, str) else ""
         if key not in result:
             result[key] = []
-        result[key].append(event)
-    return result
+        result[key].append(_copy_event(event))
+    return {key: result[key] for key in sorted(result)}
 
 
 def aggregate_events(events: Iterable[NormalizedEvent] | None) -> AggregateSummary:
@@ -324,11 +384,12 @@ def query_governance(
     info_event_ids: list[str] = []
 
     for event in governance_events:
-        severity_delta = event.payload.get("severity_delta") or {}
+        payload = _as_mapping(event.payload)
+        severity_delta = _as_mapping(payload.get("severity_delta"))
         hard = _as_int(severity_delta.get("hard"))
         soft = _as_int(severity_delta.get("soft"))
         info = _as_int(severity_delta.get("info"))
-        total_block_delta += _as_int(event.payload.get("block_logs_delta"))
+        total_block_delta += _as_int(payload.get("block_logs_delta"))
         hard_delta += hard
         soft_delta += soft
         info_delta += info
@@ -370,9 +431,10 @@ def query_failures(
     total_retry_delta = total_failed_delta = total_abandoned_delta = 0
 
     for event in failure_events:
-        retries = _as_int(event.payload.get("jobs_retry_sum_delta"))
-        failed = _as_int(event.payload.get("failed_status_delta"))
-        abandoned = _as_int(event.payload.get("abandoned_status_delta"))
+        payload = _as_mapping(event.payload)
+        retries = _as_int(payload.get("jobs_retry_sum_delta"))
+        failed = _as_int(payload.get("failed_status_delta"))
+        abandoned = _as_int(payload.get("abandoned_status_delta"))
         total_retry_delta += retries
         total_failed_delta += failed
         total_abandoned_delta += abandoned
@@ -408,8 +470,9 @@ def query_operator_activity(
     total_pause_delta = 0
     total_lifecycle_delta = 0
     for event in operator_events:
-        total_pause_delta += _as_int(event.payload.get("operator_pause_blocks_delta"))
-        total_lifecycle_delta += _as_int(event.payload.get("operator_lifecycle_events_delta"))
+        payload = _as_mapping(event.payload)
+        total_pause_delta += _as_int(payload.get("operator_pause_blocks_delta"))
+        total_lifecycle_delta += _as_int(payload.get("operator_lifecycle_events_delta"))
     return OperatorActivitySummary(
         event_count=len(operator_events),
         events=operator_events,
@@ -455,6 +518,8 @@ def slice_timeline(
     sliced_entries = entries[slice(normalized_start, normalized_stop)]
     result: list[TimelineEntry] = []
     for entry in sliced_entries:
+        if not isinstance(entry, TimelineEntry):
+            continue
         if category_selector is not None and entry.category not in category_selector:
             continue
         if subtype_selector is not None and entry.subtype not in subtype_selector:
@@ -463,7 +528,7 @@ def slice_timeline(
             continue
         if not _timestamp_in_range(entry.timestamp, start_timestamp, end_timestamp):
             continue
-        result.append(entry)
+        result.append(_copy_timeline_entry(entry))
     return TimelineQueryView(
         total_entries=len(result),
         entries=result,
@@ -504,11 +569,13 @@ def slice_spans(
     sliced_spans = span_list[slice(normalized_start, normalized_stop)]
     result: list[ReconstructedSpan] = []
     for span in sliced_spans:
+        if not isinstance(span, ReconstructedSpan):
+            continue
         if category_selector is not None and not any(category in category_selector for category in span.category_set):
             continue
         if not _timestamp_in_range(span.start_timestamp, start_timestamp, end_timestamp):
             continue
-        result.append(span)
+        result.append(_copy_span(span))
     return SpanQueryView(
         total_spans=len(result),
         spans=result,
