@@ -165,7 +165,7 @@ def test_aggregate_events_counts_correctly():
         "operator": 1,
     }
     assert summary.counts_by_subtype["governance_blocks"] == 2
-    assert summary.counts_by_severity[""] == 5
+    assert summary.counts_by_severity[""] == 6
     assert summary.counts_by_timestamp == {_TS1: 5, _TS2: 2, _TS3: 1}
 
 

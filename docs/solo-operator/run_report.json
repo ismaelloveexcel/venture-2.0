@@ -9,13 +9,13 @@
   },
   "outbound": {
     "cohort_metadata": {
-      "cohort_id": "20260516_default_1387e14d0cff_53e47369",
-      "freeze_timestamp_utc": "2026-05-16T18:39:53.582405+00:00",
+      "cohort_id": "20260516_default_1387e14d0cff_e3110054",
+      "freeze_timestamp_utc": "2026-05-16T17:37:32.579225+00:00",
       "generator_version": "1387e14d0cff0d78c9f15e0f07197fbf47cdf82c1562b877a27b1b138cfa5217",
-      "git_sha": "7d1b4d6a606c289a765abebee23240eab007b361",
+      "git_sha": "bab34be8d4bc493d6829c92916a97644992f6f8b",
       "guard_version": "74ca4cd4714f5a4b936a976125cf13194cb47559d7d31c5c5975b5ce97f34b2d",
       "message_version": "1387e14d0cff",
-      "run_id": "53e473699aa1428a",
+      "run_id": "e3110054bb874585",
       "subject_cta_fingerprint": "23ff8c10cd8f"
     },
     "dry_run": false,
@@ -33,8 +33,8 @@
     "orchestrator_telemetry": {
       "dry_run": false,
       "execute_outbound": true,
-      "finished_at_utc": "2026-05-16T18:39:54Z",
-      "started_at_utc": "2026-05-16T18:39:53Z",
+      "finished_at_utc": "2026-05-16T17:37:33Z",
+      "started_at_utc": "2026-05-16T17:37:32Z",
       "subprocess_return_code": null,
       "venture_pipeline_subprocess_ran": false
     },
@@ -193,7 +193,7 @@
         "points": [
           {
             "regression_count": 7,
-            "timestamp_utc": "2026-05-16T18:39:54Z",
+            "timestamp_utc": "2026-05-16T17:37:33Z",
             "trust_score": 32
           }
         ]
@@ -232,7 +232,7 @@
         "system_trend": "plateaued",
         "trust_score": 32
       },
-      "generated_at_utc": "2026-05-16T18:39:54.133756+00:00",
+      "generated_at_utc": "2026-05-16T17:37:33.129455+00:00",
       "historical_intelligence": {
         "degradation_acceleration": 100,
         "last_stable_configuration": {
@@ -290,7 +290,7 @@
               "module": "stage_1_prospecting",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:39:54Z"
+              "timestamp_utc": "2026-05-16T17:37:33Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -356,7 +356,7 @@
               "module": "stage_2_enrichment",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:39:54Z"
+              "timestamp_utc": "2026-05-16T17:37:33Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -422,7 +422,7 @@
               "module": "stage_3_scoring",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:39:54Z"
+              "timestamp_utc": "2026-05-16T17:37:33Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -486,7 +486,7 @@
               "module": "stage_4_message_generation",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:39:54Z"
+              "timestamp_utc": "2026-05-16T17:37:33Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -548,7 +548,7 @@
               "module": "stage_5_delivery",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:39:54Z"
+              "timestamp_utc": "2026-05-16T17:37:33Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -611,7 +611,7 @@
               "module": "stage_6_tracking",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:39:54Z"
+              "timestamp_utc": "2026-05-16T17:37:33Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -673,7 +673,7 @@
               "module": "stage_7_optimization",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:39:54Z"
+              "timestamp_utc": "2026-05-16T17:37:33Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -758,7 +758,7 @@
             "module": "stage_1_prospecting",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 83,
@@ -767,7 +767,7 @@
             "module": "stage_2_enrichment",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 67,
@@ -776,7 +776,7 @@
             "module": "stage_3_scoring",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 50,
@@ -785,7 +785,7 @@
             "module": "stage_4_message_generation",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 33,
@@ -794,7 +794,7 @@
             "module": "stage_5_delivery",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 17,
@@ -803,7 +803,7 @@
             "module": "stage_6_tracking",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 0,
@@ -812,10 +812,10 @@
             "module": "stage_7_optimization",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           }
         ],
-        "first_regression_timestamp": "2026-05-16T18:39:54Z"
+        "first_regression_timestamp": "2026-05-16T17:37:33Z"
       },
       "root_cause_intelligence": {
         "events": [
@@ -824,49 +824,49 @@
             "module": "stage_1_prospecting",
             "origin": "internal_regression",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 83,
             "module": "stage_2_enrichment",
             "origin": "stage_1_prospecting",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 67,
             "module": "stage_3_scoring",
             "origin": "stage_2_enrichment",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 50,
             "module": "stage_4_message_generation",
             "origin": "stage_3_scoring",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 33,
             "module": "stage_5_delivery",
             "origin": "stage_4_message_generation",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 17,
             "module": "stage_6_tracking",
             "origin": "stage_2_enrichment",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           },
           {
             "blast_radius": 0,
             "module": "stage_7_optimization",
             "origin": "stage_3_scoring",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:39:54Z"
+            "timestamp_utc": "2026-05-16T17:37:33Z"
           }
         ],
         "root_cause": {
@@ -923,7 +923,7 @@
     "status": "BLOCKED",
     "subprocess_return_code": null
   },
-  "run_id": "53e473699aa1428a",
+  "run_id": "e3110054bb874585",
   "schema_version": "1.0",
   "system": {
     "cost_estimates": {},
@@ -931,5 +931,5 @@
     "random_seed": 42,
     "record_count": 0
   },
-  "timestamp_utc": "2026-05-16T18:39:54Z"
+  "timestamp_utc": "2026-05-16T17:37:33Z"
 }
