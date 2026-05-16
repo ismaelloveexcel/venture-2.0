@@ -17,12 +17,9 @@ Coverage:
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 from typing import Any
-
-import pytest
 
 from telemetry_normalizer import NormalizedEvent, normalize_phase1_telemetry
 from telemetry_replay import (
@@ -64,10 +61,11 @@ def _make_event(
     p = payload or {}
     key_parts = {
         "category": cat,
+        "payload": p,
         "position": position,
         "source": "phase1_structured",
         "subtype": subtype,
-        "payload": p,
+        "timestamp": timestamp,
     }
     canonical = json.dumps(key_parts, sort_keys=True, separators=(",", ":"), default=str)
     eid = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -462,6 +460,30 @@ def test_summary_has_operator_interventions_true():
     )
     t = replay_timeline([ev])
     assert t.summary.has_operator_interventions is True
+
+
+def test_summary_has_operator_interventions_true_via_lifecycle_delta():
+    ev = _make_event(
+        "operator_interventions",
+        payload={"operator_pause_blocks_delta": 0, "operator_lifecycle_events_delta": 3},
+    )
+    t = replay_timeline([ev])
+    assert t.summary.has_operator_interventions is True
+
+
+def test_summary_has_operator_interventions_false_when_all_zero_deltas():
+    """operator_interventions event with all-zero deltas must NOT set the flag.
+
+    venture_pipeline always emits an operator_interventions event even when no
+    actual operator action occurred; the flag should only be True for non-zero
+    deltas to avoid false-positive summaries on normal runs.
+    """
+    ev = _make_event(
+        "operator_interventions",
+        payload={"operator_pause_blocks_delta": 0, "operator_lifecycle_events_delta": 0},
+    )
+    t = replay_timeline([ev])
+    assert t.summary.has_operator_interventions is False
 
 
 def test_summary_has_operator_interventions_false_when_absent():

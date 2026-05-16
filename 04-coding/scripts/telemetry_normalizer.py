@@ -82,21 +82,25 @@ def _deterministic_event_id(
     category: str,
     subtype: str,
     position: int,
+    timestamp: str,
     payload: dict[str, Any],
 ) -> str:
     """Return a deterministic sha256-hex event_id from stable, sorted inputs.
 
     The sha256 is computed over a canonical JSON representation so that:
-    - identical ``(category, subtype, position, payload)`` tuples always map to
-      the same id;
-    - different tuples (including different positions) map to different ids.
+    - identical ``(category, subtype, position, timestamp, payload)`` tuples
+      always map to the same id;
+    - different tuples (including different positions or timestamps) map to
+      different ids, so events from different pipeline runs with distinct
+      ``pipeline_started_at_utc`` values never share an id.
     """
     key_parts: dict[str, Any] = {
         "category": category,
+        "payload": payload,
         "position": position,
         "source": _SOURCE,
         "subtype": subtype,
-        "payload": payload,
+        "timestamp": timestamp,
     }
     canonical = json.dumps(key_parts, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -146,7 +150,7 @@ def _normalize_structured(
         category: str = _CATEGORY_MAP.get(subtype, "unknown")
         severity: str = _extract_severity(raw_event)
         payload: dict[str, Any] = _normalize_payload(raw_event)
-        event_id: str = _deterministic_event_id(category, subtype, position, payload)
+        event_id: str = _deterministic_event_id(category, subtype, position, timestamp, payload)
         events.append(
             NormalizedEvent(
                 event_id=event_id,

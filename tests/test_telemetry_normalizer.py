@@ -4,7 +4,9 @@ Coverage:
 - deterministic output (identical input → identical output)
 - ordering stability
 - malformed / None / invalid telemetry handling
-- backward compatibility (extra / unknown fields ignored)
+- backward compatibility (unknown event types and invalid fields are rejected,
+  returning an empty list; envelope-level unknown keys are also rejected by the
+  Phase1StructuredTelemetryModel's extra='forbid' config)
 - append-only normalization behavior
 - event_id uniqueness and sha256 structure
 - severity extraction from governance_blocks
@@ -19,17 +21,8 @@ import hashlib
 import json
 from typing import Any
 
-import pytest
-
 from run_report_schema import (
-    Phase1GovernanceBlocksEventModel,
-    Phase1OperatorInterventionsEventModel,
-    Phase1QueueOperationsEventModel,
-    Phase1RetriesFailuresEventModel,
-    Phase1SeverityDeltaModel,
-    Phase1StateTransitionsEventModel,
     Phase1StructuredTelemetryModel,
-    Phase1WindowModel,
 )
 from telemetry_normalizer import (
     NormalizedEvent,
@@ -413,6 +406,7 @@ def test_event_id_matches_manual_sha256():
     """Spot-check: manually compute expected event_id and compare."""
     data = {
         "version": 1,
+        "window": {"pipeline_started_at_utc": "2026-05-16T10:00:00Z"},
         "events": [{"event": "state_transitions", "lifecycle_events_delta": 7}],
     }
     result = normalize_phase1_telemetry(data)
@@ -421,10 +415,11 @@ def test_event_id_matches_manual_sha256():
     expected_payload = {"lifecycle_events_delta": 7}
     key_parts = {
         "category": "state",
+        "payload": expected_payload,
         "position": 0,
         "source": _SOURCE,
         "subtype": "state_transitions",
-        "payload": expected_payload,
+        "timestamp": "2026-05-16T10:00:00Z",
     }
     canonical = json.dumps(key_parts, sort_keys=True, separators=(",", ":"), default=str)
     expected_id = hashlib.sha256(canonical.encode("utf-8")).hexdigest()

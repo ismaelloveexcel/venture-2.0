@@ -18,14 +18,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
-from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Sequence
 
 from telemetry_normalizer import NormalizedEvent
-
-_logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Output structures
@@ -365,7 +361,12 @@ def _build_summary(events: Sequence[NormalizedEvent]) -> ExecutionSummary:
         for ev in events
         if ev.subtype == "state_transitions"
     )
-    has_operator = any(ev.subtype == "operator_interventions" for ev in events)
+    has_operator = any(
+        (int(ev.payload.get("operator_pause_blocks_delta") or 0) > 0
+         or int(ev.payload.get("operator_lifecycle_events_delta") or 0) > 0)
+        for ev in events
+        if ev.subtype == "operator_interventions"
+    )
     return ExecutionSummary(
         event_count=len(events),
         categories_observed=categories,
