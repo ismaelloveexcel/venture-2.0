@@ -154,6 +154,10 @@ def test_group_events_invalid_key_returns_empty():
     assert group_events(_query_events(), by="not-real") == {}  # type: ignore[arg-type]
 
 
+def test_group_events_unhashable_key_returns_empty():
+    assert group_events(_query_events(), by=["category"]) == {}  # type: ignore[arg-type]
+
+
 def test_aggregate_events_counts_correctly():
     summary = aggregate_events(_query_events())
     assert summary.total_events == 8

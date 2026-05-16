@@ -275,6 +275,8 @@ def group_events(
     by: GroupField = "category",
 ) -> dict[str, list[NormalizedEvent]]:
     """Return ordered groups keyed by a supported event field."""
+    if not isinstance(by, str):
+        return {}
     if by not in {"category", "subtype", "severity", "timestamp"}:
         return {}
 
