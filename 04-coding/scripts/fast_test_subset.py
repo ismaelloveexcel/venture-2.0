@@ -33,6 +33,7 @@ FAST_TEST_PATHS: tuple[str, ...] = (
     "tests/test_emergency_pause.py",
     "tests/test_telemetry_normalizer.py",
     "tests/test_telemetry_replay.py",
+    "tests/test_telemetry_query.py",
 )
 
 
