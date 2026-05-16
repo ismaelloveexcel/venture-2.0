@@ -9,13 +9,13 @@
   },
   "outbound": {
     "cohort_metadata": {
-      "cohort_id": "20260516_default_1387e14d0cff_f192669b",
-      "freeze_timestamp_utc": "2026-05-16T18:24:22.939187+00:00",
+      "cohort_id": "20260516_default_1387e14d0cff_76e06692",
+      "freeze_timestamp_utc": "2026-05-16T18:31:37.802568+00:00",
       "generator_version": "1387e14d0cff0d78c9f15e0f07197fbf47cdf82c1562b877a27b1b138cfa5217",
-      "git_sha": "c9bce4b273d36ccf616e3bf8d391fef6acb6ba43",
+      "git_sha": "aa20eb44a237a2809f917d243f0b50de07e4e0d9",
       "guard_version": "74ca4cd4714f5a4b936a976125cf13194cb47559d7d31c5c5975b5ce97f34b2d",
       "message_version": "1387e14d0cff",
-      "run_id": "f192669bf9894df2",
+      "run_id": "76e06692bd794537",
       "subject_cta_fingerprint": "23ff8c10cd8f"
     },
     "dry_run": false,
@@ -33,8 +33,8 @@
     "orchestrator_telemetry": {
       "dry_run": false,
       "execute_outbound": true,
-      "finished_at_utc": "2026-05-16T18:24:23Z",
-      "started_at_utc": "2026-05-16T18:24:22Z",
+      "finished_at_utc": "2026-05-16T18:31:38Z",
+      "started_at_utc": "2026-05-16T18:31:37Z",
       "subprocess_return_code": null,
       "venture_pipeline_subprocess_ran": false
     },
@@ -193,12 +193,7 @@
         "points": [
           {
             "regression_count": 7,
-            "timestamp_utc": "2026-05-16T18:20:52Z",
-            "trust_score": 32
-          },
-          {
-            "regression_count": 7,
-            "timestamp_utc": "2026-05-16T18:24:23Z",
+            "timestamp_utc": "2026-05-16T18:31:38Z",
             "trust_score": 32
           }
         ]
@@ -237,7 +232,7 @@
         "system_trend": "plateaued",
         "trust_score": 32
       },
-      "generated_at_utc": "2026-05-16T18:24:23.498970+00:00",
+      "generated_at_utc": "2026-05-16T18:31:38.364981+00:00",
       "historical_intelligence": {
         "degradation_acceleration": 100,
         "last_stable_configuration": {
@@ -245,153 +240,7 @@
           "trust_score": 32
         },
         "latest_operator_changes": [],
-        "records": [
-          {
-            "module_scores": {
-              "stage_1_prospecting": {
-                "runtime_state": "BLOCKED",
-                "trust_score": 17,
-                "usefulness_score": null
-              },
-              "stage_2_enrichment": {
-                "runtime_state": "BLOCKED",
-                "trust_score": 5,
-                "usefulness_score": null
-              },
-              "stage_3_scoring": {
-                "runtime_state": "BLOCKED",
-                "trust_score": 3,
-                "usefulness_score": null
-              },
-              "stage_4_message_generation": {
-                "runtime_state": "BLOCKED",
-                "trust_score": 4,
-                "usefulness_score": null
-              },
-              "stage_5_delivery": {
-                "runtime_state": "BLOCKED",
-                "trust_score": 3,
-                "usefulness_score": null
-              },
-              "stage_6_tracking": {
-                "runtime_state": "BLOCKED",
-                "trust_score": 0,
-                "usefulness_score": null
-              },
-              "stage_7_optimization": {
-                "runtime_state": "BLOCKED",
-                "trust_score": 0,
-                "usefulness_score": null
-              }
-            },
-            "operator_changes": [],
-            "regressions": [
-              {
-                "blast_radius": 100,
-                "confidence": 22,
-                "module_id": "stage_1_prospecting",
-                "root_cause": "internal_regression",
-                "state": "BLOCKED"
-              },
-              {
-                "blast_radius": 83,
-                "confidence": 0,
-                "module_id": "stage_2_enrichment",
-                "root_cause": "stage_1_prospecting",
-                "state": "BLOCKED"
-              },
-              {
-                "blast_radius": 67,
-                "confidence": 0,
-                "module_id": "stage_3_scoring",
-                "root_cause": "stage_2_enrichment",
-                "state": "BLOCKED"
-              },
-              {
-                "blast_radius": 50,
-                "confidence": 0,
-                "module_id": "stage_4_message_generation",
-                "root_cause": "stage_3_scoring",
-                "state": "BLOCKED"
-              },
-              {
-                "blast_radius": 33,
-                "confidence": 0,
-                "module_id": "stage_5_delivery",
-                "root_cause": "stage_4_message_generation",
-                "state": "BLOCKED"
-              },
-              {
-                "blast_radius": 17,
-                "confidence": 0,
-                "module_id": "stage_6_tracking",
-                "root_cause": "stage_2_enrichment",
-                "state": "BLOCKED"
-              },
-              {
-                "blast_radius": 0,
-                "confidence": 0,
-                "module_id": "stage_7_optimization",
-                "root_cause": "stage_3_scoring",
-                "state": "BLOCKED"
-              }
-            ],
-            "root_cause_events": [
-              {
-                "blast_radius": 100,
-                "module": "stage_1_prospecting",
-                "origin": "internal_regression",
-                "severity": "high",
-                "timestamp_utc": "2026-05-16T18:20:52Z"
-              },
-              {
-                "blast_radius": 83,
-                "module": "stage_2_enrichment",
-                "origin": "stage_1_prospecting",
-                "severity": "high",
-                "timestamp_utc": "2026-05-16T18:20:52Z"
-              },
-              {
-                "blast_radius": 67,
-                "module": "stage_3_scoring",
-                "origin": "stage_2_enrichment",
-                "severity": "high",
-                "timestamp_utc": "2026-05-16T18:20:52Z"
-              },
-              {
-                "blast_radius": 50,
-                "module": "stage_4_message_generation",
-                "origin": "stage_3_scoring",
-                "severity": "high",
-                "timestamp_utc": "2026-05-16T18:20:52Z"
-              },
-              {
-                "blast_radius": 33,
-                "module": "stage_5_delivery",
-                "origin": "stage_4_message_generation",
-                "severity": "high",
-                "timestamp_utc": "2026-05-16T18:20:52Z"
-              },
-              {
-                "blast_radius": 17,
-                "module": "stage_6_tracking",
-                "origin": "stage_2_enrichment",
-                "severity": "high",
-                "timestamp_utc": "2026-05-16T18:20:52Z"
-              },
-              {
-                "blast_radius": 0,
-                "module": "stage_7_optimization",
-                "origin": "stage_3_scoring",
-                "severity": "high",
-                "timestamp_utc": "2026-05-16T18:20:52Z"
-              }
-            ],
-            "run_id": "9047553b021f4989",
-            "system_trust_score": 32,
-            "timestamp": "2026-05-16T18:20:52Z"
-          }
-        ]
+        "records": []
       },
       "model_version": "2.0",
       "module_governance_grid": [
@@ -441,7 +290,7 @@
               "module": "stage_1_prospecting",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:24:23Z"
+              "timestamp_utc": "2026-05-16T18:31:38Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -507,7 +356,7 @@
               "module": "stage_2_enrichment",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:24:23Z"
+              "timestamp_utc": "2026-05-16T18:31:38Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -573,7 +422,7 @@
               "module": "stage_3_scoring",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:24:23Z"
+              "timestamp_utc": "2026-05-16T18:31:38Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -637,7 +486,7 @@
               "module": "stage_4_message_generation",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:24:23Z"
+              "timestamp_utc": "2026-05-16T18:31:38Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -699,7 +548,7 @@
               "module": "stage_5_delivery",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:24:23Z"
+              "timestamp_utc": "2026-05-16T18:31:38Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -762,7 +611,7 @@
               "module": "stage_6_tracking",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:24:23Z"
+              "timestamp_utc": "2026-05-16T18:31:38Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -824,7 +673,7 @@
               "module": "stage_7_optimization",
               "previous_usefulness": null,
               "severity": "high",
-              "timestamp_utc": "2026-05-16T18:24:23Z"
+              "timestamp_utc": "2026-05-16T18:31:38Z"
             }
           ],
           "resolved_state": "BLOCKED",
@@ -909,7 +758,7 @@
             "module": "stage_1_prospecting",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 83,
@@ -918,7 +767,7 @@
             "module": "stage_2_enrichment",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 67,
@@ -927,7 +776,7 @@
             "module": "stage_3_scoring",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 50,
@@ -936,7 +785,7 @@
             "module": "stage_4_message_generation",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 33,
@@ -945,7 +794,7 @@
             "module": "stage_5_delivery",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 17,
@@ -954,7 +803,7 @@
             "module": "stage_6_tracking",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 0,
@@ -963,10 +812,10 @@
             "module": "stage_7_optimization",
             "previous_usefulness": null,
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           }
         ],
-        "first_regression_timestamp": "2026-05-16T18:24:23Z"
+        "first_regression_timestamp": "2026-05-16T18:31:38Z"
       },
       "root_cause_intelligence": {
         "events": [
@@ -975,49 +824,49 @@
             "module": "stage_1_prospecting",
             "origin": "internal_regression",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 83,
             "module": "stage_2_enrichment",
             "origin": "stage_1_prospecting",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 67,
             "module": "stage_3_scoring",
             "origin": "stage_2_enrichment",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 50,
             "module": "stage_4_message_generation",
             "origin": "stage_3_scoring",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 33,
             "module": "stage_5_delivery",
             "origin": "stage_4_message_generation",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 17,
             "module": "stage_6_tracking",
             "origin": "stage_2_enrichment",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           },
           {
             "blast_radius": 0,
             "module": "stage_7_optimization",
             "origin": "stage_3_scoring",
             "severity": "high",
-            "timestamp_utc": "2026-05-16T18:24:23Z"
+            "timestamp_utc": "2026-05-16T18:31:38Z"
           }
         ],
         "root_cause": {
@@ -1074,7 +923,7 @@
     "status": "BLOCKED",
     "subprocess_return_code": null
   },
-  "run_id": "f192669bf9894df2",
+  "run_id": "76e06692bd794537",
   "schema_version": "1.0",
   "system": {
     "cost_estimates": {},
@@ -1082,5 +931,5 @@
     "random_seed": 42,
     "record_count": 0
   },
-  "timestamp_utc": "2026-05-16T18:24:23Z"
+  "timestamp_utc": "2026-05-16T18:31:38Z"
 }
