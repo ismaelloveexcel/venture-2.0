@@ -62,11 +62,17 @@ from prospect_gate import sanitize_run_id_fs
 from runtime_config import _is_effective_secret, resolve_data_base
 
 REPO_ROOT = _SCRIPTS.parent.parent
-PROSPECTS_CSV = REPO_ROOT / "06-sales" / "prospects.csv"
-OUTREACH_CSV = REPO_ROOT / "06-sales" / "generated-outreach.csv"
 REPLY_LOG_TEMPLATE = REPO_ROOT / "07-kpis" / "reply_intent_log.template.csv"
 REPLY_LOG_LIVE = REPO_ROOT / "07-kpis" / "reply_intent_log.csv"
 SOLO_OPERATOR_RUN_REPORT = REPO_ROOT / "docs" / "solo-operator" / "run_report.json"
+
+
+def _prospects_csv_path() -> Path:
+    return resolve_data_base(REPO_ROOT) / "06-sales" / "prospects.csv"
+
+
+def _outreach_csv_path() -> Path:
+    return resolve_data_base(REPO_ROOT) / "06-sales" / "generated-outreach.csv"
 
 
 def _sha256_file(path: Path) -> str:
@@ -194,8 +200,9 @@ def _maybe_write_dry_run_snapshot(
         print(f"[cohort] dry_run snapshot exists, skip: {snap_path.name}", flush=True)
         return
     rows: list[dict[str, str | int]] = []
-    if OUTREACH_CSV.is_file():
-        with OUTREACH_CSV.open(newline="", encoding="utf-8") as fh:
+    outreach_csv = _outreach_csv_path()
+    if outreach_csv.is_file():
+        with outreach_csv.open(newline="", encoding="utf-8") as fh:
             for row in csv.DictReader(fh):
                 if (row.get("status") or "").strip().upper() != "PASS":
                     continue
@@ -269,10 +276,11 @@ def _sync_solo_operator_run_report(report_path: Path) -> None:
 
 def _prospect_validation_counts() -> tuple[int, int, int, int]:
     """(ready, review, reject, total_rows) from prospects.csv."""
-    if not PROSPECTS_CSV.is_file():
+    prospects_csv = _prospects_csv_path()
+    if not prospects_csv.is_file():
         return 0, 0, 0, 0
     ready = review = reject = 0
-    with PROSPECTS_CSV.open(newline="", encoding="utf-8") as fh:
+    with prospects_csv.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             st = (
                 (row.get("validation_status") or row.get("readiness_status") or "")
@@ -291,10 +299,11 @@ def _prospect_validation_counts() -> tuple[int, int, int, int]:
 
 def _outreach_pass_fail_approved() -> tuple[int, int, int]:
     """PASS count, FAIL count, rows with status PASS and approved=yes."""
-    if not OUTREACH_CSV.is_file():
+    outreach_csv = _outreach_csv_path()
+    if not outreach_csv.is_file():
         return 0, 0, 0
     n_pass = n_fail = n_appr = 0
-    with OUTREACH_CSV.open(newline="", encoding="utf-8") as fh:
+    with outreach_csv.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             st = (row.get("status") or "").strip().upper()
             if st == "PASS":
@@ -441,9 +450,11 @@ def _telemetry_schema_soft_reasons(parsed: PipelineTelemetry) -> list[str]:
 
 
 def _validate_pipeline_telemetry_soft(
-    telemetry: dict[str, Any],
+    telemetry: Any,
 ) -> tuple[PipelineTelemetry, list[str]]:
     """Validate pipeline telemetry without breaking orchestrator flow."""
+    if not isinstance(telemetry, dict):
+        return PipelineTelemetry(), ["pipeline_telemetry_invalid"]
     try:
         return PipelineTelemetry.model_validate(telemetry), []
     except ValidationError as exc:
