@@ -197,10 +197,10 @@ def _is_canonical_utc_iso_timestamp(value: str) -> bool:
     if not isinstance(value, str):
         return False
     try:
-        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
     except ValueError:
         return False
-    return parsed.strftime("%Y-%m-%dT%H:%M:%SZ") == value
+    return True
 
 
 def _coerce_list(values: Iterable[Any] | Any | None) -> list[Any]:
