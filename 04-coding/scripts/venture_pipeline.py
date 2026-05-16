@@ -2667,20 +2667,23 @@ def main():
     )
 
     ancillary_error: Exception | None = None
-    try:
-        # Auto follow-up check for stale prospects
-        if AUTO_SEND_EMAILS or DRY_RUN:
-            print("\n--- Follow-up Check ---")
-            if ENABLE_FOLLOWUPS:
+    if AUTO_SEND_EMAILS or DRY_RUN:
+        print("\n--- Follow-up Check ---")
+        if ENABLE_FOLLOWUPS:
+            try:
                 check_and_send_followups(config)
-            else:
-                print("  Skipped: ENABLE_FOLLOWUPS is not true.")
+            except Exception as exc:  # noqa: BLE001
+                ancillary_error = exc
+                logger.exception("Ancillary post-send step failed: follow-up check")
+        else:
+            print("  Skipped: ENABLE_FOLLOWUPS is not true.")
 
-        # Email KPI digest to yourself
-        send_digest_email()
-    except Exception as exc:  # noqa: BLE001
-        ancillary_error = exc
-        logger.exception("Ancillary post-send step failed")
+    if ancillary_error is None:
+        try:
+            send_digest_email()
+        except Exception as exc:  # noqa: BLE001
+            ancillary_error = exc
+            logger.exception("Ancillary post-send step failed: digest email")
 
     phase1_snapshot_after = _capture_phase1_snapshot()
     summary_before = phase1_snapshot_before.get("job_summary", {})
