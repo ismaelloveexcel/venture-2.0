@@ -763,3 +763,39 @@ def test_replay_idempotent_with_normalizer_output():
     t1 = replay_timeline(evs)
     t2 = replay_timeline(evs)
     assert t1.summary.as_dict() == t2.summary.as_dict()
+
+
+def test_non_integer_payload_values_do_not_raise():
+    """NormalizedEvent constructed with non-integer delta values must not raise.
+
+    Phase 1 Pydantic-validated payloads always carry int|None deltas.  This
+    test covers the defensive _as_int path for manually-constructed events.
+    """
+    ev = NormalizedEvent(
+        event_id="a" * 64,
+        timestamp=_TS,
+        category="queue",
+        subtype="queue_operations",
+        severity="",
+        source="phase1_structured",
+        payload={"jobs_total_delta": "not-an-int"},  # unexpected string value
+    )
+    t = replay_timeline([ev])
+    # _as_int should return 0 for the string value; no ValueError raised
+    assert t.summary.queue_delta == 0
+
+
+def test_none_payload_values_do_not_raise():
+    """None delta values in payload are handled as zero by _as_int."""
+    ev = NormalizedEvent(
+        event_id="b" * 64,
+        timestamp=_TS,
+        category="health",
+        subtype="retries_failures",
+        severity="",
+        source="phase1_structured",
+        payload={"jobs_retry_sum_delta": None, "failed_status_delta": None},
+    )
+    t = replay_timeline([ev])
+    assert t.summary.retries.total_retry_delta == 0
+    assert t.summary.retries.total_failed_delta == 0

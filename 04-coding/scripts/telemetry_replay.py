@@ -191,6 +191,20 @@ class ExecutionTimeline:
 # ---------------------------------------------------------------------------
 
 
+def _as_int(value: Any) -> int:
+    """Safely coerce a payload value to int, returning 0 for None or non-numeric types.
+
+    Phase 1 normalized events carry Pydantic-validated ``int | None`` delta
+    fields, so in normal operation ``value`` is always ``int`` or ``None``.
+    This helper guards against unexpected ``str`` or other types that could
+    arise if callers construct :class:`~telemetry_normalizer.NormalizedEvent`
+    objects manually with arbitrary payloads.
+    """
+    if isinstance(value, int):
+        return value
+    return 0
+
+
 def _span_id(event_ids: list[str]) -> str:
     """Deterministic sha256 span identifier derived from sorted event IDs."""
     key = json.dumps(sorted(event_ids), separators=(",", ":"))
@@ -200,37 +214,39 @@ def _span_id(event_ids: list[str]) -> str:
 def _derive_summary(subtype: str, severity: str, payload: dict[str, Any]) -> str:
     """Derive a human-readable, deterministic summary string from event fields."""
     if subtype == "queue_operations":
-        delta = payload.get("jobs_total_delta")
-        if delta is None:
+        raw = payload.get("jobs_total_delta")
+        if raw is None:
             return "Queue operations: no delta recorded"
+        delta = _as_int(raw)
         sign = "+" if delta >= 0 else ""
         return f"Queue delta: {sign}{delta} job(s)"
 
     if subtype == "state_transitions":
-        delta = payload.get("lifecycle_events_delta")
-        if delta is None:
+        raw = payload.get("lifecycle_events_delta")
+        if raw is None:
             return "State transitions: no delta recorded"
-        return f"State transitions: {delta} lifecycle event(s)"
+        return f"State transitions: {_as_int(raw)} lifecycle event(s)"
 
     if subtype == "governance_blocks":
-        delta = payload.get("block_logs_delta")
-        if delta is None:
+        raw = payload.get("block_logs_delta")
+        if raw is None:
             delta_str = "no delta recorded"
         else:
+            delta = _as_int(raw)
             sign = "+" if delta >= 0 else ""
             delta_str = f"{sign}{delta}"
         sev = f" ({severity})" if severity else ""
         return f"Governance blocks: {delta_str}{sev}"
 
     if subtype == "retries_failures":
-        retries = payload.get("jobs_retry_sum_delta", 0) or 0
-        failed = payload.get("failed_status_delta", 0) or 0
-        abandoned = payload.get("abandoned_status_delta", 0) or 0
+        retries = _as_int(payload.get("jobs_retry_sum_delta"))
+        failed = _as_int(payload.get("failed_status_delta"))
+        abandoned = _as_int(payload.get("abandoned_status_delta"))
         return f"Retries/failures: {retries} retry(ies), {failed} failure(s), {abandoned} abandoned"
 
     if subtype == "operator_interventions":
-        pauses = payload.get("operator_pause_blocks_delta", 0) or 0
-        lc = payload.get("operator_lifecycle_events_delta", 0) or 0
+        pauses = _as_int(payload.get("operator_pause_blocks_delta"))
+        lc = _as_int(payload.get("operator_lifecycle_events_delta"))
         return f"Operator interventions: {pauses} pause(s), {lc} lifecycle event(s)"
 
     return f"{subtype}: event recorded"
@@ -303,11 +319,11 @@ def _build_governance_summary(events: Sequence[NormalizedEvent]) -> GovernanceEs
         if ev.subtype != "governance_blocks":
             continue
         payload = ev.payload
-        total += int(payload.get("block_logs_delta") or 0)
+        total += _as_int(payload.get("block_logs_delta"))
         sev_d = payload.get("severity_delta") or {}
-        h = int(sev_d.get("hard") or 0)
-        s = int(sev_d.get("soft") or 0)
-        i = int(sev_d.get("info") or 0)
+        h = _as_int(sev_d.get("hard"))
+        s = _as_int(sev_d.get("soft"))
+        i = _as_int(sev_d.get("info"))
         hard += h
         soft += s
         info += i
@@ -330,9 +346,9 @@ def _build_retry_summary(events: Sequence[NormalizedEvent]) -> RetryFailureSumma
         if ev.subtype != "retries_failures":
             continue
         payload = ev.payload
-        retries = int(payload.get("jobs_retry_sum_delta") or 0)
-        failed = int(payload.get("failed_status_delta") or 0)
-        abandoned = int(payload.get("abandoned_status_delta") or 0)
+        retries = _as_int(payload.get("jobs_retry_sum_delta"))
+        failed = _as_int(payload.get("failed_status_delta"))
+        abandoned = _as_int(payload.get("abandoned_status_delta"))
         total_retry += retries
         total_failed += failed
         total_abandoned += abandoned
@@ -352,18 +368,18 @@ def _build_retry_summary(events: Sequence[NormalizedEvent]) -> RetryFailureSumma
 def _build_summary(events: Sequence[NormalizedEvent]) -> ExecutionSummary:
     categories = sorted({ev.category for ev in events})
     queue_delta = sum(
-        int(ev.payload.get("jobs_total_delta") or 0)
+        _as_int(ev.payload.get("jobs_total_delta"))
         for ev in events
         if ev.subtype == "queue_operations"
     )
     state_delta = sum(
-        int(ev.payload.get("lifecycle_events_delta") or 0)
+        _as_int(ev.payload.get("lifecycle_events_delta"))
         for ev in events
         if ev.subtype == "state_transitions"
     )
     has_operator = any(
-        (int(ev.payload.get("operator_pause_blocks_delta") or 0) > 0
-         or int(ev.payload.get("operator_lifecycle_events_delta") or 0) > 0)
+        (_as_int(ev.payload.get("operator_pause_blocks_delta")) > 0
+         or _as_int(ev.payload.get("operator_lifecycle_events_delta")) > 0)
         for ev in events
         if ev.subtype == "operator_interventions"
     )
