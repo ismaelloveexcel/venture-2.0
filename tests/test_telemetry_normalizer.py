@@ -159,6 +159,11 @@ def test_integer_input_returns_empty_list():
     assert normalize_phase1_telemetry(42) == []  # type: ignore[arg-type]
 
 
+def test_list_input_returns_empty_list():
+    """List input (not a dict or model) is rejected gracefully."""
+    assert normalize_phase1_telemetry([{"event": "queue_operations"}]) == []  # type: ignore[arg-type]
+
+
 def test_empty_dict_returns_empty_list():
     assert normalize_phase1_telemetry({}) == []
 

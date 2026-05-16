@@ -237,6 +237,9 @@ def test_multi_span_each_has_correct_events():
     t = replay_timeline([ev1, ev2])
     assert t.spans[0].event_ids == [ev1.event_id]
     assert t.spans[1].event_ids == [ev2.event_id]
+    # Span ordering must follow first-seen timestamp order
+    assert t.spans[0].start_timestamp == _TS
+    assert t.spans[1].start_timestamp == _TS2
 
 
 def test_span_category_set_sorted():

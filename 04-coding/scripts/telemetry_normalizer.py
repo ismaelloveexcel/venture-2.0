@@ -213,9 +213,11 @@ def normalize_phase1_telemetry(
         model = Phase1StructuredTelemetryModel.model_validate(inner)
     except Exception as exc:  # noqa: BLE001
         _logger.debug(
-            "telemetry_normalizer: phase1_structured validation failed (%s); "
-            "returning empty list — may indicate schema evolution or malformed input",
+            "telemetry_normalizer: phase1_structured validation failed; "
+            "returning empty list. error=%r input_type=%s input_keys=%s",
             exc,
+            type(inner).__name__,
+            sorted(inner.keys()) if isinstance(inner, dict) else "n/a",
         )
         return []
 
