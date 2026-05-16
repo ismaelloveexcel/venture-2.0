@@ -14,6 +14,7 @@ Coverage:
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from typing import Any
@@ -103,8 +104,6 @@ def test_identical_model_input_produces_identical_output():
 
 def test_different_payload_produces_different_event_id():
     """Changing a field changes the event_id (no hash collision on trivial deltas)."""
-    import copy
-
     d1 = copy.deepcopy(_bare_phase1_dict())
     d2 = copy.deepcopy(_bare_phase1_dict())
     d2["events"][0]["jobs_total_delta"] = 99

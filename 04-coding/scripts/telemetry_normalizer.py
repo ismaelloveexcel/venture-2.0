@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -24,6 +25,8 @@ from run_report_schema import (
     Phase1GovernanceBlocksEventModel,
     Phase1StructuredTelemetryModel,
 )
+
+_logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Canonical event record
@@ -208,7 +211,12 @@ def normalize_phase1_telemetry(
 
     try:
         model = Phase1StructuredTelemetryModel.model_validate(inner)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        _logger.debug(
+            "telemetry_normalizer: phase1_structured validation failed (%s); "
+            "returning empty list — may indicate schema evolution or malformed input",
+            exc,
+        )
         return []
 
     return _normalize_structured(model)
