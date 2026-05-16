@@ -193,7 +193,7 @@ def _copy_span(span: ReconstructedSpan) -> ReconstructedSpan:
     )
 
 
-def _is_canonical_utc_iso_timestamp(value: str) -> bool:
+def _is_canonical_utc_iso_timestamp(value: Any) -> bool:
     if not isinstance(value, str):
         return False
     try:

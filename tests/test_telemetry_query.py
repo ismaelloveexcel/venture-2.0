@@ -207,6 +207,8 @@ def test_aggregate_events_coerces_malformed_group_values():
         source="phase1_structured",
         payload={},
     )
+    # Post-construction mutation is intentional to simulate malformed runtime objects
+    # that bypass static typing but may still reach query helpers.
     malformed.category = ["bad"]  # type: ignore[assignment]
     malformed.subtype = {"x": 1}  # type: ignore[assignment]
     malformed.severity = ("tuple",)  # type: ignore[assignment]
