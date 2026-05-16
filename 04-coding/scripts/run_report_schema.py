@@ -26,6 +26,91 @@ class PipelineTelemetry(BaseModel):
     run_health: dict[str, Any] | None = None
     job_queue_summary: dict[str, Any] | None = None
     funnel_counts_7d: dict[str, Any] | None = None
+    phase1_structured: Phase1StructuredTelemetryModel | None = None
+
+
+class Phase1SeverityDeltaModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    hard: int = 0
+    soft: int = 0
+    info: int = 0
+
+
+class Phase1WindowModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    pipeline_started_at_utc: str | None = None
+    pipeline_finished_at_utc: str | None = None
+
+
+class Phase1QueueOperationsEventModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    event: Literal["queue_operations"]
+    job_summary_before: dict[str, Any] | None = None
+    job_summary_after: dict[str, Any] | None = None
+    jobs_total_delta: int | None = None
+
+
+class Phase1StateTransitionsEventModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    event: Literal["state_transitions"]
+    lifecycle_events_delta: int | None = None
+
+
+class Phase1GovernanceBlocksEventModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    event: Literal["governance_blocks"]
+    block_logs_delta: int | None = None
+    severity_delta: Phase1SeverityDeltaModel | None = None
+
+
+class Phase1RetriesFailuresEventModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    event: Literal["retries_failures"]
+    jobs_retry_sum_delta: int | None = None
+    failed_status_delta: int | None = None
+    abandoned_status_delta: int | None = None
+
+
+class Phase1OperatorInterventionsEventModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    event: Literal["operator_interventions"]
+    operator_pause_blocks_delta: int | None = None
+    operator_lifecycle_events_delta: int | None = None
+
+
+Phase1EventModel = (
+    Phase1QueueOperationsEventModel
+    | Phase1StateTransitionsEventModel
+    | Phase1GovernanceBlocksEventModel
+    | Phase1RetriesFailuresEventModel
+    | Phase1OperatorInterventionsEventModel
+)
+
+
+class Phase1StructuredTelemetryModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    version: Literal[1] = 1
+    window: Phase1WindowModel | None = None
+    events: list[Phase1EventModel] = Field(default_factory=list)
+
+
+class OrchestratorTelemetryModel(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    started_at_utc: str | None = None
+    finished_at_utc: str | None = None
+    execute_outbound: bool = False
+    dry_run: bool = False
+    venture_pipeline_subprocess_ran: bool = False
+    subprocess_return_code: int | None = None
 
 
 class MoneyPathModel(BaseModel):
@@ -267,6 +352,9 @@ class OutboundSection(BaseModel):
     money_path_source: MoneyPathSource = "none"
     # Populated by run_daily when child sets VENTURE_PIPELINE_TELEMETRY_JSON (P3)
     pipeline_telemetry: PipelineTelemetry = Field(default_factory=PipelineTelemetry)
+    orchestrator_telemetry: OrchestratorTelemetryModel = Field(
+        default_factory=OrchestratorTelemetryModel
+    )
     prospect_batch: ProspectBatchModel = Field(default_factory=ProspectBatchModel)
     cohort_metadata: CohortMetadataModel | None = None
     funnel_health_snapshots: list[FunnelHealthSnapshotModel] = Field(

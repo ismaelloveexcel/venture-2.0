@@ -308,6 +308,31 @@ def _check_resend_emails_endpoint_isolation(repo: Path) -> list[str]:
     return []
 
 
+def _check_e2e_trace_artifact_isolation(repo: Path) -> list[str]:
+    """
+    Guard against test-driven churn in governed artifact files.
+
+    The run_daily e2e trace test must execute in an isolated client workspace and
+    skip solo-operator mirror writes.
+    """
+    test_path = repo / "tests" / "test_run_daily_e2e_trace.py"
+    if not test_path.is_file():
+        return ["tests/test_run_daily_e2e_trace.py missing (trace guard required)"]
+    text = test_path.read_text(encoding="utf-8")
+    errs: list[str] = []
+    if "VENTURE_CLIENT_WORKSPACE" not in text:
+        errs.append(
+            "e2e trace isolation: tests/test_run_daily_e2e_trace.py must set "
+            "VENTURE_CLIENT_WORKSPACE to avoid writing governed repo artifacts"
+        )
+    if "VENTURE_SKIP_SOLO_OPERATOR_SYNC" not in text:
+        errs.append(
+            "e2e trace isolation: tests/test_run_daily_e2e_trace.py must set "
+            "VENTURE_SKIP_SOLO_OPERATOR_SYNC=1 to avoid mutating docs/solo-operator/run_report.json"
+        )
+    return errs
+
+
 def main() -> int:
     repo = _repo_root()
     scripts = _scripts_dir(repo)
@@ -330,6 +355,7 @@ def main() -> int:
     errs.extend(_check_prospects_csv_schema(repo))
     errs.extend(_check_prospects_csv_write_isolation(scripts))
     errs.extend(_check_resend_emails_endpoint_isolation(repo))
+    errs.extend(_check_e2e_trace_artifact_isolation(repo))
     errs.extend(_check_landing_icp_semantic_latch(repo))
 
     if errs:

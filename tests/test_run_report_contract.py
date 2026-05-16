@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from run_report_schema import CohortMetadataModel, OutboundSection, RunReport
+from run_daily import _merge_pipeline_telemetry
 from run_report_writer import parse_run_report, write_run_report_atomic
 
 
@@ -30,6 +31,92 @@ def test_outbound_pipeline_telemetry_roundtrip(tmp_path: Path):
     back = parse_run_report(p)
     assert back.outbound.pipeline_telemetry.schema_version == 1
     assert isinstance(back.outbound.pipeline_telemetry.run_health, dict)
+
+
+def test_outbound_phase1_structured_telemetry_roundtrip(tmp_path: Path):
+    p = tmp_path / "rr_phase1_telemetry.json"
+    r = RunReport(
+        run_id="p1",
+        timestamp_utc="2026-05-15T00:00:00Z",
+        outbound=OutboundSection(
+            status="SUCCESS",
+            pipeline_telemetry={
+                "schema_version": 1,
+                "phase1_structured": {
+                    "version": 1,
+                    "events": [
+                        {"event": "queue_operations", "jobs_total_delta": 3},
+                        {"event": "governance_blocks", "block_logs_delta": 1},
+                    ],
+                },
+            },
+            orchestrator_telemetry={
+                "started_at_utc": "2026-05-15T00:00:00Z",
+                "finished_at_utc": "2026-05-15T00:00:12Z",
+                "execute_outbound": True,
+                "dry_run": True,
+                "venture_pipeline_subprocess_ran": True,
+                "subprocess_return_code": 0,
+            },
+        ),
+    )
+    write_run_report_atomic(p, r)
+    back = parse_run_report(p)
+    assert back.outbound.pipeline_telemetry.phase1_structured is not None
+    assert back.outbound.pipeline_telemetry.phase1_structured.version == 1
+    assert back.outbound.pipeline_telemetry.phase1_structured.events[0].event == "queue_operations"
+    assert back.outbound.orchestrator_telemetry.execute_outbound is True
+    assert back.outbound.orchestrator_telemetry.subprocess_return_code == 0
+
+
+def test_outbound_phase1_structured_partial_backward_compatible(tmp_path: Path):
+    p = tmp_path / "rr_phase1_partial.json"
+    r = RunReport(
+        run_id="p2",
+        timestamp_utc="2026-05-15T00:00:00Z",
+        outbound=OutboundSection(
+            status="SUCCESS",
+            pipeline_telemetry={
+                "schema_version": 1,
+                "phase1_structured": {
+                    "version": 1,
+                    "events": [
+                        {"event": "queue_operations", "jobs_total_delta": 1},
+                        {"event": "governance_blocks", "block_logs_delta": 0},
+                    ],
+                },
+            },
+        ),
+    )
+    write_run_report_atomic(p, r)
+    back = parse_run_report(p)
+    phase1 = back.outbound.pipeline_telemetry.phase1_structured
+    assert phase1 is not None
+    assert len(phase1.events) == 2
+    assert phase1.events[1].event == "governance_blocks"
+
+
+def test_outbound_phase1_structured_unknown_event_is_dropped_safely():
+    base = OutboundSection(
+        status="SUCCESS",
+        money_path_source="orchestrator",
+        dry_run=True,
+    )
+    merged = _merge_pipeline_telemetry(
+        base,
+        {
+            "schema_version": 1,
+            "run_health": {"sent": 1, "blocked": 0},
+            "phase1_structured": {
+                "version": 1,
+                "events": [{"event": "unknown_event", "value": 1}],
+            },
+        },
+        dry_run=True,
+    )
+    assert merged.pipeline_telemetry.phase1_structured is None
+    assert "phase1_structured_dropped_invalid" in merged.money_path.reasons
+    assert merged.money_path_source == "pipeline_telemetry"
 
 
 def test_cohort_metadata_policy_fingerprint_matches_batch_guard() -> None:

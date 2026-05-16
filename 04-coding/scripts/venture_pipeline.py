@@ -30,6 +30,7 @@ import os
 import csv
 import json
 import pathlib
+import sqlite3
 import sys
 import re
 from collections import defaultdict
@@ -1722,6 +1723,68 @@ def retry_failed_jobs():
             job_queue.fail_job(job.id, error=str(e), retry=True)
 
 
+def _capture_phase1_snapshot() -> dict[str, int | dict[str, int]]:
+    """Capture sparse baseline counters for Phase 1 structured telemetry deltas."""
+    summary = job_queue.get_summary()
+    phase1_snapshot: dict[str, int | dict[str, int]] = {
+        "job_summary": {
+            "pending": int(summary.get("pending", 0)),
+            "in_progress": int(summary.get("in_progress", 0)),
+            "completed": int(summary.get("completed", 0)),
+            "failed": int(summary.get("failed", 0)),
+            "abandoned": int(summary.get("abandoned", 0)),
+        },
+        "jobs_total": 0,
+        "lifecycle_events_total": 0,
+        "block_logs_total": 0,
+        "block_logs_hard": 0,
+        "block_logs_soft": 0,
+        "block_logs_info": 0,
+        "jobs_retry_sum": 0,
+        "operator_pause_blocks_total": 0,
+        "operator_lifecycle_events_total": 0,
+    }
+    try:
+        with sqlite3.connect(job_queue.db_path) as conn:
+            cur = conn.execute("SELECT COUNT(*) FROM jobs")
+            phase1_snapshot["jobs_total"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute("SELECT COUNT(*) FROM lifecycle_events")
+            phase1_snapshot["lifecycle_events_total"] = int(
+                (cur.fetchone() or [0])[0] or 0
+            )
+            cur = conn.execute("SELECT COUNT(*) FROM block_logs")
+            phase1_snapshot["block_logs_total"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='HARD'"
+            )
+            phase1_snapshot["block_logs_hard"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='SOFT'"
+            )
+            phase1_snapshot["block_logs_soft"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM block_logs WHERE UPPER(COALESCE(severity,''))='INFO'"
+            )
+            phase1_snapshot["block_logs_info"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute("SELECT COALESCE(SUM(retry_count), 0) FROM jobs")
+            phase1_snapshot["jobs_retry_sum"] = int((cur.fetchone() or [0])[0] or 0)
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM block_logs WHERE block_type='OPERATOR_PAUSE_BLOCK'"
+            )
+            phase1_snapshot["operator_pause_blocks_total"] = int(
+                (cur.fetchone() or [0])[0] or 0
+            )
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM lifecycle_events WHERE source='operator'"
+            )
+            phase1_snapshot["operator_lifecycle_events_total"] = int(
+                (cur.fetchone() or [0])[0] or 0
+            )
+    except sqlite3.Error as exc:
+        logger.warning("Phase 1 snapshot capture failed: %s", exc)
+    return phase1_snapshot
+
+
 # ── Main Pipeline ─────────────────────────────────────────────────────────────
 def main():
     print("\n========================================")
@@ -1822,6 +1885,11 @@ def main():
         print(
             "[ok] Batch 1 lock consumed; this run is now bound to approved recipients."
         )
+
+    phase1_pipeline_started_at = datetime.now(timezone.utc).isoformat().replace(
+        "+00:00", "Z"
+    )
+    phase1_snapshot_before = _capture_phase1_snapshot()
 
     # Retry failed jobs from previous runs
     retry_failed_jobs()
@@ -2598,6 +2666,87 @@ def main():
         f"Failed: {summary['failed']} | Abandoned: {summary['abandoned']}"
     )
 
+    ancillary_error: Exception | None = None
+    if AUTO_SEND_EMAILS or DRY_RUN:
+        print("\n--- Follow-up Check ---")
+        if ENABLE_FOLLOWUPS:
+            try:
+                check_and_send_followups(config)
+            except Exception as exc:  # noqa: BLE001
+                ancillary_error = exc
+                logger.exception("Ancillary post-send step failed: follow-up check")
+        else:
+            print("  Skipped: ENABLE_FOLLOWUPS is not true.")
+
+    if ancillary_error is None:
+        try:
+            send_digest_email()
+        except Exception as exc:  # noqa: BLE001
+            ancillary_error = exc
+            logger.exception("Ancillary post-send step failed: digest email")
+
+    phase1_snapshot_after = _capture_phase1_snapshot()
+    summary_before = phase1_snapshot_before.get("job_summary", {})
+    summary_after = phase1_snapshot_after.get("job_summary", {})
+    phase1_structured = {
+        "version": 1,
+        "window": {
+            "pipeline_started_at_utc": phase1_pipeline_started_at,
+            "pipeline_finished_at_utc": datetime.now(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
+        },
+        "events": [
+            {
+                "event": "queue_operations",
+                "job_summary_before": summary_before,
+                "job_summary_after": summary_after,
+                "jobs_total_delta": int(phase1_snapshot_after["jobs_total"])
+                - int(phase1_snapshot_before["jobs_total"]),
+            },
+            {
+                "event": "state_transitions",
+                "lifecycle_events_delta": int(
+                    phase1_snapshot_after["lifecycle_events_total"]
+                )
+                - int(phase1_snapshot_before["lifecycle_events_total"]),
+            },
+            {
+                "event": "governance_blocks",
+                "block_logs_delta": int(phase1_snapshot_after["block_logs_total"])
+                - int(phase1_snapshot_before["block_logs_total"]),
+                "severity_delta": {
+                    "hard": int(phase1_snapshot_after["block_logs_hard"])
+                    - int(phase1_snapshot_before["block_logs_hard"]),
+                    "soft": int(phase1_snapshot_after["block_logs_soft"])
+                    - int(phase1_snapshot_before["block_logs_soft"]),
+                    "info": int(phase1_snapshot_after["block_logs_info"])
+                    - int(phase1_snapshot_before["block_logs_info"]),
+                },
+            },
+            {
+                "event": "retries_failures",
+                "jobs_retry_sum_delta": int(phase1_snapshot_after["jobs_retry_sum"])
+                - int(phase1_snapshot_before["jobs_retry_sum"]),
+                "failed_status_delta": int(summary_after.get("failed", 0))
+                - int(summary_before.get("failed", 0)),
+                "abandoned_status_delta": int(summary_after.get("abandoned", 0))
+                - int(summary_before.get("abandoned", 0)),
+            },
+            {
+                "event": "operator_interventions",
+                "operator_pause_blocks_delta": int(
+                    phase1_snapshot_after["operator_pause_blocks_total"]
+                )
+                - int(phase1_snapshot_before["operator_pause_blocks_total"]),
+                "operator_lifecycle_events_delta": int(
+                    phase1_snapshot_after["operator_lifecycle_events_total"]
+                )
+                - int(phase1_snapshot_before["operator_lifecycle_events_total"]),
+            },
+        ],
+    }
+
     telemetry_path = os.environ.get("VENTURE_PIPELINE_TELEMETRY_JSON", "").strip()
     if telemetry_path:
         try:
@@ -2610,21 +2759,13 @@ def main():
                 "job_queue_summary": dict(summary),
                 "run_health": dict(run_health),
                 "funnel_counts_7d": dict(fc_7d),
+                "phase1_structured": phase1_structured,
             }
             tpath.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         except OSError as exc:
             logger.warning("VENTURE_PIPELINE_TELEMETRY_JSON write failed: %s", exc)
-
-    # Auto follow-up check for stale prospects
-    if AUTO_SEND_EMAILS or DRY_RUN:
-        print("\n--- Follow-up Check ---")
-        if ENABLE_FOLLOWUPS:
-            check_and_send_followups(config)
-        else:
-            print("  Skipped: ENABLE_FOLLOWUPS is not true.")
-
-    # Email KPI digest to yourself
-    send_digest_email()
+    if ancillary_error is not None:
+        raise ancillary_error
 
     if AUTO_SEND_EMAILS or DRY_RUN:
         print(

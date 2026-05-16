@@ -31,6 +31,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
 # Ensure sibling imports resolve when executed as script
 _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
@@ -41,6 +43,7 @@ from run_report_schema import (
     CisEvalSection,
     CohortMetadataModel,
     FunnelHealthSnapshotModel,
+    OrchestratorTelemetryModel,
     OutboundSection,
     OutboundStatus,
     PipelineTelemetry,
@@ -59,11 +62,17 @@ from prospect_gate import sanitize_run_id_fs
 from runtime_config import _is_effective_secret, resolve_data_base
 
 REPO_ROOT = _SCRIPTS.parent.parent
-PROSPECTS_CSV = REPO_ROOT / "06-sales" / "prospects.csv"
-OUTREACH_CSV = REPO_ROOT / "06-sales" / "generated-outreach.csv"
 REPLY_LOG_TEMPLATE = REPO_ROOT / "07-kpis" / "reply_intent_log.template.csv"
 REPLY_LOG_LIVE = REPO_ROOT / "07-kpis" / "reply_intent_log.csv"
 SOLO_OPERATOR_RUN_REPORT = REPO_ROOT / "docs" / "solo-operator" / "run_report.json"
+
+
+def _prospects_csv_path() -> Path:
+    return resolve_data_base(REPO_ROOT) / "06-sales" / "prospects.csv"
+
+
+def _outreach_csv_path() -> Path:
+    return resolve_data_base(REPO_ROOT) / "06-sales" / "generated-outreach.csv"
 
 
 def _sha256_file(path: Path) -> str:
@@ -191,8 +200,9 @@ def _maybe_write_dry_run_snapshot(
         print(f"[cohort] dry_run snapshot exists, skip: {snap_path.name}", flush=True)
         return
     rows: list[dict[str, str | int]] = []
-    if OUTREACH_CSV.is_file():
-        with OUTREACH_CSV.open(newline="", encoding="utf-8") as fh:
+    outreach_csv = _outreach_csv_path()
+    if outreach_csv.is_file():
+        with outreach_csv.open(newline="", encoding="utf-8") as fh:
             for row in csv.DictReader(fh):
                 if (row.get("status") or "").strip().upper() != "PASS":
                     continue
@@ -241,6 +251,13 @@ def _maybe_write_dry_run_snapshot(
 
 def _sync_solo_operator_run_report(report_path: Path) -> None:
     """Mirror the canonical run report to the solo-operator dashboard data path."""
+    if os.environ.get("VENTURE_SKIP_SOLO_OPERATOR_SYNC", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
     try:
         if not report_path.is_file():
             return
@@ -259,10 +276,11 @@ def _sync_solo_operator_run_report(report_path: Path) -> None:
 
 def _prospect_validation_counts() -> tuple[int, int, int, int]:
     """(ready, review, reject, total_rows) from prospects.csv."""
-    if not PROSPECTS_CSV.is_file():
+    prospects_csv = _prospects_csv_path()
+    if not prospects_csv.is_file():
         return 0, 0, 0, 0
     ready = review = reject = 0
-    with PROSPECTS_CSV.open(newline="", encoding="utf-8") as fh:
+    with prospects_csv.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             st = (
                 (row.get("validation_status") or row.get("readiness_status") or "")
@@ -281,10 +299,11 @@ def _prospect_validation_counts() -> tuple[int, int, int, int]:
 
 def _outreach_pass_fail_approved() -> tuple[int, int, int]:
     """PASS count, FAIL count, rows with status PASS and approved=yes."""
-    if not OUTREACH_CSV.is_file():
+    outreach_csv = _outreach_csv_path()
+    if not outreach_csv.is_file():
         return 0, 0, 0
     n_pass = n_fail = n_appr = 0
-    with OUTREACH_CSV.open(newline="", encoding="utf-8") as fh:
+    with outreach_csv.open(newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             st = (row.get("status") or "").strip().upper()
             if st == "PASS":
@@ -430,18 +449,54 @@ def _telemetry_schema_soft_reasons(parsed: PipelineTelemetry) -> list[str]:
     return []
 
 
+def _validate_pipeline_telemetry_soft(
+    telemetry: dict[str, Any] | list[Any] | str | int | float | bool | None,
+) -> tuple[PipelineTelemetry, list[str]]:
+    """Validate pipeline telemetry without breaking orchestrator flow."""
+    if not isinstance(telemetry, dict):
+        return PipelineTelemetry(), ["pipeline_telemetry_invalid"]
+    try:
+        return PipelineTelemetry.model_validate(telemetry), []
+    except ValidationError as exc:
+        reasons: list[str] = []
+        invalid_fields: set[str] = set()
+        for err in exc.errors():
+            loc = err.get("loc") or ()
+            if loc and isinstance(loc[0], str):
+                invalid_fields.add(loc[0])
+
+        sanitized = dict(telemetry)
+        if "phase1_structured" in invalid_fields and "phase1_structured" in sanitized:
+            sanitized.pop("phase1_structured", None)
+            reasons.append("phase1_structured_dropped_invalid")
+
+        other_invalid_fields = invalid_fields - {"phase1_structured"}
+        for field in other_invalid_fields:
+            sanitized.pop(field, None)
+        if other_invalid_fields:
+            reasons.append("pipeline_telemetry_invalid")
+
+        try:
+            return PipelineTelemetry.model_validate(sanitized), reasons
+        except ValidationError:
+            if "pipeline_telemetry_invalid" not in reasons:
+                reasons.append("pipeline_telemetry_invalid")
+            return PipelineTelemetry(), reasons
+
+
 def _merge_pipeline_telemetry(
     outbound: OutboundSection, telemetry: dict, *, dry_run: bool
 ) -> OutboundSection:
     """Attach validated telemetry; promote counts into money_path only when run_health is present."""
-    parsed = PipelineTelemetry.model_validate(telemetry)
+    parsed, validation_reasons = _validate_pipeline_telemetry_soft(telemetry)
     schema_extra = _telemetry_schema_soft_reasons(parsed)
+    extras = schema_extra + validation_reasons
     o = outbound.model_copy(update={"pipeline_telemetry": parsed})
     rh = parsed.run_health
     if not isinstance(rh, dict):
-        if schema_extra:
+        if extras:
             mp = o.money_path.model_copy(
-                update={"reasons": list(o.money_path.reasons) + schema_extra}
+                update={"reasons": list(o.money_path.reasons) + extras}
             )
             o = o.model_copy(update={"money_path": mp})
         return o
@@ -454,7 +509,7 @@ def _merge_pipeline_telemetry(
     else:
         reasons.append("live_pipeline_telemetry")
     reasons.append("pipeline_telemetry")
-    reasons.extend(schema_extra)
+    reasons.extend(extras)
     return o.model_copy(
         update={
             "money_path": o.money_path.model_copy(
@@ -1201,6 +1256,7 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit(5)
 
     execute_outbound = bool(args.execute_outbound or args.execute)
+    orchestrator_started_at = _utc_iso()
 
     run_id = os.environ.get("VENTURE_RUN_ID", "").strip() or uuid.uuid4().hex[:16]
     os.environ["VENTURE_RUN_ID"] = run_id
@@ -1363,8 +1419,10 @@ def main(argv: list[str] | None = None) -> int:
         else:
             outbound = outbound.model_copy(update={"money_path_source": "orchestrator"})
             if telemetry:
-                parsed = PipelineTelemetry.model_validate(telemetry)
+                parsed, validation_reasons = _validate_pipeline_telemetry_soft(telemetry)
                 outbound = outbound.model_copy(update={"pipeline_telemetry": parsed})
+                if validation_reasons:
+                    outbound.errors.extend(validation_reasons)
 
     # Impossible-state guard: outbound ran but provenance was never set (future refactor safety).
     if execute_outbound and outbound.money_path_source == "none":
@@ -1409,6 +1467,21 @@ def main(argv: list[str] | None = None) -> int:
         pc = REPO_ROOT / "clients" / args.client / "prospects.csv"
         if pc.is_file():
             n_records = max(0, sum(1 for _ in pc.open(encoding="utf-8")) - 1)
+
+    outbound = outbound.model_copy(
+        update={
+            "orchestrator_telemetry": OrchestratorTelemetryModel(
+                started_at_utc=orchestrator_started_at,
+                finished_at_utc=_utc_iso(),
+                execute_outbound=execute_outbound,
+                dry_run=bool(args.dry_run),
+                venture_pipeline_subprocess_ran=(
+                    "venture_pipeline_subprocess" in outbound.phases
+                ),
+                subprocess_return_code=outbound.subprocess_return_code,
+            )
+        }
+    )
 
     report = RunReport(
         run_id=run_id,
