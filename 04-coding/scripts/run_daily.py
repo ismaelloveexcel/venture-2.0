@@ -244,6 +244,13 @@ def _maybe_write_dry_run_snapshot(
 
 def _sync_solo_operator_run_report(report_path: Path) -> None:
     """Mirror the canonical run report to the solo-operator dashboard data path."""
+    if os.environ.get("VENTURE_SKIP_SOLO_OPERATOR_SYNC", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
     try:
         if not report_path.is_file():
             return
