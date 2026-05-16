@@ -450,7 +450,7 @@ def _telemetry_schema_soft_reasons(parsed: PipelineTelemetry) -> list[str]:
 
 
 def _validate_pipeline_telemetry_soft(
-    telemetry: object,
+    telemetry: dict[str, Any] | list[Any] | str | int | float | bool | None,
 ) -> tuple[PipelineTelemetry, list[str]]:
     """Validate pipeline telemetry without breaking orchestrator flow."""
     if not isinstance(telemetry, dict):
