@@ -1,9 +1,12 @@
 {
   "schema_version": "1",
-  "status": "PRE_LAUNCH_ACTIVE",
+  "status": "READY_TO_BUILD_BATCH",
   "opened_utc": "2026-05-12T17:05:00Z",
   "repo_git_short": "07753d5",
-  "landing_icp": "pending",
+  "landing_icp": "locked",
+  "icp_one_liner": "Founder-led B2B service firms (agencies, consulting, dev shops, recruiters) losing deals to slow lead response",
+  "cohort_id": "cohort_001",
+  "first_batch_size_rule": "20-30 prospects max; 100% manually reviewable; zero demo_template source rows",
   "last_baseline": {
     "recorded_at_utc": "2026-05-17T00:00:00Z",
     "pytest_tests": "run_daily.py bridge validate: 255 passed",
