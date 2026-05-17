@@ -197,6 +197,56 @@ def get_blocked_status() -> list:
         return []
 
 
+def get_control_focus() -> dict:
+    """
+    Single actionable operator focus derived from canonical run_report context.
+    Severity order: HARD > ACTION > DEGRADED > INFO.
+    """
+    status_payload = operator_status_payload(
+        repo_root=BASE,
+        data_base=resolve_data_base(BASE),
+    )
+    run_id = (status_payload.get("run_id") or "").strip() or "unknown"
+    outbound_status = (status_payload.get("outbound_status") or "").strip().upper()
+    skipped_rows = status_payload.get("skipped_rows") or []
+
+    if outbound_status in {"FAILED", "BLOCKED"}:
+        return {
+            "severity": "HARD",
+            "title": f"Outbound {outbound_status}",
+            "run_id": run_id,
+            "recommended_action": "Open run_report + send_skipped, resolve blocker, then rehearse before live.",
+            "source": "run_report.json",
+        }
+
+    if outbound_status in {"SKIPPED", "NOT_EXECUTED"}:
+        return {
+            "severity": "ACTION",
+            "title": "Execution not complete",
+            "run_id": run_id,
+            "recommended_action": "Run Rehearse mode first, then Execute Live only when checks pass.",
+            "source": "run_report.json",
+        }
+
+    if len(skipped_rows) > 0:
+        top_reason = (skipped_rows[-1].get("skip_reason") or "unknown").strip()
+        return {
+            "severity": "DEGRADED",
+            "title": f"Skipped sends detected ({len(skipped_rows)} recent)",
+            "run_id": run_id,
+            "recommended_action": f"Inspect skip reason '{top_reason}' and unblock before next live run.",
+            "source": "send_skipped_log.csv",
+        }
+
+    return {
+        "severity": "INFO",
+        "title": "No active blocker",
+        "run_id": run_id,
+        "recommended_action": "Observe telemetry; use Rehearse for changes before live execution.",
+        "source": "run_report.json",
+    }
+
+
 def score_idea_openai(idea: str) -> str:
     if not OPENAI_API_KEY:
         return "⚠  OPENAI_API_KEY not set. Add it to your .env file and restart the dashboard."
@@ -294,6 +344,8 @@ class Handler(BaseHTTPRequestHandler):
                     data_base=resolve_data_base(BASE),
                 )
             )
+        elif path == "/api/control-focus":
+            self._send_json(get_control_focus())
         elif path.startswith("/api/opportunity"):
             q = parse_qs(urlparse(self.path).query)
             bid = (q.get("business_id") or q.get("id") or [""])[0]
@@ -310,10 +362,38 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/run-pipeline":
             try:
+                query = parse_qs(urlparse(self.path).query)
+                mode = (query.get("mode") or ["dry"])[0].strip().lower()
+                body = self._read_json()
+
+                if mode not in {"dry", "live"}:
+                    self._send_json(
+                        {"output": "Invalid mode. Use mode=dry or mode=live."},
+                        status=400,
+                    )
+                    return
+
+                if mode == "live":
+                    if (
+                        body.get("confirm_live") or ""
+                    ).strip() != "I_UNDERSTAND_LIVE_SENDS":
+                        self._send_json(
+                            {
+                                "output": (
+                                    "Live execution requires confirm_live=I_UNDERSTAND_LIVE_SENDS in request body."
+                                )
+                            },
+                            status=400,
+                        )
+                        return
+
                 env = os.environ.copy()
                 env["VENTURE_CANONICAL_ENTRY"] = "1"
+                cmd = [PYTHON, RUN_DAILY, "--execute-outbound"]
+                if mode == "dry":
+                    cmd.append("--dry-run")
                 result = subprocess.run(
-                    [PYTHON, RUN_DAILY, "--execute"],
+                    cmd,
                     capture_output=True,
                     text=True,
                     timeout=300,

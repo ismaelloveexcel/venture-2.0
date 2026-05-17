@@ -1,510 +1,1009 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Venture OS — execution control plane (local)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root {
-      --bg: #0a0f0d;
-      --surface: #121a17;
-      --border: #1e2a26;
-      --text: #e4ebe8;
-      --muted: #8a9a94;
-      --accent: #2d6a4f;
-      --accent-dim: #245542;
-      --warn: #b8860b;
-      --bad: #9b3b3b;
-    }
-    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
-    .input-field {
-      display: block; width: 100%; margin-top: 6px; padding: 9px 12px;
-      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-      color: var(--text); font-size: 14px; outline: none; transition: border-color .15s;
-    }
-    .input-field:focus { border-color: var(--accent); }
-    .input-field::placeholder { color: #5c6b64; }
-    .btn-primary { background: var(--accent); color: #fff; font-weight: 600; padding: 10px 22px;
-      border-radius: 8px; border: none; cursor: pointer; transition: background .15s; font-size: 14px; }
-    .btn-primary:hover:not(:disabled) { background: var(--accent-dim); }
-    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-ghost { background: #151d1a; color: var(--muted); font-weight: 500; padding: 10px 20px;
-      border-radius: 8px; border: 1px solid var(--border); cursor: pointer; transition: all .15s; font-size: 14px; }
-    .btn-ghost:hover { background: #1a2420; color: var(--text); }
-    .tab-btn { padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 500;
-      border: none; cursor: pointer; transition: all .15s; }
-    .tab-btn.active { background: var(--accent); color: #fff; }
-    .tab-btn:not(.active) { background: #151d1a; color: #6b7a74; }
-    .tab-btn:not(.active):hover { background: #1a2420; color: #a8b5af; }
-    .terminal { background: #060908; border: 1px solid var(--border); border-radius: 8px;
-      padding: 16px; color: #7dd3a0; font-family: ui-monospace, monospace; font-size: 12.5px;
-      line-height: 1.6; min-height: 80px; max-height: 340px; overflow-y: auto;
-      white-space: pre-wrap; word-break: break-word; }
-    .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 500; }
-    .badge-pending { background: #2a2210; color: #e3c76a; }
-    .badge-sent    { background: #0f2418; color: #7dd3a0; }
-    .badge-other   { background: #151d1a; color: #6b7a74; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-    .dot-on  { background: #4ade80; }
-    .dot-off { background: #3d4a44; }
-    .progress-bar-track { background: #151d1a; border-radius: 99px; height: 6px; overflow: hidden; }
-    .progress-bar-fill  { background: var(--accent); height: 100%;
-      border-radius: 99px; transition: width .5s ease; }
-    .spinner { width: 16px; height: 16px; border: 2px solid var(--accent);
-      border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  </style>
-</head>
-<body class="min-h-screen">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Venture OS — execution control plane (local)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --bg: #0a0f0d;
+        --surface: #121a17;
+        --border: #1e2a26;
+        --text: #e4ebe8;
+        --muted: #8a9a94;
+        --accent: #2d6a4f;
+        --accent-dim: #245542;
+        --warn: #b8860b;
+        --bad: #9b3b3b;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, sans-serif;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+      .input-field {
+        display: block;
+        width: 100%;
+        margin-top: 6px;
+        padding: 9px 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .input-field:focus {
+        border-color: var(--accent);
+      }
+      .input-field::placeholder {
+        color: #5c6b64;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        padding: 10px 22px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: background 0.15s;
+        font-size: 14px;
+      }
+      .btn-primary:hover:not(:disabled) {
+        background: var(--accent-dim);
+      }
+      .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-ghost {
+        background: #151d1a;
+        color: var(--muted);
+        font-weight: 500;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: all 0.15s;
+        font-size: 14px;
+      }
+      .btn-ghost:hover {
+        background: #1a2420;
+        color: var(--text);
+      }
+      .tab-btn {
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .tab-btn.active {
+        background: var(--accent);
+        color: #fff;
+      }
+      .tab-btn:not(.active) {
+        background: #151d1a;
+        color: #6b7a74;
+      }
+      .tab-btn:not(.active):hover {
+        background: #1a2420;
+        color: #a8b5af;
+      }
+      .terminal {
+        background: #060908;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        color: #7dd3a0;
+        font-family: ui-monospace, monospace;
+        font-size: 12.5px;
+        line-height: 1.6;
+        min-height: 80px;
+        max-height: 340px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .badge-pending {
+        background: #2a2210;
+        color: #e3c76a;
+      }
+      .badge-sent {
+        background: #0f2418;
+        color: #7dd3a0;
+      }
+      .badge-other {
+        background: #151d1a;
+        color: #6b7a74;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .dot-on {
+        background: #4ade80;
+      }
+      .dot-off {
+        background: #3d4a44;
+      }
+      .progress-bar-track {
+        background: #151d1a;
+        border-radius: 99px;
+        height: 6px;
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        background: var(--accent);
+        height: 100%;
+        border-radius: 99px;
+        transition: width 0.5s ease;
+      }
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--accent);
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        display: inline-block;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <!-- ── Header ── -->
+    <div
+      style="background: #0f1613; border-bottom: 1px solid #1e2a26"
+      class="sticky top-0 z-10"
+    >
+      <div
+        class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            style="
+              background: #2d6a4f;
+              width: 32px;
+              height: 32px;
+              border-radius: 8px;
+            "
+            class="flex items-center justify-center text-white font-bold text-sm"
+          >
+            V
+          </div>
+          <div>
+            <span class="text-white font-semibold">Venture OS</span>
+            <span class="text-gray-500 text-sm ml-2"
+              >execution control plane · local</span
+            >
+          </div>
+        </div>
+        <div id="api-status" class="flex items-center gap-4 text-xs"></div>
+      </div>
+    </div>
 
-  <!-- ── Header ── -->
-  <div style="background:#0f1613;border-bottom:1px solid #1e2a26" class="sticky top-0 z-10">
-    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div style="background:#2d6a4f;width:32px;height:32px;border-radius:8px" class="flex items-center justify-center text-white font-bold text-sm">V</div>
-        <div>
-          <span class="text-white font-semibold">Venture OS</span>
-          <span class="text-gray-500 text-sm ml-2">execution control plane · local</span>
+    <div class="max-w-5xl mx-auto px-6 py-8">
+      <!-- ── Current execution focus (severity-first) ── -->
+      <div
+        class="card p-4 mb-5"
+        id="control-focus-card"
+        style="border-color: #3b4a44"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+              Current execution focus
+            </p>
+            <p id="focus-title" class="text-white font-semibold">Loading…</p>
+            <p id="focus-action" class="text-gray-400 text-sm mt-1"></p>
+          </div>
+          <div class="text-right">
+            <span id="focus-severity" class="badge badge-other">INFO</span>
+            <p id="focus-run" class="text-gray-500 text-xs mt-2">run_id: —</p>
+          </div>
         </div>
       </div>
-      <div id="api-status" class="flex items-center gap-4 text-xs"></div>
-    </div>
-  </div>
 
-  <div class="max-w-5xl mx-auto px-6 py-8">
-
-    <!-- ── Artifact strip: values from weekly-kpi-data.csv, reply log, prospects file (not scoring) ── -->
-    <div class="grid grid-cols-2 gap-4 mb-2 sm:grid-cols-4">
-      <div class="card p-5">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">weekly-kpi-data.csv — revenue</p>
-        <p class="text-2xl font-bold text-white" id="kpi-mrr">—</p>
-        <div class="progress-bar-track mt-3"><div class="progress-bar-fill" id="kpi-bar" style="width:0%"></div></div>
-        <p class="text-gray-600 text-xs mt-1.5" id="kpi-pct">loading…</p>
-      </div>
-      <div class="card p-5">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">weekly-kpi-data.csv — gap</p>
-        <p class="text-2xl font-bold text-amber-400" id="kpi-gap">—</p>
-        <p class="text-gray-600 text-xs mt-3">operator spreadsheet only — not a shipped guarantee</p>
-      </div>
-      <div class="card p-5">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">reply_intent_log.csv — reply %</p>
-        <p class="text-2xl font-bold" id="kpi-reply">—</p>
-        <p class="text-gray-600 text-xs mt-3">from reply_intent_log.csv · not predictive</p>
-      </div>
-      <div class="card p-5">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">prospects.csv — pending count</p>
-        <p class="text-2xl font-bold text-white" id="kpi-pending">—</p>
-        <p class="text-gray-600 text-xs mt-3">rows in prospects file</p>
-      </div>
-    </div>
-    <p class="text-gray-600 text-xs mb-6 max-w-4xl">
-      Governed runs: <code class="text-gray-500">run_daily.py</code> per <code class="text-gray-500">OPERATOR_RUNBOOK.md</code>.
-      Values above are raw fields from files under <code class="text-gray-500">07-kpis/</code> and <code class="text-gray-500">06-sales/</code> — not scores, not models, not a second source of truth vs <code class="text-gray-500">run_report.json</code>.
-    </p>
-
-    <!-- ── Job queue (venture_jobs.db) ── -->
-    <div class="grid grid-cols-2 gap-4 mb-8 sm:grid-cols-5">
-      <div class="card p-4">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Pending</p>
-        <p class="text-2xl font-bold text-amber-400" id="jq-pending">—</p>
-        <p class="text-gray-600 text-xs mt-2">jobs queued</p>
-      </div>
-      <div class="card p-4">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Completed</p>
-        <p class="text-2xl font-bold text-emerald-400" id="jq-completed">—</p>
-        <p class="text-gray-600 text-xs mt-2">this session</p>
-      </div>
-      <div class="card p-4">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Failed</p>
-        <p class="text-2xl font-bold text-red-400" id="jq-failed">—</p>
-        <p class="text-gray-600 text-xs mt-2">retry eligible</p>
-      </div>
-      <div class="card p-4">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">In Progress</p>
-        <p class="text-2xl font-bold text-blue-400" id="jq-inprogress">—</p>
-        <p class="text-gray-600 text-xs mt-2">running now</p>
-      </div>
-      <div class="card p-4">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Total Jobs</p>
-        <p class="text-2xl font-bold text-gray-400" id="jq-total">—</p>
-        <p class="text-gray-600 text-xs mt-2">all time</p>
-      </div>
-    </div>
-
-    <!-- ── Operator snapshot (run_report + skips) ── -->
-    <div class="card p-5 mb-6">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-white font-semibold text-sm">Latest run &amp; outbound skips</h2>
-        <button type="button" class="btn-ghost text-xs py-1 px-3" onclick="loadOperatorSnapshot()">↻ Refresh</button>
-      </div>
-      <p class="text-gray-500 text-xs mb-3">Reads repo-root <code class="text-gray-400">run_report.json</code> and <code class="text-gray-400">DATA_BASE/logs/send_skipped_log.csv</code> after <code class="text-gray-400">run_daily.py</code>.</p>
-      <div id="operator-snapshot" class="text-sm text-gray-300 font-mono whitespace-pre-wrap">Loading…</div>
-    </div>
-
-    <div class="card p-5 mb-6">
-      <h2 class="text-white font-semibold text-sm">Interpretation → writing (not ad hoc)</h2>
-      <p class="text-gray-500 text-xs mt-2 mb-3">
-        Cohort changes, resume-after-halt, ICP edits, and commercial pivots belong in prose the team can grep — not undocumented side channels.
-      </p>
-      <ul class="text-sm text-gray-400 space-y-2 list-disc pl-5">
-        <li><code class="text-gray-500">03-reevaluation/decision-log.md</code> — decisions, overrides, “why we resumed.”</li>
-        <li><code class="text-gray-500">07-kpis/operator_execution_log.csv</code> — time-ordered operator actions where applicable.</li>
-        <li>Doctrine: <code class="text-gray-500">docs/SEMANTIC_CONTRACT.md</code> §8.3 (written interpretation; no “AI verdict” layer on the money path).</li>
-      </ul>
-    </div>
-
-    <!-- ── Tabs ── -->
-    <div class="flex gap-2 mb-6 flex-wrap">
-      <button class="tab-btn active" id="tab-pipeline" onclick="showTab('pipeline')">▶ Pipeline script</button>
-      <button class="tab-btn" id="tab-prospects" onclick="showTab('prospects')">Prospects</button>
-      <button class="tab-btn" id="tab-add" onclick="showTab('add')">+ Add Prospect</button>
-    </div>
-
-    <!-- ── Pipeline Panel ── -->
-    <div id="panel-pipeline" class="card p-6">
-      <div class="flex items-start justify-between mb-5">
-        <div>
-          <h2 class="text-white font-semibold text-base">Run <code class="text-gray-400 text-sm">venture_pipeline.py</code> (dev / legacy)</h2>
-          <p class="text-gray-500 text-sm mt-1">
-            Fires the pipeline subprocess for local debugging. <strong class="text-gray-400">Canonical operator path</strong> for governed outbound is
-            <code class="text-gray-400">run_daily.py</code> (eligibility audit, dry-run, report) — see <code class="text-gray-400">OPERATOR_RUNBOOK.md</code>.
+      <!-- ── Artifact strip: values from weekly-kpi-data.csv, reply log, prospects file (not scoring) ── -->
+      <div class="grid grid-cols-2 gap-4 mb-2 sm:grid-cols-4">
+        <div class="card p-5">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            weekly-kpi-data.csv — revenue
+          </p>
+          <p class="text-2xl font-bold text-white" id="kpi-mrr">—</p>
+          <div class="progress-bar-track mt-3">
+            <div class="progress-bar-fill" id="kpi-bar" style="width: 0%"></div>
+          </div>
+          <p class="text-gray-600 text-xs mt-1.5" id="kpi-pct">loading…</p>
+        </div>
+        <div class="card p-5">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            weekly-kpi-data.csv — gap
+          </p>
+          <p class="text-2xl font-bold text-amber-400" id="kpi-gap">—</p>
+          <p class="text-gray-600 text-xs mt-3">
+            operator spreadsheet only — not a shipped guarantee
           </p>
         </div>
-        <button class="btn-primary flex items-center gap-2" id="run-btn" onclick="runPipeline()">
-          ▶ Run Now
-        </button>
+        <div class="card p-5">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            reply_intent_log.csv — reply %
+          </p>
+          <p class="text-2xl font-bold" id="kpi-reply">—</p>
+          <p class="text-gray-600 text-xs mt-3">
+            from reply_intent_log.csv · not predictive
+          </p>
+        </div>
+        <div class="card p-5">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            prospects.csv — pending count
+          </p>
+          <p class="text-2xl font-bold text-white" id="kpi-pending">—</p>
+          <p class="text-gray-600 text-xs mt-3">rows in prospects file</p>
+        </div>
       </div>
-      <div id="run-status" class="hidden items-center gap-2 mb-3 text-sm" style="color:#7dd3a0">
-        <span class="spinner"></span> Pipeline running — wait for completion…
-      </div>
-      <div class="terminal" id="pipeline-output">Click "Run Now" to execute the pipeline.</div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+      <p class="text-gray-600 text-xs mb-6 max-w-4xl">
+        Governed runs: <code class="text-gray-500">run_daily.py</code> per
+        <code class="text-gray-500">OPERATOR_RUNBOOK.md</code>. Values above are
+        raw fields from files under
+        <code class="text-gray-500">07-kpis/</code> and
+        <code class="text-gray-500">06-sales/</code> — not scores, not models,
+        not a second source of truth vs
+        <code class="text-gray-500">run_report.json</code>.
+      </p>
+
+      <!-- ── Job queue (venture_jobs.db) ── -->
+      <div class="grid grid-cols-2 gap-4 mb-8 sm:grid-cols-5">
         <div class="card p-4">
-          <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">7-day lifecycle counts</p>
-          <div id="funnel-summary" class="text-sm text-gray-300">Loading funnel…</div>
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            Pending
+          </p>
+          <p class="text-2xl font-bold text-amber-400" id="jq-pending">—</p>
+          <p class="text-gray-600 text-xs mt-2">jobs queued</p>
         </div>
         <div class="card p-4">
-          <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">Blocked Prospects</p>
-          <div id="blocked-summary" class="text-sm text-gray-300">Loading blocked items…</div>
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            Completed
+          </p>
+          <p class="text-2xl font-bold text-emerald-400" id="jq-completed">—</p>
+          <p class="text-gray-600 text-xs mt-2">this session</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            Failed
+          </p>
+          <p class="text-2xl font-bold text-red-400" id="jq-failed">—</p>
+          <p class="text-gray-600 text-xs mt-2">retry eligible</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            In Progress
+          </p>
+          <p class="text-2xl font-bold text-blue-400" id="jq-inprogress">—</p>
+          <p class="text-gray-600 text-xs mt-2">running now</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">
+            Total Jobs
+          </p>
+          <p class="text-2xl font-bold text-gray-400" id="jq-total">—</p>
+          <p class="text-gray-600 text-xs mt-2">all time</p>
         </div>
       </div>
-      <div class="card p-4 mt-4">
-        <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">Daily governance checks</p>
-        <ul class="text-sm text-gray-300 space-y-1">
-          <li>1) Latest <code class="text-gray-500">run_report.json</code> outbound status + errors tail clean.</li>
-          <li>2) Skips / audit join: review <code class="text-gray-500">send_skipped_log.csv</code> and audit log per runbook.</li>
-          <li>3) Cohort envelope (subject + CTA) unchanged since freeze — or <code class="text-gray-500">message_version</code> bumped.</li>
-          <li>4) Prefer <code class="text-gray-500">run_daily.py --dry-run</code> before any live send.</li>
+
+      <!-- ── Operator snapshot (run_report + skips) ── -->
+      <div class="card p-5 mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-white font-semibold text-sm">
+            Latest run &amp; outbound skips
+          </h2>
+          <button
+            type="button"
+            class="btn-ghost text-xs py-1 px-3"
+            onclick="loadOperatorSnapshot()"
+          >
+            ↻ Refresh
+          </button>
+        </div>
+        <p class="text-gray-500 text-xs mb-3">
+          Reads repo-root <code class="text-gray-400">run_report.json</code> and
+          <code class="text-gray-400">DATA_BASE/logs/send_skipped_log.csv</code>
+          after <code class="text-gray-400">run_daily.py</code>.
+        </p>
+        <div
+          id="operator-snapshot"
+          class="text-sm text-gray-300 font-mono whitespace-pre-wrap"
+        >
+          Loading…
+        </div>
+      </div>
+
+      <div class="card p-5 mb-6">
+        <h2 class="text-white font-semibold text-sm">
+          Interpretation → writing (not ad hoc)
+        </h2>
+        <p class="text-gray-500 text-xs mt-2 mb-3">
+          Cohort changes, resume-after-halt, ICP edits, and commercial pivots
+          belong in prose the team can grep — not undocumented side channels.
+        </p>
+        <ul class="text-sm text-gray-400 space-y-2 list-disc pl-5">
+          <li>
+            <code class="text-gray-500">03-reevaluation/decision-log.md</code> —
+            decisions, overrides, “why we resumed.”
+          </li>
+          <li>
+            <code class="text-gray-500"
+              >07-kpis/operator_execution_log.csv</code
+            >
+            — time-ordered operator actions where applicable.
+          </li>
+          <li>
+            Doctrine:
+            <code class="text-gray-500">docs/SEMANTIC_CONTRACT.md</code> §8.3
+            (written interpretation; no “AI verdict” layer on the money path).
+          </li>
         </ul>
       </div>
-    </div>
 
-    <!-- ── Prospects Panel ── -->
-    <div id="panel-prospects" class="card p-6 hidden">
-      <div class="flex items-center justify-between mb-5">
-        <h2 class="text-white font-semibold text-base">All Prospects</h2>
-        <button class="btn-ghost text-xs py-1.5 px-3" onclick="loadProspects()">↻ Refresh</button>
-      </div>
-      <div id="prospects-content">
-        <p class="text-gray-500 text-sm">Loading…</p>
-      </div>
-    </div>
-
-    <!-- ── Add Prospect Panel ── -->
-    <div id="panel-add" class="card p-6 hidden">
-      <h2 class="text-white font-semibold text-base mb-1">Add a New Prospect</h2>
-      <p class="text-gray-500 text-sm mb-2">Governed batches use <code class="text-gray-400">run_daily.py --generate-prospects</code> (prospect_builder + audit). This form is disabled from writing <code class="text-gray-400">prospects.csv</code> directly.</p>
-      <p class="text-amber-400/90 text-sm mb-5">Use the CLI path above; the button below will show the server error if invoked.</p>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label class="text-gray-400 text-xs uppercase tracking-widest">Full Name <span class="text-red-400">*</span></label>
-          <input id="p-name" class="input-field" placeholder="Jane Smith">
-        </div>
-        <div>
-          <label class="text-gray-400 text-xs uppercase tracking-widest">Company <span class="text-red-400">*</span></label>
-          <input id="p-company" class="input-field" placeholder="Bright Smiles Dental">
-        </div>
-        <div>
-          <label class="text-gray-400 text-xs uppercase tracking-widest">Their Role</label>
-          <input id="p-role" class="input-field" placeholder="Owner / CEO / Marketing Manager">
-        </div>
-        <div>
-          <label class="text-gray-400 text-xs uppercase tracking-widest">Industry</label>
-          <input id="p-industry" class="input-field" placeholder="Dental / Legal / E-commerce…">
-        </div>
-        <div class="sm:col-span-2">
-          <label class="text-gray-400 text-xs uppercase tracking-widest">Their Main Pain Point <span class="text-red-400">*</span></label>
-          <input id="p-pain" class="input-field" placeholder="Patients not rebooking after appointments">
-        </div>
-        <div>
-          <label class="text-gray-400 text-xs uppercase tracking-widest">Email (optional — Hunter will find it)</label>
-          <input id="p-email" class="input-field" type="email" placeholder="jane@brightsmiles.com">
-        </div>
-        <div>
-          <label class="text-gray-400 text-xs uppercase tracking-widest">LinkedIn URL (optional)</label>
-          <input id="p-linkedin" class="input-field" placeholder="https://linkedin.com/in/…">
-        </div>
-      </div>
-      <div class="flex items-center gap-4 mt-5">
-        <button class="btn-primary" onclick="addProspect()" style="background:#059669">
-          ＋ Add Prospect
+      <!-- ── Tabs ── -->
+      <div class="flex gap-2 mb-6 flex-wrap">
+        <button
+          class="tab-btn active"
+          id="tab-pipeline"
+          onclick="showTab('pipeline')"
+        >
+          ▶ Pipeline script
         </button>
-        <p id="add-msg" class="text-sm hidden"></p>
+        <button
+          class="tab-btn"
+          id="tab-prospects"
+          onclick="showTab('prospects')"
+        >
+          Prospects
+        </button>
+      </div>
+
+      <!-- ── Pipeline Panel ── -->
+      <div id="panel-pipeline" class="card p-6">
+        <div class="flex items-start justify-between mb-5">
+          <div>
+            <h2 class="text-white font-semibold text-base">
+              Run
+              <code class="text-gray-400 text-sm">venture_pipeline.py</code>
+              (dev / legacy)
+            </h2>
+            <p class="text-gray-500 text-sm mt-1">
+              Fires the pipeline subprocess for local debugging.
+              <strong class="text-gray-400">Canonical operator path</strong> for
+              governed outbound is
+              <code class="text-gray-400">run_daily.py</code> (eligibility
+              audit, dry-run, report) — see
+              <code class="text-gray-400">OPERATOR_RUNBOOK.md</code>.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 mb-4 flex-wrap">
+          <button class="btn-ghost" onclick="observeNow()">Observe</button>
+          <button
+            class="btn-primary flex items-center gap-2"
+            id="rehearse-btn"
+            onclick="runPipeline('dry')"
+          >
+            Rehearse (Dry-run)
+          </button>
+          <button
+            class="btn-ghost"
+            id="execute-live-btn"
+            style="border-color: #7a3c3c; color: #fca5a5"
+            onclick="runPipeline('live')"
+          >
+            Execute Live (Escalated)
+          </button>
+        </div>
+        <div
+          id="run-status"
+          class="hidden items-center gap-2 mb-3 text-sm"
+          style="color: #7dd3a0"
+        >
+          <span class="spinner"></span> Execution running — wait for completion…
+        </div>
+        <div class="terminal" id="pipeline-output">
+          Use Rehearse for safe validation; use Execute Live only after explicit
+          escalation.
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <div class="card p-4">
+            <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">
+              7-day lifecycle counts
+            </p>
+            <div id="funnel-summary" class="text-sm text-gray-300">
+              Loading funnel…
+            </div>
+          </div>
+          <div class="card p-4">
+            <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">
+              Blocked Prospects
+            </p>
+            <div id="blocked-summary" class="text-sm text-gray-300">
+              Loading blocked items…
+            </div>
+          </div>
+        </div>
+        <div class="card p-4 mt-4">
+          <p class="text-gray-500 text-xs uppercase tracking-widest mb-2">
+            Daily governance checks
+          </p>
+          <ul class="text-sm text-gray-300 space-y-1">
+            <li>
+              1) Latest
+              <code class="text-gray-500">run_report.json</code> outbound status
+              + errors tail clean.
+            </li>
+            <li>
+              2) Skips / audit join: review
+              <code class="text-gray-500">send_skipped_log.csv</code> and audit
+              log per runbook.
+            </li>
+            <li>
+              3) Cohort envelope (subject + CTA) unchanged since freeze — or
+              <code class="text-gray-500">message_version</code> bumped.
+            </li>
+            <li>
+              4) Prefer
+              <code class="text-gray-500">run_daily.py --dry-run</code> before
+              any live send.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ── Prospects Panel ── -->
+      <div id="panel-prospects" class="card p-6 hidden">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-white font-semibold text-base">All Prospects</h2>
+          <button
+            class="btn-ghost text-xs py-1.5 px-3"
+            onclick="loadProspects()"
+          >
+            ↻ Refresh
+          </button>
+        </div>
+        <div id="prospects-content">
+          <p class="text-gray-500 text-sm">Loading…</p>
+        </div>
+      </div>
+
+      <!-- ── Add Prospect Panel ── -->
+      <div id="panel-add" class="card p-6 hidden">
+        <h2 class="text-white font-semibold text-base mb-1">
+          Add a New Prospect
+        </h2>
+        <p class="text-gray-500 text-sm mb-2">
+          Governed batches use
+          <code class="text-gray-400">run_daily.py --generate-prospects</code>
+          (prospect_builder + audit). This form is disabled from writing
+          <code class="text-gray-400">prospects.csv</code> directly.
+        </p>
+        <p class="text-amber-400/90 text-sm mb-5">
+          Use the CLI path above; the button below will show the server error if
+          invoked.
+        </p>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label class="text-gray-400 text-xs uppercase tracking-widest"
+              >Full Name <span class="text-red-400">*</span></label
+            >
+            <input id="p-name" class="input-field" placeholder="Jane Smith" />
+          </div>
+          <div>
+            <label class="text-gray-400 text-xs uppercase tracking-widest"
+              >Company <span class="text-red-400">*</span></label
+            >
+            <input
+              id="p-company"
+              class="input-field"
+              placeholder="Bright Smiles Dental"
+            />
+          </div>
+          <div>
+            <label class="text-gray-400 text-xs uppercase tracking-widest"
+              >Their Role</label
+            >
+            <input
+              id="p-role"
+              class="input-field"
+              placeholder="Owner / CEO / Marketing Manager"
+            />
+          </div>
+          <div>
+            <label class="text-gray-400 text-xs uppercase tracking-widest"
+              >Industry</label
+            >
+            <input
+              id="p-industry"
+              class="input-field"
+              placeholder="Dental / Legal / E-commerce…"
+            />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-gray-400 text-xs uppercase tracking-widest"
+              >Their Main Pain Point <span class="text-red-400">*</span></label
+            >
+            <input
+              id="p-pain"
+              class="input-field"
+              placeholder="Patients not rebooking after appointments"
+            />
+          </div>
+          <div>
+            <label class="text-gray-400 text-xs uppercase tracking-widest"
+              >Email (optional — Hunter will find it)</label
+            >
+            <input
+              id="p-email"
+              class="input-field"
+              type="email"
+              placeholder="jane@brightsmiles.com"
+            />
+          </div>
+          <div>
+            <label class="text-gray-400 text-xs uppercase tracking-widest"
+              >LinkedIn URL (optional)</label
+            >
+            <input
+              id="p-linkedin"
+              class="input-field"
+              placeholder="https://linkedin.com/in/…"
+            />
+          </div>
+        </div>
+        <div class="flex items-center gap-4 mt-5">
+          <button
+            class="btn-primary"
+            onclick="addProspect()"
+            style="background: #059669"
+          >
+            ＋ Add Prospect
+          </button>
+          <p id="add-msg" class="text-sm hidden"></p>
+        </div>
       </div>
     </div>
+    <!-- /max-w -->
 
-  </div><!-- /max-w -->
-
-  <script>
-    // ── Operator snapshot (run_report + send_skipped) ─────────────────────
-    async function loadOperatorSnapshot() {
-      const el = document.getElementById('operator-snapshot');
-      try {
-        const d = await fetch('/api/operator-status').then(r => r.json());
-        const lines = [];
-        lines.push('run_id:          ' + (d.run_id || '—'));
-        lines.push('outbound status: ' + (d.outbound_status || '—'));
-        lines.push('run_report:      ' + d.run_report_path);
-        lines.push('DATA_BASE:       ' + d.data_base);
-        if (d.generation_digest_path) lines.push('gen digest:      ' + d.generation_digest_path);
-        lines.push('send_skipped:    ' + d.send_skipped_log_path);
-        const skips = d.skipped_rows || [];
-        if (skips.length) {
-          lines.push('');
-          lines.push('Recent skips (why):');
-          skips.forEach(s => {
-            lines.push('  • ' + (s.email || '?') + ' | ' + (s.skip_reason || '') );
-            lines.push('    → ' + (s.why || ''));
-          });
-        } else {
-          lines.push('');
-          lines.push('(no recent rows in send_skipped_log.csv)');
+    <script>
+      // ── Operator snapshot (run_report + send_skipped) ─────────────────────
+      async function loadOperatorSnapshot() {
+        const el = document.getElementById("operator-snapshot");
+        try {
+          const d = await fetch("/api/operator-status").then((r) => r.json());
+          const lines = [];
+          lines.push("run_id:          " + (d.run_id || "—"));
+          lines.push("outbound status: " + (d.outbound_status || "—"));
+          lines.push("run_report:      " + d.run_report_path);
+          lines.push("DATA_BASE:       " + d.data_base);
+          if (d.generation_digest_path)
+            lines.push("gen digest:      " + d.generation_digest_path);
+          lines.push("send_skipped:    " + d.send_skipped_log_path);
+          const skips = d.skipped_rows || [];
+          if (skips.length) {
+            lines.push("");
+            lines.push("Recent skips (why):");
+            skips.forEach((s) => {
+              lines.push(
+                "  • " + (s.email || "?") + " | " + (s.skip_reason || ""),
+              );
+              lines.push("    → " + (s.why || ""));
+            });
+          } else {
+            lines.push("");
+            lines.push("(no recent rows in send_skipped_log.csv)");
+          }
+          el.textContent = lines.join("\n");
+        } catch (e) {
+          el.textContent = "Could not load operator status: " + e.message;
         }
-        el.textContent = lines.join('\n');
-      } catch(e) {
-        el.textContent = 'Could not load operator status: ' + e.message;
       }
-    }
 
-    // ── Tab management ─────────────────────────────────────────────────────
-    const TABS = ['pipeline','prospects','add'];
-    function showTab(name) {
-      TABS.forEach(t => {
-        document.getElementById('panel-' + t).classList.add('hidden');
-        const btn = document.getElementById('tab-' + t);
-        btn.classList.remove('active');
-      });
-      document.getElementById('panel-' + name).classList.remove('hidden');
-      document.getElementById('tab-' + name).classList.add('active');
-      if (name === 'prospects') loadProspects();
-    }
+      // ── Tab management ─────────────────────────────────────────────────────
+      const TABS = ["pipeline", "prospects"];
+      function showTab(name) {
+        TABS.forEach((t) => {
+          document.getElementById("panel-" + t).classList.add("hidden");
+          const btn = document.getElementById("tab-" + t);
+          btn.classList.remove("active");
+        });
+        document.getElementById("panel-" + name).classList.remove("hidden");
+        document.getElementById("tab-" + name).classList.add("active");
+        if (name === "prospects") loadProspects();
+      }
 
-    // ── Artifact strip (weekly-kpi-data, reply log, prospects file) ─────────
-    async function loadKPIs() {
-      try {
-        const d = await fetch('/api/kpis').then(r => r.json());
-        document.getElementById('kpi-mrr').textContent     = '$' + d.revenue.toLocaleString('en-US', {maximumFractionDigits:0});
-        document.getElementById('kpi-gap').textContent     = '$' + d.gap.toLocaleString('en-US', {maximumFractionDigits:0});
-        document.getElementById('kpi-pending').textContent = d.pending_prospects;
-        const rr = d.reply_rate;
-        const rrEl = document.getElementById('kpi-reply');
-        rrEl.textContent = rr.toFixed(1) + '%';
-        rrEl.className   = 'text-2xl font-bold ' + (rr >= 5 ? 'text-emerald-400' : rr > 0 ? 'text-amber-400' : 'text-gray-500');
-        document.getElementById('kpi-pct').textContent  = d.pct.toFixed(0) + '% of internal target (CSV)';
-        document.getElementById('kpi-bar').style.width  = Math.min(d.pct, 100) + '%';
-        if (d.revenue >= d.target) document.getElementById('kpi-mrr').classList.add('text-emerald-400');
-      } catch(e) { console.warn('artifact strip load failed', e); }
-    }
+      // ── Artifact strip (weekly-kpi-data, reply log, prospects file) ─────────
+      async function loadKPIs() {
+        try {
+          const d = await fetch("/api/kpis").then((r) => r.json());
+          document.getElementById("kpi-mrr").textContent =
+            "$" +
+            d.revenue.toLocaleString("en-US", { maximumFractionDigits: 0 });
+          document.getElementById("kpi-gap").textContent =
+            "$" + d.gap.toLocaleString("en-US", { maximumFractionDigits: 0 });
+          document.getElementById("kpi-pending").textContent =
+            d.pending_prospects;
+          const rr = d.reply_rate;
+          const rrEl = document.getElementById("kpi-reply");
+          rrEl.textContent = rr.toFixed(1) + "%";
+          rrEl.className =
+            "text-2xl font-bold " +
+            (rr >= 5
+              ? "text-emerald-400"
+              : rr > 0
+                ? "text-amber-400"
+                : "text-gray-500");
+          document.getElementById("kpi-pct").textContent =
+            d.pct.toFixed(0) + "% of internal target (CSV)";
+          document.getElementById("kpi-bar").style.width =
+            Math.min(d.pct, 100) + "%";
+          if (d.revenue >= d.target)
+            document
+              .getElementById("kpi-mrr")
+              .classList.add("text-emerald-400");
+        } catch (e) {
+          console.warn("artifact strip load failed", e);
+        }
+      }
 
-    // ── API status dots ────────────────────────────────────────────────────
-    async function loadEnvStatus() {
-      try {
-        const d = await fetch('/api/env-status').then(r => r.json());
-        document.getElementById('api-status').innerHTML = Object.entries(d).map(([k,v]) =>
-          `<span class="flex items-center gap-1.5">
-            <span class="dot ${v ? 'dot-on' : 'dot-off'}"></span>
-            <span style="color:${v ? '#9ca3af' : '#374151'}">${k}</span>
-          </span>`
-        ).join('');
-      } catch(e) {}
-    }
+      // ── API status dots ────────────────────────────────────────────────────
+      async function loadEnvStatus() {
+        try {
+          const d = await fetch("/api/env-status").then((r) => r.json());
+          document.getElementById("api-status").innerHTML = Object.entries(d)
+            .map(
+              ([k, v]) =>
+                `<span class="flex items-center gap-1.5">
+            <span class="dot ${v ? "dot-on" : "dot-off"}"></span>
+            <span style="color:${v ? "#9ca3af" : "#374151"}">${k}</span>
+          </span>`,
+            )
+            .join("");
+        } catch (e) {}
+      }
 
-    // ── Run pipeline ───────────────────────────────────────────────────────
-    async function runPipeline() {
-      const btn     = document.getElementById('run-btn');
-      const out     = document.getElementById('pipeline-output');
-      const status  = document.getElementById('run-status');
-      btn.disabled  = true;
-      btn.textContent = 'Running…';
-      out.textContent = '';
-      status.classList.remove('hidden');
-      status.style.display = 'flex';
-      try {
-        const r = await fetch('/run-pipeline', { method: 'POST' });
-        const d = await r.json();
-        out.textContent = d.output || 'No output.';
-        out.scrollTop   = out.scrollHeight;
+      async function loadControlFocus() {
+        try {
+          const d = await fetch("/api/control-focus").then((r) => r.json());
+          document.getElementById("focus-title").textContent =
+            d.title || "No active blocker";
+          document.getElementById("focus-action").textContent =
+            d.recommended_action || "";
+          document.getElementById("focus-run").textContent =
+            "run_id: " + (d.run_id || "—");
+          const sev = (d.severity || "INFO").toUpperCase();
+          const sevEl = document.getElementById("focus-severity");
+          sevEl.textContent = sev;
+          sevEl.className =
+            "badge " +
+            (sev === "HARD"
+              ? "badge-pending"
+              : sev === "ACTION"
+                ? "badge-other"
+                : sev === "DEGRADED"
+                  ? "badge-pending"
+                  : "badge-sent");
+          const card = document.getElementById("control-focus-card");
+          card.style.borderColor =
+            sev === "HARD"
+              ? "#7a3c3c"
+              : sev === "ACTION"
+                ? "#6a5a2d"
+                : sev === "DEGRADED"
+                  ? "#6a5a2d"
+                  : "#3b4a44";
+        } catch (e) {
+          document.getElementById("focus-title").textContent =
+            "Could not load control focus";
+          document.getElementById("focus-action").textContent = e.message;
+        }
+      }
+
+      // ── Run pipeline ───────────────────────────────────────────────────────
+      function observeNow() {
         loadKPIs();
+        loadEnvStatus();
         loadFunnel();
         loadBlocked();
         loadOperatorSnapshot();
-      } catch(e) {
-        out.textContent = 'Network error: ' + e.message;
+        loadJobQueue();
+        loadControlFocus();
+        const out = document.getElementById("pipeline-output");
+        out.textContent = "Observe refresh complete.";
       }
-      status.style.display = 'none';
-      btn.innerHTML   = '▶ Run Now';
-      btn.disabled    = false;
-    }
 
-    async function loadFunnel() {
-      const el = document.getElementById('funnel-summary');
-      try {
-        const d = await fetch('/api/funnel').then(r => r.json());
-        const stages = ['prospect_loaded','email_found','message_generated','email_sent','delivered','replied','followup_sent'];
-        const parts = stages.map(s => `${s.replaceAll('_',' ')}: ${d[s] || 0}`);
-        el.textContent = parts.join(' | ');
-      } catch (e) {
-        el.textContent = 'Failed to load funnel data.';
-      }
-    }
+      async function runPipeline(mode) {
+        const rehearseBtn = document.getElementById("rehearse-btn");
+        const executeBtn = document.getElementById("execute-live-btn");
+        const out = document.getElementById("pipeline-output");
+        const status = document.getElementById("run-status");
+        let payload = {};
 
-    async function loadBlocked() {
-      const el = document.getElementById('blocked-summary');
-      try {
-        const rows = await fetch('/api/blocked').then(r => r.json());
-        if (!rows.length) {
-          el.textContent = 'No blocked prospects.';
-          return;
+        if (mode === "live") {
+          const ok = confirm(
+            "Execute LIVE outbound now? This is escalated and requires explicit acknowledgement.",
+          );
+          if (!ok) {
+            out.textContent = "Live execution cancelled by operator.";
+            return;
+          }
+          payload.confirm_live = "I_UNDERSTAND_LIVE_SENDS";
         }
-        el.innerHTML = rows.slice(0, 5).map(r =>
-          `<div class="mb-1">${r.name || r.prospect_id} — ${r.stage} (${r.status_reason || 'n/a'})</div>`
-        ).join('');
-      } catch (e) {
-        el.textContent = 'Failed to load blocked prospects.';
-      }
-    }
 
-    async function loadJobQueue() {
-      try {
-        const d = await fetch('/api/job-queue').then(r => r.json());
-        document.getElementById('jq-pending').textContent     = d.pending;
-        document.getElementById('jq-completed').textContent   = d.completed;
-        document.getElementById('jq-failed').textContent      = d.failed;
-        document.getElementById('jq-inprogress').textContent  = d.in_progress;
-        document.getElementById('jq-total').textContent       = d.total;
-      } catch(e) { console.warn('Job queue load failed', e); }
-    }
-
-    // ── Prospects table ────────────────────────────────────────────────────
-    async function loadProspects() {
-      const el = document.getElementById('prospects-content');
-      el.innerHTML = '<p class="text-gray-500 text-sm">Loading…</p>';
-      try {
-        const rows = await fetch('/api/prospects').then(r => r.json());
-        if (!rows.length) {
-          el.innerHTML = '<p class="text-gray-500 text-sm">No prospects yet. Run <code class="text-gray-400">run_daily.py --generate-prospects</code> or add via governed flow.</p>';
-          return;
+        rehearseBtn.disabled = true;
+        executeBtn.disabled = true;
+        rehearseBtn.textContent =
+          mode === "dry" ? "Running…" : "Rehearse (Dry-run)";
+        executeBtn.textContent =
+          mode === "live" ? "Running…" : "Execute Live (Escalated)";
+        out.textContent = "";
+        status.classList.remove("hidden");
+        status.style.display = "flex";
+        try {
+          const r = await fetch(
+            "/run-pipeline?mode=" + encodeURIComponent(mode || "dry"),
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            },
+          );
+          const d = await r.json();
+          out.textContent = d.output || "No output.";
+          out.scrollTop = out.scrollHeight;
+          loadKPIs();
+          loadFunnel();
+          loadBlocked();
+          loadOperatorSnapshot();
+          loadControlFocus();
+        } catch (e) {
+          out.textContent = "Network error: " + e.message;
         }
-        const cols = ['name','company','role','industry','pain_point','email','status'];
-        el.innerHTML = `
+        status.style.display = "none";
+        rehearseBtn.textContent = "Rehearse (Dry-run)";
+        executeBtn.textContent = "Execute Live (Escalated)";
+        rehearseBtn.disabled = false;
+        executeBtn.disabled = false;
+      }
+
+      async function loadFunnel() {
+        const el = document.getElementById("funnel-summary");
+        try {
+          const d = await fetch("/api/funnel").then((r) => r.json());
+          const stages = [
+            "prospect_loaded",
+            "email_found",
+            "message_generated",
+            "email_sent",
+            "delivered",
+            "replied",
+            "followup_sent",
+          ];
+          const parts = stages.map(
+            (s) => `${s.replaceAll("_", " ")}: ${d[s] || 0}`,
+          );
+          el.textContent = parts.join(" | ");
+        } catch (e) {
+          el.textContent = "Failed to load funnel data.";
+        }
+      }
+
+      async function loadBlocked() {
+        const el = document.getElementById("blocked-summary");
+        try {
+          const rows = await fetch("/api/blocked").then((r) => r.json());
+          if (!rows.length) {
+            el.textContent = "No blocked prospects.";
+            return;
+          }
+          el.innerHTML = rows
+            .slice(0, 5)
+            .map(
+              (r) =>
+                `<div class="mb-1">${r.name || r.prospect_id} — ${r.stage} (${r.status_reason || "n/a"})</div>`,
+            )
+            .join("");
+        } catch (e) {
+          el.textContent = "Failed to load blocked prospects.";
+        }
+      }
+
+      async function loadJobQueue() {
+        try {
+          const d = await fetch("/api/job-queue").then((r) => r.json());
+          document.getElementById("jq-pending").textContent = d.pending;
+          document.getElementById("jq-completed").textContent = d.completed;
+          document.getElementById("jq-failed").textContent = d.failed;
+          document.getElementById("jq-inprogress").textContent = d.in_progress;
+          document.getElementById("jq-total").textContent = d.total;
+        } catch (e) {
+          console.warn("Job queue load failed", e);
+        }
+      }
+
+      // ── Prospects table ────────────────────────────────────────────────────
+      async function loadProspects() {
+        const el = document.getElementById("prospects-content");
+        el.innerHTML = '<p class="text-gray-500 text-sm">Loading…</p>';
+        try {
+          const rows = await fetch("/api/prospects").then((r) => r.json());
+          if (!rows.length) {
+            el.innerHTML =
+              '<p class="text-gray-500 text-sm">No prospects yet. Run <code class="text-gray-400">run_daily.py --generate-prospects</code> or add via governed flow.</p>';
+            return;
+          }
+          const cols = [
+            "name",
+            "company",
+            "role",
+            "industry",
+            "pain_point",
+            "email",
+            "status",
+          ];
+          el.innerHTML = `
           <div class="overflow-x-auto">
             <table class="w-full text-sm" style="border-collapse:separate;border-spacing:0">
               <thead>
-                <tr>${cols.map(c => `<th class="text-left text-gray-500 text-xs uppercase tracking-widest pb-3 pr-5">${c.replace('_',' ')}</th>`).join('')}</tr>
+                <tr>${cols.map((c) => `<th class="text-left text-gray-500 text-xs uppercase tracking-widest pb-3 pr-5">${c.replace("_", " ")}</th>`).join("")}</tr>
               </thead>
               <tbody>
-                ${rows.map(row => `
+                ${rows
+                  .map(
+                    (row) => `
                   <tr style="border-top:1px solid #1e1e2e">
-                    ${cols.map(c => {
-                      if (c === 'status') return `<td class="py-3 pr-5"><span class="badge ${badgeClass(row[c])}">${row[c]||'—'}</span></td>`;
-                      if (c === 'pain_point') return `<td class="py-3 pr-5 text-gray-400 max-w-xs truncate" title="${row[c]||''}">${row[c]||'—'}</td>`;
-                      return `<td class="py-3 pr-5 text-gray-300">${row[c]||'—'}</td>`;
-                    }).join('')}
-                  </tr>`
-                ).join('')}
+                    ${cols
+                      .map((c) => {
+                        if (c === "status")
+                          return `<td class="py-3 pr-5"><span class="badge ${badgeClass(row[c])}">${row[c] || "—"}</span></td>`;
+                        if (c === "pain_point")
+                          return `<td class="py-3 pr-5 text-gray-400 max-w-xs truncate" title="${row[c] || ""}">${row[c] || "—"}</td>`;
+                        return `<td class="py-3 pr-5 text-gray-300">${row[c] || "—"}</td>`;
+                      })
+                      .join("")}
+                  </tr>`,
+                  )
+                  .join("")}
               </tbody>
             </table>
           </div>
-          <p class="text-gray-600 text-xs mt-3">${rows.length} total prospect${rows.length !== 1 ? 's' : ''}</p>`;
-      } catch(e) {
-        el.innerHTML = '<p class="text-red-400 text-sm">Failed to load: ' + e.message + '</p>';
-      }
-    }
-
-    function badgeClass(s) {
-      if (!s || s === 'pending') return 'badge-pending';
-      if (s === 'sent') return 'badge-sent';
-      return 'badge-other';
-    }
-
-    // ── Score idea (removed from UI: not part of outbound governance / invites "AI verdict" framing) ──
-
-    // ── Add prospect ───────────────────────────────────────────────────────
-    async function addProspect() {
-      const get = id => document.getElementById(id).value.trim();
-      const data = {
-        name:         get('p-name'),
-        company:      get('p-company'),
-        role:         get('p-role'),
-        industry:     get('p-industry'),
-        pain_point:   get('p-pain'),
-        email:        get('p-email'),
-        linkedin_url: get('p-linkedin'),
-      };
-      if (!data.name || !data.company || !data.pain_point) {
-        showMsg('add-msg', '⚠  Name, Company and Pain Point are required.', 'text-amber-400');
-        return;
-      }
-      try {
-        const r = await fetch('/add-prospect', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(data)
-        });
-        const d = await r.json();
-        if (d.success) {
-          showMsg('add-msg', '✓ Record accepted by API (if enabled). Governed writes: run_daily.py --generate-prospects per runbook.', 'text-emerald-400');
-          ['p-name','p-company','p-role','p-industry','p-pain','p-email','p-linkedin']
-            .forEach(id => document.getElementById(id).value = '');
-          loadKPIs();
-        } else {
-          showMsg('add-msg', 'Error: ' + d.error, 'text-red-400');
+          <p class="text-gray-600 text-xs mt-3">${rows.length} total prospect${rows.length !== 1 ? "s" : ""}</p>`;
+        } catch (e) {
+          el.innerHTML =
+            '<p class="text-red-400 text-sm">Failed to load: ' +
+            e.message +
+            "</p>";
         }
-      } catch(e) {
-        showMsg('add-msg', 'Network error: ' + e.message, 'text-red-400');
       }
-    }
 
-    function showMsg(id, text, cls) {
-      const el = document.getElementById(id);
-      el.textContent = text;
-      el.className   = 'text-sm ' + cls;
-      el.classList.remove('hidden');
-    }
-
-    // ── Keyboard shortcuts ─────────────────────────────────────────────────
-    document.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        const active = document.querySelector('.tab-btn.active').id.replace('tab-','');
-        if (active === 'pipeline') runPipeline();
-        if (active === 'add')      addProspect();
+      function badgeClass(s) {
+        if (!s || s === "pending") return "badge-pending";
+        if (s === "sent") return "badge-sent";
+        return "badge-other";
       }
-    });
 
-    // ── Init ───────────────────────────────────────────────────────────────
-    loadKPIs();
-    loadEnvStatus();
-    loadFunnel();
-    loadBlocked();
-    loadOperatorSnapshot();
-    loadJobQueue();
-    // Refresh job queue every 5 seconds
-    setInterval(loadJobQueue, 5000);
-    setInterval(loadOperatorSnapshot, 30000);
-  </script>
-</body>
+      // ── Score idea (removed from UI: not part of outbound governance / invites "AI verdict" framing) ──
+
+      // ── Add prospect ───────────────────────────────────────────────────────
+      async function addProspect() {
+        const get = (id) => document.getElementById(id).value.trim();
+        const data = {
+          name: get("p-name"),
+          company: get("p-company"),
+          role: get("p-role"),
+          industry: get("p-industry"),
+          pain_point: get("p-pain"),
+          email: get("p-email"),
+          linkedin_url: get("p-linkedin"),
+        };
+        if (!data.name || !data.company || !data.pain_point) {
+          showMsg(
+            "add-msg",
+            "⚠  Name, Company and Pain Point are required.",
+            "text-amber-400",
+          );
+          return;
+        }
+        try {
+          const r = await fetch("/add-prospect", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          const d = await r.json();
+          if (d.success) {
+            showMsg(
+              "add-msg",
+              "✓ Record accepted by API (if enabled). Governed writes: run_daily.py --generate-prospects per runbook.",
+              "text-emerald-400",
+            );
+            [
+              "p-name",
+              "p-company",
+              "p-role",
+              "p-industry",
+              "p-pain",
+              "p-email",
+              "p-linkedin",
+            ].forEach((id) => (document.getElementById(id).value = ""));
+            loadKPIs();
+          } else {
+            showMsg("add-msg", "Error: " + d.error, "text-red-400");
+          }
+        } catch (e) {
+          showMsg("add-msg", "Network error: " + e.message, "text-red-400");
+        }
+      }
+
+      function showMsg(id, text, cls) {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        el.className = "text-sm " + cls;
+        el.classList.remove("hidden");
+      }
+
+      // ── Keyboard shortcuts ─────────────────────────────────────────────────
+      document.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          const active = document
+            .querySelector(".tab-btn.active")
+            .id.replace("tab-", "");
+          if (active === "pipeline") runPipeline("dry");
+        }
+      });
+
+      // ── Init ───────────────────────────────────────────────────────────────
+      loadKPIs();
+      loadEnvStatus();
+      loadFunnel();
+      loadBlocked();
+      loadOperatorSnapshot();
+      loadJobQueue();
+      loadControlFocus();
+      // Refresh job queue every 5 seconds
+      setInterval(loadJobQueue, 5000);
+      setInterval(loadOperatorSnapshot, 30000);
+      setInterval(loadControlFocus, 15000);
+    </script>
+  </body>
 </html>
