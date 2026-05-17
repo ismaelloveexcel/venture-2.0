@@ -10,6 +10,106 @@
 
 **Independent review protocol (mandatory for external/autonomous reviewers):** `docs/INDEPENDENT_AGENT_REVIEW.md` — source-of-truth hierarchy, required command sequence, evidence checklist, and forbidden assumptions.
 
+## Audit / remediation separation protocol (mandatory)
+
+### Audit mode (read-only)
+
+On entering audit mode, the agent must emit:
+
+`=== AUDIT MODE ACTIVATED ===`
+
+During audit mode, agents may:
+
+- inspect files
+- run validators and tests
+- classify findings by severity
+- produce evidence snapshots and an audit report
+
+During audit mode, agents may not:
+
+- patch files
+- update state artifacts
+- mutate governance records
+- run migrations or remediation commands
+
+Audit mode ends only after all four are emitted:
+
+1. structured audit report
+2. finding classification (severity + owner)
+3. explicit PASS/FAIL verdict
+4. explicit audit completion marker
+
+Required completion marker:
+
+`=== AUDIT MODE COMPLETE ===`
+
+Before entering remediation mode, preserve an evidence snapshot containing:
+
+- audit findings
+- validator output
+- failing commands/tests
+- file-level evidence references
+
+The remediation delta report must reference this preserved evidence set.
+
+### Remediation mode (explicit activation required)
+
+After audit completion, the agent must emit:
+
+`=== REMEDIATION MODE ACTIVATED ===`
+
+Only then may it:
+
+- patch files
+- update governance artifacts
+- refresh execution state
+- run remediation commands
+
+Scope lock: during remediation mode, mutate only:
+
+- files directly implicated in audit findings
+- files required to satisfy post-remediation validation
+
+Prohibited during remediation mode:
+
+- opportunistic cleanup
+- unrelated refactors
+- speculative improvements
+- architecture changes outside the audit scope
+
+If remediation introduces validator failure, test regression, or new contract violation, the agent must:
+
+1. stop immediately
+2. emit `FAILED REMEDIATION` report
+3. revert remediation changes
+4. re-run validation after revert
+5. emit post-revert validation results
+
+After remediation, the agent must emit:
+
+1. validation rerun results
+2. remediation delta report (files changed + reason)
+3. residual risk report
+4. final PASS/FAIL status
+
+### Governance artifact handling
+
+Treat these locations as governance artifacts:
+
+- `04-coding/state/`
+- `03-reevaluation/decision-log.md`
+- `07-kpis/`
+
+Governance artifacts may only be modified in explicit remediation mode or explicit execution mode. Never modify them during audit mode.
+
+### Reporting precision rule
+
+Do not overstate closure. Prefer:
+
+- `No unresolved hard contract violations identified after remediation and re-validation.`
+
+Avoid absolute language that hides advisory risks.
+
 ## Resend / operator identity (Auditbound)
 
 - **Brand domain (DNS verify only):** `auditbound.io` — add in Resend if needed for account/brand verification; cold **From** does not use this domain unless you choose to.

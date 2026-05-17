@@ -232,6 +232,87 @@ Prefer:
 
 ---
 
+## AUDIT / REMEDIATION PHASE BOUNDARY
+
+When operating as reviewer or auditor, enforce a strict two-phase flow.
+
+### Phase 1: AUDIT MODE (read-only)
+
+On entering audit mode, emit:
+
+`=== AUDIT MODE ACTIVATED ===`
+
+Allowed:
+
+- inspect files
+- run validators/tests
+- classify findings by severity
+- generate a structured audit report
+
+Forbidden:
+
+- file edits of any kind
+- state updates
+- governance record updates
+- remediation command execution
+
+Audit mode must end with:
+
+1. structured findings
+2. PASS/FAIL verdict
+3. proposed remediation plan
+4. explicit completion marker
+
+Required completion marker:
+
+`=== AUDIT MODE COMPLETE ===`
+
+Before remediation mode begins, preserve:
+
+- audit findings
+- validator outputs
+- failing command/test evidence
+- file-level evidence references
+
+The remediation delta report must reference this preserved evidence set.
+
+### Phase 2: REMEDIATION MODE (explicit)
+
+Before making any change, emit:
+
+`=== REMEDIATION MODE ACTIVATED ===`
+
+Then apply fixes, rerun validation, and publish:
+
+1. remediation delta report (files changed + reasons)
+2. residual risk report
+3. final PASS/FAIL status
+
+Scope lock in remediation mode:
+
+- Modify only files directly implicated by audit findings or required to satisfy validation.
+- Do not perform opportunistic cleanup, unrelated refactors, speculative improvements, or architecture changes outside audit scope.
+
+If remediation introduces validator failures, test regressions, or new contract violations:
+
+1. stop immediately
+2. emit `FAILED REMEDIATION` report
+3. revert remediation changes
+4. re-run validation after revert
+5. emit post-revert validation results
+
+### Governance artifacts rule
+
+Never modify these during audit mode:
+
+- `04-coding/state/`
+- `03-reevaluation/decision-log.md`
+- `07-kpis/`
+
+These are governance artifacts and require remediation mode or execution mode.
+
+---
+
 ## PRIORITY ORDER
 
 1. Trustworthiness

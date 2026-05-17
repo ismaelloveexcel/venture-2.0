@@ -105,18 +105,105 @@ def _runtime_path(env_key: str, default: pathlib.Path) -> pathlib.Path:
 CLIENT_WORKSPACE = os.environ.get("VENTURE_CLIENT_WORKSPACE", "").strip()
 DATA_BASE = resolve_data_base(BASE)
 DOTENV_PATH = _runtime_path("VENTURE_DOTENV_PATH", DATA_BASE / ".env")
-load_dotenv(DOTENV_PATH)
 
-# Setup logging to file + console
-logger = setup_logging(
-    log_dir=str(_runtime_path("VENTURE_LOG_DIR", DATA_BASE / "logs")),
-    name="venture-pipeline",
-)
+# ── Import-pure initialisation (INV-1) ────────────────────────────────────────
+# load_dotenv, setup_logging, and get_queue are DEFERRED to _init_runtime().
+# Module-level code below this point must be side-effect-free so that
+# `python -c "import venture_pipeline"` produces zero side effects.
+
+# Null logger until _init_runtime() replaces it
+logger = logging.getLogger("venture-pipeline")
+logger.addHandler(logging.NullHandler())
+
 DB_PATH = _runtime_path("VENTURE_DB_PATH", resolve_venture_db_path(DATA_BASE, BASE))
-job_queue = get_queue(db_path=str(DB_PATH))
 
-logger.info("=" * 80)
-logger.info(f"Pipeline started (dry_run={DRY_RUN})")
+
+class _LazyJobQueue:
+    """Proxy that defers SQLite connection until first attribute access (INV-1)."""
+
+    _instance: object = None
+
+    def __getattr__(self, name: str) -> object:
+        if _LazyJobQueue._instance is None:
+            _LazyJobQueue._instance = get_queue(db_path=str(DB_PATH))
+        return getattr(_LazyJobQueue._instance, name)
+
+
+job_queue: object = _LazyJobQueue()
+
+
+def _init_runtime() -> None:
+    """
+    Load .env, initialise logging, refresh CFG-derived globals.
+
+    Must be called exactly once before any live I/O (called from main()).
+    Safe to call multiple times (idempotent after first call via the
+    NullHandler guard check).
+    """
+    global logger, CFG  # noqa: PLW0603
+    global OPENAI_API_KEY, HUNTER_API_KEY, AIRTABLE_API_KEY, AIRTABLE_BASE_ID
+    global AIRTABLE_PROSPECTS_TABLE, AIRTABLE_KPIS_TABLE
+    global NOTION_API_KEY, NOTION_PROSPECTS_DB, NOTION_KPIS_DB
+    global RESEND_API_KEY, RESEND_FROM_EMAIL, RESEND_FROM_NAME
+    global DIGEST_TO_EMAIL, AUTO_SEND_EMAILS, FOLLOWUP_DAYS
+    global ENABLE_FOLLOWUPS, ENABLE_SEND_EMAIL_RETRIES
+    global REVENUE_TARGET, SEND_DAILY_CAP, SEND_HOURLY_CAP
+    global SEND_START_HOUR, SEND_END_HOUR
+    global ACTIVE_CLIENT_CAPACITY, ACTIVE_CLIENTS_CURRENT
+    global REPLY_INTENT_ENABLED, REPLY_INTENT_MIN_PROB, REPLY_INTENT_VOLUME_THRESHOLD
+    global HARD_FAIL_ON_PROVIDER_AUTH, HARD_FAIL_ON_GENERATION_ERROR, MIN_MESSAGE_CHARS
+
+    load_dotenv(DOTENV_PATH)
+    CFG = RuntimeConfig.from_env()
+    # Refresh all CFG-derived globals now that .env is loaded
+    OPENAI_API_KEY = CFG.openai_api_key
+    HUNTER_API_KEY = CFG.hunter_api_key
+    AIRTABLE_API_KEY = CFG.airtable_api_key
+    AIRTABLE_BASE_ID = CFG.airtable_base_id
+    AIRTABLE_PROSPECTS_TABLE = CFG.airtable_prospects_table
+    AIRTABLE_KPIS_TABLE = CFG.airtable_kpis_table
+    NOTION_API_KEY = CFG.notion_api_key
+    NOTION_PROSPECTS_DB = CFG.notion_prospects_db
+    NOTION_KPIS_DB = CFG.notion_kpis_db
+    RESEND_API_KEY = CFG.resend_api_key
+    RESEND_FROM_EMAIL = CFG.resend_from_email
+    RESEND_FROM_NAME = CFG.resend_from_name
+    DIGEST_TO_EMAIL = CFG.digest_to_email
+    AUTO_SEND_EMAILS = CFG.auto_send_emails
+    FOLLOWUP_DAYS = CFG.followup_days
+    ENABLE_FOLLOWUPS = (
+        os.environ.get("ENABLE_FOLLOWUPS", "false").strip().lower() == "true"
+    )
+    ENABLE_SEND_EMAIL_RETRIES = (
+        os.environ.get("ENABLE_SEND_EMAIL_RETRIES", "false").strip().lower() == "true"
+    )
+    REVENUE_TARGET = CFG.revenue_target
+    SEND_DAILY_CAP = int(os.environ.get("SEND_DAILY_CAP", "40"))
+    SEND_HOURLY_CAP = int(os.environ.get("SEND_HOURLY_CAP", "12"))
+    SEND_START_HOUR = int(os.environ.get("SEND_START_HOUR", "8"))
+    SEND_END_HOUR = int(os.environ.get("SEND_END_HOUR", "18"))
+    ACTIVE_CLIENT_CAPACITY = int(os.environ.get("ACTIVE_CLIENT_CAPACITY", "6"))
+    ACTIVE_CLIENTS_CURRENT = int(os.environ.get("ACTIVE_CLIENTS_CURRENT", "0"))
+    REPLY_INTENT_ENABLED = CFG.reply_intent_enabled
+    REPLY_INTENT_MIN_PROB = CFG.reply_intent_min_prob
+    REPLY_INTENT_VOLUME_THRESHOLD = CFG.reply_intent_volume_threshold
+    HARD_FAIL_ON_PROVIDER_AUTH = (
+        os.environ.get("VENTURE_HARD_FAIL_PROVIDER_AUTH", "true").strip().lower()
+        == "true"
+    )
+    HARD_FAIL_ON_GENERATION_ERROR = (
+        os.environ.get("VENTURE_HARD_FAIL_ON_GENERATION_ERROR", "true").strip().lower()
+        == "true"
+    )
+    MIN_MESSAGE_CHARS = int(os.environ.get("VENTURE_MIN_MESSAGE_CHARS", "80"))
+
+    logger = setup_logging(
+        log_dir=str(_runtime_path("VENTURE_LOG_DIR", DATA_BASE / "logs")),
+        name="venture-pipeline",
+    )
+    logger.info("=" * 80)
+    logger.info(f"Pipeline started (dry_run={DRY_RUN})")
+
 
 BATCH_RUN_ID = os.environ.get("BATCH_RUN_ID", "").strip() or make_run_id("pipeline")
 
@@ -235,44 +322,40 @@ CONFIG_FILE = _runtime_path(
     ),
 )
 
-CFG = RuntimeConfig.from_env()
-OPENAI_API_KEY = CFG.openai_api_key
-HUNTER_API_KEY = CFG.hunter_api_key
-AIRTABLE_API_KEY = CFG.airtable_api_key
-AIRTABLE_BASE_ID = CFG.airtable_base_id
-AIRTABLE_PROSPECTS_TABLE = CFG.airtable_prospects_table
-AIRTABLE_KPIS_TABLE = CFG.airtable_kpis_table
-NOTION_API_KEY = CFG.notion_api_key
-NOTION_PROSPECTS_DB = CFG.notion_prospects_db
-NOTION_KPIS_DB = CFG.notion_kpis_db
-RESEND_API_KEY = CFG.resend_api_key
-RESEND_FROM_EMAIL = CFG.resend_from_email
-RESEND_FROM_NAME = CFG.resend_from_name
-DIGEST_TO_EMAIL = CFG.digest_to_email
-AUTO_SEND_EMAILS = CFG.auto_send_emails
-FOLLOWUP_DAYS = CFG.followup_days
-ENABLE_FOLLOWUPS = os.environ.get("ENABLE_FOLLOWUPS", "false").strip().lower() == "true"
-ENABLE_SEND_EMAIL_RETRIES = (
-    os.environ.get("ENABLE_SEND_EMAIL_RETRIES", "false").strip().lower() == "true"
-)
-REVENUE_TARGET = CFG.revenue_target
-SEND_DAILY_CAP = int(os.environ.get("SEND_DAILY_CAP", "40"))
-SEND_HOURLY_CAP = int(os.environ.get("SEND_HOURLY_CAP", "12"))
-SEND_START_HOUR = int(os.environ.get("SEND_START_HOUR", "8"))
-SEND_END_HOUR = int(os.environ.get("SEND_END_HOUR", "18"))
-ACTIVE_CLIENT_CAPACITY = int(os.environ.get("ACTIVE_CLIENT_CAPACITY", "6"))
-ACTIVE_CLIENTS_CURRENT = int(os.environ.get("ACTIVE_CLIENTS_CURRENT", "0"))
-REPLY_INTENT_ENABLED = CFG.reply_intent_enabled
-REPLY_INTENT_MIN_PROB = CFG.reply_intent_min_prob
-REPLY_INTENT_VOLUME_THRESHOLD = CFG.reply_intent_volume_threshold
-HARD_FAIL_ON_PROVIDER_AUTH = (
-    os.environ.get("VENTURE_HARD_FAIL_PROVIDER_AUTH", "true").strip().lower() == "true"
-)
-HARD_FAIL_ON_GENERATION_ERROR = (
-    os.environ.get("VENTURE_HARD_FAIL_ON_GENERATION_ERROR", "true").strip().lower()
-    == "true"
-)
-MIN_MESSAGE_CHARS = int(os.environ.get("VENTURE_MIN_MESSAGE_CHARS", "80"))
+# ── Runtime globals — populated by _init_runtime() ───────────────────────────
+# These hold empty/default values at import time (INV-1).
+# _init_runtime() refreshes them after load_dotenv() runs.
+CFG: RuntimeConfig = RuntimeConfig.from_env()  # values may be empty pre-init
+OPENAI_API_KEY: str = CFG.openai_api_key
+HUNTER_API_KEY: str = CFG.hunter_api_key
+AIRTABLE_API_KEY: str = CFG.airtable_api_key
+AIRTABLE_BASE_ID: str = CFG.airtable_base_id
+AIRTABLE_PROSPECTS_TABLE: str = CFG.airtable_prospects_table
+AIRTABLE_KPIS_TABLE: str = CFG.airtable_kpis_table
+NOTION_API_KEY: str = CFG.notion_api_key
+NOTION_PROSPECTS_DB: str = CFG.notion_prospects_db
+NOTION_KPIS_DB: str = CFG.notion_kpis_db
+RESEND_API_KEY: str = CFG.resend_api_key
+RESEND_FROM_EMAIL: str = CFG.resend_from_email
+RESEND_FROM_NAME: str = CFG.resend_from_name
+DIGEST_TO_EMAIL: str = CFG.digest_to_email
+AUTO_SEND_EMAILS: bool = CFG.auto_send_emails
+FOLLOWUP_DAYS: int = CFG.followup_days
+ENABLE_FOLLOWUPS: bool = False
+ENABLE_SEND_EMAIL_RETRIES: bool = False
+REVENUE_TARGET: float = CFG.revenue_target
+SEND_DAILY_CAP: int = 40
+SEND_HOURLY_CAP: int = 12
+SEND_START_HOUR: int = 8
+SEND_END_HOUR: int = 18
+ACTIVE_CLIENT_CAPACITY: int = 6
+ACTIVE_CLIENTS_CURRENT: int = 0
+REPLY_INTENT_ENABLED: bool = CFG.reply_intent_enabled
+REPLY_INTENT_MIN_PROB: float = CFG.reply_intent_min_prob
+REPLY_INTENT_VOLUME_THRESHOLD: int = CFG.reply_intent_volume_threshold
+HARD_FAIL_ON_PROVIDER_AUTH: bool = True
+HARD_FAIL_ON_GENERATION_ERROR: bool = True
+MIN_MESSAGE_CHARS: int = 80
 
 # Import Notion helper from sibling directory
 import sys as _sys
@@ -1787,9 +1870,12 @@ def _capture_phase1_snapshot() -> dict[str, int | dict[str, int]]:
 
 # ── Main Pipeline ─────────────────────────────────────────────────────────────
 def main():
+    # Initialise runtime: load_dotenv, setup_logging, refresh CFG globals (INV-1)
+    _init_runtime()
+
     print("\n========================================")
     print("  VENTURE OS — AUTOMATION PIPELINE")
-    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
     print("========================================\n")
 
     reset_compliance_cooldown_policy_for_run()
@@ -1886,8 +1972,8 @@ def main():
             "[ok] Batch 1 lock consumed; this run is now bound to approved recipients."
         )
 
-    phase1_pipeline_started_at = datetime.now(timezone.utc).isoformat().replace(
-        "+00:00", "Z"
+    phase1_pipeline_started_at = (
+        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     )
     phase1_snapshot_before = _capture_phase1_snapshot()
 

@@ -33,7 +33,7 @@ It defines:
 The current productization focus is **not** new execution logic. The focus is a deterministic **interpretation layer** over existing execution truth:
 
 - Keep `run_daily.py` as the only orchestration entrypoint.
-- Keep `venture_pipeline.py` as the only governed execution path.
+- Keep `venture_pipeline.py` as the governed execution kernel invoked by `run_daily.py`; direct `venture_pipeline.py` `__main__` use is dev-only (`VENTURE_DEV_MAIN=1`, except `--status`).
 - Keep `run_report_schema.py` as the run-level data contract.
 - Build client-facing artifacts from those existing outputs.
 

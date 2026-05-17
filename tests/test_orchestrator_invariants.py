@@ -31,6 +31,11 @@ WHITELIST = [
     ("04-coding/scripts/venture_pipeline.py", r"(import|from) \+venture_pipeline"),
     # Test-only imports
     ("tests/", r"(import|from) \+venture_pipeline"),
+    # Contract validator (subprocess import-purity check)
+    (
+        "04-coding/event_engine/validate_contract.py",
+        r"(import|from) \+venture_pipeline",
+    ),
     # Explicit dev-only override
     (
         "04-coding/scripts/venture_pipeline.py",
